@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="15.0.0" />
+    <PackageReference Include="Microsoft.AspNet.Identity.EntityFramework" Version="2.2.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BackPredictFinance.Common\BackPredictFinance.Common.csproj" />
+    <ProjectReference Include="..\BackPredictFinance.Datas\BackPredictFinance.Datas.csproj" />
+    <ProjectReference Include="..\FinanceAPI.Data\BackPredictFinance.Datas.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="MobileViewModels\" />
+  </ItemGroup>
+
+</Project>

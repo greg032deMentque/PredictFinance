@@ -1,0 +1,8 @@
+analyze_double_top.service 
+
+sudo journalctl -u analyze_double_top.service pour voir logs en temps réel
+
+systemctl is-active analyze_double_top.service (retour “inactive” à la fin)
+
+systemctl status analyze_double_top.service indique Active: inactive (success) quand c’est fini.
+

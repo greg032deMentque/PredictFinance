@@ -1,0 +1,59 @@
+
+commande :  tree /A /F
+
+ai-worker/
+│
+├── main.py
+├── config.py
+│
++---fetchers
+|   |   data_fetcher.py
+|   |
+|   \---__pycache__
+|           data_fetcher.cpython-312.pyc
+|
++---help
+|       structure.txt
+|       todo
+|
++---logs
+|       app.log
+|       app.log.2025-07-11
+|
++---patterns
+|   |   bilateral_patterns.py
+|   |   continuation_patterns.py
+|   |   reversal_patterns.py
+|   |
+|   \---__pycache__
+|           bilateral_patterns.cpython-312.pyc
+|           continuation_patterns.cpython-312.pyc
+|           reversal_patterns.cpython-312.pyc
+|
++---pipeline
+|   |   pipeline_config.py
+|   |   pipeline_dataset.py
+|   |   pipeline_features.py
+|   |   pipeline_indicators.py
+|   |   pipeline_main.py
+|   |   pipeline_training.py
+|   |   train_pipeline.py
+|   |   __init__.py
+|   |
+|   \---__pycache__
+|           pipeline_config.cpython-312.pyc
+|           pipeline_dataset.cpython-312.pyc
+|           pipeline_features.cpython-312.pyc
+|           pipeline_indicators.cpython-312.pyc
+|           pipeline_main.cpython-312.pyc
+|           pipeline_training.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|
++---tests
+|       test_bilateral_patterns.py
+|       test_continuation_patterns.py
+|       test_data_fetcher.py
+|       test_main.py
+|       test_reversal_patterns.py
+|       test_train_pipeline.py
+

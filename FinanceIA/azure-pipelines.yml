@@ -1,0 +1,101 @@
+trigger:
+  branches:
+    include:
+      - dev
+
+variables:
+  SRC_DIR: 'FinanceIA'
+  DEPLOY_PATH: '/var/www/predictFinance/FinanceIA'
+  PYTHON_VERSION: '3.11'
+  SERVER_USER: $(server.username)
+  SERVER_HOST: $(server.ip)
+  SERVER_PWD:  $(server.pwd)
+
+stages:
+  - stage: Build
+    displayName: '🛠️ Build & Package'
+    jobs:
+      - job: Package
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(PYTHON_VERSION)'
+
+          - script: |
+              python -m venv venv
+              source venv/bin/activate
+              pip install --upgrade pip
+              pip install -r requirements.txt
+            workingDirectory: '$(Build.SourcesDirectory)/$(SRC_DIR)'
+            displayName: 'Install dependencies'
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: '$(Build.SourcesDirectory)/$(SRC_DIR)'
+              includeRootFolder: false
+              archiveType: 'tar'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/app.tar.gz'
+
+          - publish: '$(Build.ArtifactStagingDirectory)/app.tar.gz'
+            artifact: 'app_package'
+
+  - stage: Deploy
+    displayName: '🚀 Deploy & Run'
+    dependsOn: Build
+    jobs:
+      - job: DeployJob
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - download: current
+            artifact: app_package
+
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y sshpass
+            displayName: 'Install sshpass'
+
+          - script: |
+              sshpass -p "$(SERVER_PWD)" scp -o StrictHostKeyChecking=no \
+                $(Pipeline.Workspace)/app_package/app.tar.gz \
+                $(SERVER_USER)@$(SERVER_HOST):$(DEPLOY_PATH)/
+            displayName: 'Copy artifact to server'
+
+          - script: |
+              sshpass -p "$(SERVER_PWD)" ssh -o StrictHostKeyChecking=no \
+                $(SERVER_USER)@$(SERVER_HOST) << 'EOF'
+              set -e
+              cd $(DEPLOY_PATH)
+
+              # Décompression et nettoyage
+              tar -xzf app.tar.gz
+              rm app.tar.gz
+
+              # Création venv si absent
+              if [ ! -d "venv" ]; then
+                  python$(PYTHON_VERSION) -m venv venv
+              fi
+
+              # Activation venv et maj pip
+              source venv/bin/activate
+              pip install --upgrade pip
+
+              # Installation uniquement si requirements.txt changé
+              if ! cmp -s requirements.txt venv/.requirements_cache.txt; then
+                  pip install -r requirements.txt
+                  cp requirements.txt venv/.requirements_cache.txt
+              else
+                  echo "✅ Requirements inchangés, pas de réinstallation"
+              fi
+
+              # Redémarrage du service
+              sudo systemctl daemon-reload
+              sudo systemctl restart analyze_double_top.service
+
+              # Sauvegarde de l’état
+              sudo systemctl status analyze_double_top.service \
+                | sudo tee $(DEPLOY_PATH)/pipeline/pipeline_double_top/service_status.txt
+              EOF
+            displayName: 'Deploy with cached venv & restart service'
