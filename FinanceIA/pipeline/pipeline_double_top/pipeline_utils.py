@@ -134,7 +134,9 @@ def compute_all_indicators(
 
     # Volume normalisé (0 à 1)
     max_vol = df["vol"].max()
-    df["vol_norm"] = df["vol"] / max_vol if max_vol else 0.0 if max_vol else 0.0
+    # Éviter une double condition redondante qui pouvait conduire à un code difficile à lire.
+    # Lorsque max_vol est nul, on renvoie 0 pour éviter une division par zéro.
+    df["vol_norm"] = df["vol"] / max_vol if max_vol else 0.0
 
     # Pentes (première et deuxième dérivée) pour capter la vitesse de variation
     df["slope1"] = df["price"].diff()
