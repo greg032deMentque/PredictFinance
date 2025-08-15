@@ -39,59 +39,47 @@ from .config_double_top import (
 )
 
 
+import time
+import structlog
+
+LOGGER = structlog.get_logger(__name__)  # logger structuré pour ce module
+
+
 def fetch_data(
     ticker: str,
     end_date: 'Optional[str]' = None
 ) -> 'Tuple[Optional[pd.Series], Optional[pd.Series]]':
-    """
-    Récupère les séries historiques "Close" (prix de clôture) et "Volume" pour un ticker donné.
-    Les données couvrent de 1990-01-01 jusqu'à end_date (optionnel).
-
-    Args:
-        ticker (str): Symbole boursier (ex. "AAPL" ou "BRK.B").
-        end_date (str|None): Date de fin au format YYYY-MM-DD. None = aujourd'hui.
-
-    Returns:
-        Tuple[pd.Series, pd.Series]: deux pandas Series (prix, volume),
-        ou (None, None) en cas d'erreur ou manque de données.
-    """
+    t0 = time.time()
+    _log = logger.bind(ticker=ticker)  # on "binde" le ticker dans le contexte
     try:
-        # Fonction interne pour récupérer l'historique via yfinance
         def _grab(tk: str) -> pd.DataFrame:
-            # history renvoie un DataFrame avec index date et colonnes [Open, High, Low, Close, Volume, ...]
             return yf.Ticker(tk).history(start="1990-01-01", end=end_date)
 
-        # Première tentative avec le ticker tel quel
+        _log.info("fetch_start", end_date=end_date)
         df = _grab(ticker)
-        # Si vide et que le ticker contient un point (ex. BRK.B), on remplace par un tiret
         if df.empty and "." in ticker:
             alt = ticker.replace(".", "-")
-            logger.info(f"Retrying {ticker} as {alt}")
+            _log.warning("fetch_retry_alt_ticker", alt=alt)
             df = _grab(alt)
 
-        # On vérifie qu'on a assez de données (TOTAL_WINDOW jours)
         if df.empty or len(df) < TOTAL_WINDOW:
-            logger.error(f"Pas assez de données pour {ticker} (len={len(df)})")
+            _log.error("fetch_not_enough_data", n_rows=int(len(df)))
             return None, None
 
-        # Extraire la colonne Close et retirer les valeurs NaN
         prices = df["Close"].dropna().tz_localize(None)
-        # Extraire le volume, forward-fill pour combler les trous et aligner l'index
         vols = df["Volume"].ffill().reindex(prices.index)
 
-        # Reconstruire un DataFrame minimal avec Close et Volume
         df_loc = df.reindex(prices.index)
         df_loc = df_loc.assign(Close=prices, Volume=vols)
-        # Ajouter High et Low pour les chandeliers
         df_loc["high"] = df["High"].reindex(prices.index)
         df_loc["low"] = df["Low"].reindex(prices.index)
 
-        # On renvoie deux Series : prix de clôture et volume
+        elapsed = time.time() - t0
+        _log.info("fetch_done", n_rows=int(len(df_loc)), elapsed_sec=round(elapsed, 3))
         return df_loc["Close"], df_loc["Volume"]
 
     except Exception as e:
-        # Logger en cas d'erreur inattendue
-        logger.error(f"fetch_data {ticker}: {e}")
+        _log.exception("fetch_failed", error=str(e))
         return None, None
 
 
@@ -110,6 +98,10 @@ def compute_all_indicators(
     Returns:
         pd.DataFrame: DataFrame où chaque colonne est un indicateur technique.
     """
+    t0 = time.time()
+    _log = logger  # pas de ticker ici, mais on pourrait binder si appelé depuis fetch
+    _log.info("compute_indicators_start", n_rows=int(len(prices)))
+
     # Initialisation du DataFrame de travail
     df = pd.DataFrame({"price": prices, "vol": vols})
 
@@ -162,11 +154,11 @@ def compute_all_indicators(
     try:
         returns_pct = df["price"].pct_change().dropna() * 100
         am = arch_model(returns_pct, vol="Garch", p=1, q=1)
-        res = am.fit(disp="off")  # disp="off" supprime la sortie console
-        # On remplit la volatilité GARCH dans le DataFrame
+        res = am.fit(disp="off")
         df["garch_vol"] = res.conditional_volatility.reindex(df.index).ffill()
+        _log.info("garch_ok")
     except Exception as e:
-        logger.warning("garch_failed", error=str(e))
+        _log.warning("garch_failed", error=str(e))
         df["garch_vol"] = 0.0
     # 3. Statistiques de chandeliers (candlesticks)
     # ---------------------------------------------
@@ -192,7 +184,10 @@ def compute_all_indicators(
     df["candle_body_ratio"] = df["body"] / den.replace(0, np.nan)
 
     # Remplacer les NaN par 0 pour avoir un DataFrame complet
-    return df.fillna(0)
+    out = df.fillna(0)
+    elapsed = time.time() - t0
+    _log.info("compute_indicators_done", n_features=int(out.shape[1]), elapsed_sec=round(elapsed, 3))
+    return out
 
 
 def compute_labels(
@@ -209,6 +204,10 @@ def compute_labels(
     Returns:
         np.ndarray: vecteur d'entiers (0/1) de la même longueur que prices.
     """
+    t0 = time.time()
+    _log = logger.bind(ticker=ticker)
+    _log.info("compute_labels_start", n_rows=int(len(prices)))
+
     # Conversion des dates de l'index en datetime
     dates = pd.to_datetime(prices.index)
     peaks: list[tuple[int, int]] = []  # liste de couples (index_pic1, index_pic2)
@@ -235,6 +234,8 @@ def compute_labels(
         center = i2
         if LOOKBACK <= center < len(prices) - LOOKAHEAD:
             labels[center] = 1
+    elapsed = time.time() - t0
+    _log.info("compute_labels_done", n_labels=int(labels.sum()), elapsed_sec=round(elapsed, 3))
     return labels
 
 

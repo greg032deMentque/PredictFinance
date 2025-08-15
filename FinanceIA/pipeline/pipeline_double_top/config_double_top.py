@@ -22,7 +22,7 @@ from pathlib import Path
 # BASE_DIR : répertoire racine du projet (un niveau au-dessus)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # MODEL_DIR : répertoire où seront sauvegardés les modèles et scalers
-MODEL_DIR = Path("/var/www/predictFinance/ModelsIA")
+MODEL_DIR = Path("../models")
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
 # Création du répertoire s'il n'existe pas

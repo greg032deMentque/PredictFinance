@@ -40,6 +40,11 @@ from .config_double_top import TOTAL_WINDOW, LOOKBACK
 # Import des fonctions utilitaires pour récupérer données et générer labels
 from .pipeline_utils import fetch_data, compute_all_indicators, compute_labels
 
+import time
+import structlog
+
+LOGGER = structlog.get_logger(__name__)  # logger structuré pour ce module
+
 
 def build_test_set(
     tickers: list[str],
@@ -200,36 +205,60 @@ def evaluate_model(model, X_test: np.ndarray, y_test: np.ndarray) -> None:
       - rapport de classification et scores (ROC AUC, précision, rappel, F1)
       - tracé des courbes ROC, PR et diagramme de fiabilité
       - simulation financière et calcul de Sharpe & drawdown
-
-    Args:
-        model: modèle entraîné (sklearn-like API)
-        X_test: features de test
-        y_test: labels de test
     """
-    # Prédiction des classes (0/1)
-    y_pred = model.predict(X_test)
-    # Prédiction des probabilités (colonne de la classe positive)
-    y_proba = model.predict_proba(X_test)[:, 1]
+    t0 = time.time()
+    try:
+        # Journaliser les dimensions des jeux de test pour aider au debug
+        LOGGER.info("eval_start", n_samples=int(X_test.shape[0]), n_features=int(X_test.shape[1]))
 
-    # Affichage du rapport de classification détaillé
-    print("\n=== Classification report ===")
-    print(classification_report(y_test, y_pred))
-    # Calcul et affichage des scores globaux
-    print(f"ROC AUC   : {roc_auc_score(y_test, y_proba):.4f}")
-    print(f"Precision : {precision_score(y_test, y_pred):.4f}")
-    print(f"Recall    : {recall_score(y_test, y_pred):.4f}")
-    print(f"F1-score  : {f1_score(y_test, y_pred):.4f}\n")
+        # Prédiction des classes (0/1)
+        y_pred = model.predict(X_test)
+        # Prédiction des probabilités (colonne de la classe positive)
+        y_proba = model.predict_proba(X_test)[:, 1]
 
-    # Tracer les courbes ROC et PR
-    plot_curves(y_test, y_proba)
+        # Calcul des scores globaux
+        roc = float(roc_auc_score(y_test, y_proba))
+        prec = float(precision_score(y_test, y_pred))
+        rec = float(recall_score(y_test, y_pred))
+        f1 = float(f1_score(y_test, y_pred))
 
-    # Afficher le reliability diagram
-    reliability_diagram(y_test, y_proba)
+        # On loggue un résumé compact (machine-friendly + lisible)
+        LOGGER.info(
+            "metrics_summary",
+            roc_auc=roc,
+            precision=prec,
+            recall=rec,
+            f1=f1,
+        )
 
-    # Simulation P&L et métriques financières
-    # NOTE: ici, il faut idéalement passer aussi une série de prix réelle
-    # on utilise X_test pour extraire une feature "prix" comme placeholder
-    prices_test = X_test[:, -TOTAL_WINDOW]  # suppose que la dernière feature est le prix
-    pnl = simulate_pnl(prices_test, y_proba)
-    print(f"Sharpe ratio  : {sharpe_ratio(pnl):.2f}")
-    print(f"Max drawdown  : {max_drawdown(pnl):.2%}")
+        # On garde le rapport détaillé pour inspection (peut être volumineux)
+        rep = classification_report(y_test, y_pred)
+        LOGGER.info("classification_report", report=rep)
+
+        # Tracer les courbes ROC et PR
+        LOGGER.info("plotting_curves_start")
+        plot_curves(y_test, y_proba)
+        LOGGER.info("plotting_curves_done")
+
+        # Afficher le reliability diagram
+        LOGGER.info("reliability_diagram_start")
+        reliability_diagram(y_test, y_proba)
+        LOGGER.info("reliability_diagram_done")
+
+        # Simulation P&L et métriques financières
+        # NOTE: ici, il faut idéalement passer aussi une série de prix réelle
+        # on utilise X_test pour extraire une feature "prix" comme placeholder
+        prices_test = X_test[:, -TOTAL_WINDOW]  # suppose que la dernière feature est le prix
+        pnl = simulate_pnl(prices_test, y_proba)
+        sr = float(sharpe_ratio(pnl))
+        mdd = float(max_drawdown(pnl))
+
+        LOGGER.info("finance_metrics", sharpe_ratio=sr, max_drawdown=mdd)
+
+        elapsed = time.time() - t0
+        LOGGER.info("eval_done", elapsed_sec=round(elapsed, 3))
+
+    except Exception as e:
+        # .exception() dans structlog ajoute la stack automatiquement via notre config
+        LOGGER.exception("eval_failed", error=str(e))
+        raise

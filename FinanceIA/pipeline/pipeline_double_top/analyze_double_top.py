@@ -20,17 +20,16 @@ from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
-import structlog
 
 # -----------------------------------------------------------------------------
 # Logging (structlog)
 # -----------------------------------------------------------------------------
-try:
-    from logging_config import setup_logging
-except ImportError:
-    setup_logging = None
+import logging
+import structlog
+from logging_config import setup_logging
 
-LOGGER = structlog.get_logger(__name__)
+setup_logging(logging.INFO)  # IMPORTANT: appeler avant de créer le logger
+LOGGER = structlog.get_logger(__name__)  # logger structlog standard
 
 # -----------------------------------------------------------------------------
 # Imports projet (relatifs, car lancé via -m)
@@ -77,13 +76,6 @@ CNN_PERSIST_FILE = str(
 
 # Réduire le bruit TensorFlow si présent
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
-
-# -----------------------------------------------------------------------------
-# Logging setup
-# -----------------------------------------------------------------------------
-LOG_DIR = os.path.join(MODEL_DIR, "logs") if MODEL_DIR else "logs"
-if setup_logging:
-    setup_logging(log_dir=LOG_DIR)
 
 # -----------------------------------------------------------------------------
 # Utils env / versions
