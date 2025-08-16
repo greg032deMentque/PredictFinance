@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/gregd/Documents/greg/Projet%20perso/GitHub-projects/PredictFinance/FinanceIA/pipeline/pipeline_double_top/mlruns/0/682c368d0c744f6caf91a23c70f85327/artifacts
+end_time: 1755295459239
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 682c368d0c744f6caf91a23c70f85327
+run_name: defiant-panda-258
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1755295273330
+status: 3
+tags: []
+user_id: gregd

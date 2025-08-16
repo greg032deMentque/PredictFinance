@@ -1,0 +1,10 @@
+artifact_location: file:///C:/Users/gregd/Documents/greg/Projet%20perso/GitHub-projects/PredictFinance/FinanceIA/pipeline/pipeline_double_top/mlruns/0/models/m-cfd085e3af954b15865e84d60544d662/artifacts
+creation_timestamp: 1755297033721
+experiment_id: '0'
+last_updated_timestamp: 1755297042302
+model_id: m-cfd085e3af954b15865e84d60544d662
+model_type: null
+name: model
+source_run_id: ea2adb3415cf4b58b5f2de274d1649bb
+status: 2
+status_message: null

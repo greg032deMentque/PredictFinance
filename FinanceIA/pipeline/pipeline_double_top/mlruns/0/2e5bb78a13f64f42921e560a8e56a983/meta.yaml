@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/gregd/Documents/greg/Projet%20perso/GitHub-projects/PredictFinance/FinanceIA/pipeline/pipeline_double_top/mlruns/0/2e5bb78a13f64f42921e560a8e56a983/artifacts
+end_time: 1755296018025
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 2e5bb78a13f64f42921e560a8e56a983
+run_name: illustrious-cat-321
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1755295992868
+status: 3
+tags: []
+user_id: gregd

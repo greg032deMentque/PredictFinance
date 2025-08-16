@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/gregd/Documents/greg/Projet%20perso/GitHub-projects/PredictFinance/FinanceIA/pipeline/pipeline_double_top/mlruns/0/712e25159fa24b528072e1999b0b13af/artifacts
+end_time: 1755295487449
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 712e25159fa24b528072e1999b0b13af
+run_name: charming-shark-456
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1755295467403
+status: 3
+tags: []
+user_id: gregd

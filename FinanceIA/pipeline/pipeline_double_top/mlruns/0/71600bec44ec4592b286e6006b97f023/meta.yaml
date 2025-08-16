@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/gregd/Documents/greg/Projet%20perso/GitHub-projects/PredictFinance/FinanceIA/pipeline/pipeline_double_top/mlruns/0/71600bec44ec4592b286e6006b97f023/artifacts
+end_time: 1755296637853
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 71600bec44ec4592b286e6006b97f023
+run_name: blushing-chimp-991
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1755296408337
+status: 3
+tags: []
+user_id: gregd

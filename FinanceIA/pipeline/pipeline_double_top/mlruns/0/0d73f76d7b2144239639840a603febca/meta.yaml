@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/gregd/Documents/greg/Projet%20perso/GitHub-projects/PredictFinance/FinanceIA/pipeline/pipeline_double_top/mlruns/0/0d73f76d7b2144239639840a603febca/artifacts
+end_time: 1755295984357
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 0d73f76d7b2144239639840a603febca
+run_name: bold-fawn-223
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1755295778715
+status: 3
+tags: []
+user_id: gregd

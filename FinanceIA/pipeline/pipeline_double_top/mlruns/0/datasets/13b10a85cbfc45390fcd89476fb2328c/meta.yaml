@@ -1,0 +1,10 @@
+digest: 074f9aa5
+name: dataset
+profile: '{"features_shape": [223295, 984], "features_size": 219722280, "features_nbytes":
+  1757778240}'
+schema: '{"mlflow_tensorspec": {"features": "[{\"type\": \"tensor\", \"tensor-spec\":
+  {\"dtype\": \"float64\", \"shape\": [-1, 984]}}]", "targets": null}}'
+source: '{"tags": {"mlflow.user": "gregd", "mlflow.source.name": "C:\\Users\\gregd\\Documents\\greg\\Projet
+  perso\\GitHub-projects\\PredictFinance\\FinanceIA\\pipeline\\pipeline_double_top\\analyze_double_top.py",
+  "mlflow.source.type": "LOCAL", "mlflow.source.git.commit": "ff3c1ebb78ebc4cf9bd521317ae9f6660830bb4e"}}'
+source_type: code
