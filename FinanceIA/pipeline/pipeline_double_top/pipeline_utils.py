@@ -28,7 +28,7 @@ from scipy.signal import find_peaks
 from arch import arch_model
 
 # Import des constantes de configuration pour le double top
-from .config_double_top import (
+from pipeline.pipeline_double_top.config_double_top import (
     LOOKBACK,       # nombre de jours de recul pour positionner un sommet
     LOOKBETWEEN,    # nombre de jours max entre deux sommets
     LOOKAHEAD,      # nombre de jours d'avance pour la fenêtre de labelisation
@@ -197,48 +197,83 @@ def compute_labels(
     ticker: str
 ) -> np.ndarray:
     """
-    Génère des labels binaires (0 ou 1) indiquant le centre d'un pattern "double top".
+    Génère un vecteur de labels 0/1 aligné aux dates de `prices`.
+    Un '1' est posé au niveau du deuxième sommet (i2) d'un double top validé.
 
-    Args:
-        prices (pd.Series): Série des prix de clôture.
-        ticker (str): Symbole boursier pour récupérer les pics manuels.
-
-    Returns:
-        np.ndarray: vecteur d'entiers (0/1) de la même longueur que prices.
+    Règles :
+      - pics automatiques (find_peaks) + pics manuels (MANUAL_PEAKS)
+      - filtrage des paires (i1, i2) avec is_double_top(...)
+      - label = 1 à i2 (sinon 0)
     """
     t0 = time.time()
     _log = logger.bind(ticker=ticker)
     _log.info("compute_labels_start", n_rows=int(len(prices)))
 
-    # Conversion des dates de l'index en datetime
-    dates = pd.to_datetime(prices.index)
-    peaks: list[tuple[int, int]] = []  # liste de couples (index_pic1, index_pic2)
+    # Sécurité: on veut une Series avec index de dates
+    ps = prices.copy()
+    ps.index = pd.to_datetime(ps.index)
 
-    # Détection automatique des pics si activée
-    if ENABLE_AUTO_PEAKS:
-        auto_idx, _ = find_peaks(prices.values, **AUTO_PEAK_PARAMS)
-        # On cherche toutes les paires de pics dans la fenêtre LOOKBETWEEN
+    labels = np.zeros(len(ps), dtype=int)
+
+    # 1) pics automatiques
+    auto_idx: list[int] = []
+    try:
+        # NOTE: find_peaks travaille sur un array numpy; on applique les params config
+        from pipeline.pipeline_double_top.config_double_top import ENABLE_AUTO_PEAKS, AUTO_PEAK_PARAMS
+        if ENABLE_AUTO_PEAKS:
+            peaks, _ = find_peaks(ps.values, **AUTO_PEAK_PARAMS)
+            auto_idx = list(map(int, peaks))
+    except Exception as e:
+        _log.warning("auto_peaks_failed", error=str(e))
+        auto_idx = []
+
+    # 2) pics manuels
+    manual_pairs_idx: list[tuple[int, int]] = []
+    try:
+        from pipeline.pipeline_double_top.config_double_top import MANUAL_PEAKS
+        for d1, d2 in MANUAL_PEAKS.get(ticker, []):
+            try:
+                i1 = ps.index.get_loc(pd.to_datetime(d1))
+                i2 = ps.index.get_loc(pd.to_datetime(d2))
+                manual_pairs_idx.append((int(i1), int(i2)))
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # 3) construire des paires (i1, i2) à partir des pics auto (+ vérifier l'écart max LOOKBETWEEN)
+    auto_pairs_idx: list[tuple[int, int]] = []
+    try:
+        from pipeline.pipeline_double_top.config_double_top import LOOKBETWEEN
         for i1 in auto_idx:
             for i2 in auto_idx:
-                if 0 < (i2 - i1) <= LOOKBETWEEN:
-                    peaks.append((i1, i2))
-    # Ajout des pics manuels définis dans la configuration
-    for d1, d2 in MANUAL_PEAKS.get(ticker, []):
-        idx1 = dates.get_loc(pd.to_datetime(d1))
-        idx2 = dates.get_loc(pd.to_datetime(d2))
-        if 0 < (idx2 - idx1) <= LOOKBETWEEN:
-            peaks.append((idx1, idx2))
+                if 0 < (i2 - i1) <= int(LOOKBETWEEN):
+                    auto_pairs_idx.append((i1, i2))
+    except Exception:
+        # fallback si pas de LOOKBETWEEN
+        for i1 in auto_idx:
+            for i2 in auto_idx:
+                if i2 > i1:
+                    auto_pairs_idx.append((i1, i2))
 
-    # Initialisation des labels à 0
-    labels = np.zeros(len(prices), dtype=int)
-    # On marque le centre du double top (deuxième pic) comme 1 si suffisamment éloigné
-    for i1, i2 in peaks:
-        center = i2
-        if LOOKBACK <= center < len(prices) - LOOKAHEAD:
-            labels[center] = 1
+    # 4) concaténer auto + manuels (les manuels passeront aussi par le filtre)
+    all_pairs = auto_pairs_idx + manual_pairs_idx
+
+    # 5) filtrer avec nos critères chartistes/tempo
+    valid_pairs: list[tuple[int, int]] = []
+    for (i1, i2) in all_pairs:
+        if is_double_top(ps, i1, i2):
+            valid_pairs.append((i1, i2))
+
+    # 6) labelliser au deuxième sommet i2
+    for (_, i2) in valid_pairs:
+        if 0 <= i2 < len(labels):
+            labels[i2] = 1
+
     elapsed = time.time() - t0
-    _log.info("compute_labels_done", n_labels=int(labels.sum()), elapsed_sec=round(elapsed, 3))
+    _log.info("compute_labels_done", n_pos=int(labels.sum()), elapsed_sec=round(elapsed, 3))
     return labels
+
 
 
 def detect_peaks(
@@ -255,3 +290,89 @@ def detect_peaks(
     """
     idx, _ = find_peaks(prices.values, **AUTO_PEAK_PARAMS)
     return prices.index[idx]
+
+
+def is_double_top(
+    prices: pd.Series,
+    i1: int,
+    i2: int,
+    *,
+    tolerance_pct: float = 0.02,       # tolérance d’égalité des deux sommets (±2%)
+    min_valley_drop_pct: float = 0.04, # profondeur min. du creux (4% par défaut)
+    min_separation: int = 3,           # jours min entre les deux sommets
+    max_separation: int | None = None, # jours max (par défaut: LOOKBETWEEN)
+    min_up_pct: float = 0.05,          # tendance haussière préalable min. (5% sur LOOKBACK)
+    confirm_break: bool = False,       # demander la confirmation de cassure ?
+    confirm_lookahead: int = 5         # nb de jours pour confirmer la cassure du creux
+) -> bool:
+    """
+    Valide si (i1, i2) forment un pattern 'double top' sur la série de PRIX.
+
+    Critères :
+      - sommets proches (tolérance en %) ;
+      - creux intermédiaire marqué (drop min. en %) ;
+      - séparation temporelle entre sommets (min/max jours) ;
+      - tendance haussière préalable (sur LOOKBACK jours) ;
+      - (optionnel) cassure de la 'neckline' dans les X jours après i2.
+    """
+    # Sécurité : bornes d’indices
+    n = len(prices)
+    if not (0 <= i1 < i2 < n):
+        return False
+
+    # Paramètre par défaut: max_separation = LOOKBETWEEN si non fourni
+    if max_separation is None:
+        try:
+            from pipeline.pipeline_double_top.config_double_top import LOOKBETWEEN
+            max_separation = int(LOOKBETWEEN)
+        except Exception:
+            max_separation = 20  # fallback
+
+    # 1) Condition temporelle: min/max jours entre les sommets
+    sep = i2 - i1
+    if sep < int(min_separation) or sep > int(max_separation):
+        return False
+
+    # 2) Valeurs des sommets
+    p1 = float(prices.iloc[i1])
+    p2 = float(prices.iloc[i2])
+    if p1 <= 0 or p2 <= 0:
+        return False
+
+    # 3) Sommets "proches" en prix (tolérance relative)
+    top_ref = max(p1, p2)
+    if abs(p1 - p2) / top_ref > float(tolerance_pct):
+        return False
+
+    # 4) Creux (neckline) entre i1 et i2
+    #    On prend le minimum de prix sur l’intervalle (i1 .. i2)
+    valley = float(prices.iloc[i1:i2+1].min())
+    # profondeur relative du creux vs le sommet le plus haut
+    valley_drop = (top_ref - valley) / top_ref if top_ref > 0 else 0.0
+    if valley_drop < float(min_valley_drop_pct):
+        return False
+
+    # 5) Tendance haussière préalable sur LOOKBACK jours avant i1
+    try:
+        from pipeline.pipeline_double_top.config_double_top import LOOKBACK
+        lb = int(LOOKBACK)
+    except Exception:
+        lb = 10  # fallback
+    i0 = max(0, i1 - lb)
+    pre = float(prices.iloc[i0])
+    if pre <= 0:  # sécurité
+        return False
+    up_move = (p1 / pre) - 1.0
+    if up_move < float(min_up_pct):
+        return False
+
+    # 6) (Optionnel) Confirmation: cassure sous le creux dans les N jours après i2
+    if confirm_break:
+        j1 = i2 + 1
+        j2 = min(n, i2 + 1 + int(confirm_lookahead))
+        # on considère qu’une cassure stricte sous le creux confirme (peut être adouci)
+        after = prices.iloc[j1:j2]
+        if after.empty or not (after < valley).any():
+            return False
+
+    return True
