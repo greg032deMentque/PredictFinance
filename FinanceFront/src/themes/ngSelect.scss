@@ -1,0 +1,42 @@
+.ng-select .ng-select-container {
+    border-radius: 0 !important;
+    overflow: auto !important;
+
+
+}
+
+.ng-select .ng-select-container {
+
+    max-height: 100px !important;
+}
+
+
+.ng-select {
+    &.ng-select-focused {
+        &:not(.ng-select-opened)>.ng-select-container {
+            border-color: transparent !important;
+            box-shadow: none !important;
+            max-height: 100px !important;
+
+        }
+    }
+}
+
+
+.ng-dropdown-panel .ng-dropdown-panel-items {
+
+    max-height: 180px !important;
+    overflow: auto !important;
+}
+
+
+.ng-select.ng-select-opened.ng-select-bottom > .ng-select-container {
+
+    max-height: 100px !important;
+    overflow: auto !important;
+}
+
+.ng-clear-wrapper {
+    display: none;
+
+}

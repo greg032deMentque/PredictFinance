@@ -1,4 +1,4 @@
-﻿using BackPredictFinance.Datas.Models;
+using BackPredictFinance.Datas.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -108,3 +108,4 @@ namespace BackPredictFinance.Services
         }
     }
 }
+

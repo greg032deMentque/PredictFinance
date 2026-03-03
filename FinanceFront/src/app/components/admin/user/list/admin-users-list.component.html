@@ -1,0 +1,74 @@
+<section class="d-flex flex-column gap-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <p class="text-uppercase text-muted mb-1">Administration</p>
+      <h1 class="h4 mb-0">Liste des utilisateurs</h1>
+    </div>
+
+    <a class="btn btn-primary" [routerLink]="['/', adminPaths.UserAdd]">
+      <i class="bi bi-plus-circle me-2"></i>Ajouter un utilisateur
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      @if (loading) {
+        <div class="p-4 text-center text-muted">
+          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          Chargement des utilisateurs...
+        </div>
+      }
+
+      <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Nom</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Statut</th>
+              <th>Cree le</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users; track user.id) {
+              <tr>
+                <td>{{ user.firstName }} {{ user.lastName }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.role }}</td>
+                <td>
+                  <span class="badge" [class.text-bg-success]="user.isActive" [class.text-bg-secondary]="!user.isActive">
+                    {{ user.isActive ? 'Actif' : 'Inactif' }}
+                  </span>
+                </td>
+                <td>{{ user.createdAt | date: 'dd/MM/yyyy' }}</td>
+                <td class="text-end">
+                  <div class="d-flex justify-content-end gap-2">
+                    <a class="btn btn-sm btn-outline-primary" [routerLink]="['/', adminPaths.UserEdit(user.id)]">
+                      Modifier
+                    </a>
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      type="button"
+                      (click)="deleteUser(user)"
+                      [disabled]="deletingUserId === user.id"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+
+            @if (!loading && users.length === 0) {
+              <tr>
+                <td class="text-center text-muted py-4" colspan="6">Aucun utilisateur trouve.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

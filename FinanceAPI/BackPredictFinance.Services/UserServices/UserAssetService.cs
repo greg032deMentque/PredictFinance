@@ -1,4 +1,4 @@
-﻿using BackPredictFinance.Datas.Models;
+using BackPredictFinance.Datas.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -68,3 +68,4 @@ namespace BackPredictFinance.Services.UserServices
         }
     }
 }
+

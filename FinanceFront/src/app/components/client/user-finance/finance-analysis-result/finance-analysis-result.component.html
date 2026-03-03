@@ -1,0 +1,43 @@
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <h2 class="h6 text-uppercase text-muted mb-3">3. Resultat IA</h2>
+
+    @if (loading) {
+      <div class="text-muted">Analyse en cours...</div>
+    } @else if (result) {
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <div class="h5 mb-1">{{ result.symbol }} - {{ result.companyName }}</div>
+          <div class="text-muted">Pattern detecte: {{ result.pattern }}</div>
+        </div>
+        <span class="badge" [class]="recommendationClass">{{ result.recommendation }}</span>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3">
+          <small class="text-muted d-block">Confiance</small>
+          <strong>{{ result.confidence | percent: '1.0-0' }}</strong>
+        </div>
+        <div class="col-6 col-lg-3">
+          <small class="text-muted d-block">Risque</small>
+          <strong>{{ result.riskLevel }}</strong>
+        </div>
+        <div class="col-6 col-lg-3">
+          <small class="text-muted d-block">Horizon</small>
+          <strong>{{ result.horizonDays }} jours</strong>
+        </div>
+        <div class="col-6 col-lg-3">
+          <small class="text-muted d-block">Date prediction</small>
+          <strong>{{ result.predictedAt | date: 'dd/MM HH:mm' }}</strong>
+        </div>
+      </div>
+
+      <div class="reason-box">
+        <div class="fw-semibold mb-1">Action proposee</div>
+        <p class="mb-0">{{ result.reason }}</p>
+      </div>
+    } @else {
+      <div class="text-muted">Aucune analyse lancee pour le moment.</div>
+    }
+  </div>
+</div>

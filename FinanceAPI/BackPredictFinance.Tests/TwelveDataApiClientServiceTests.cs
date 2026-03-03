@@ -1,6 +1,6 @@
 //using BackPredictFinance.Common.enums;
 //using BackPredictFinance.Datas.Context;
-//using BackPredictFinance.Datas.Models;
+//using BackPredictFinance.Datas.Entities;
 //using BackPredictFinance.Services.TwelveDataServices;
 //using Microsoft.EntityFrameworkCore;
 //using Microsoft.Extensions.Configuration;

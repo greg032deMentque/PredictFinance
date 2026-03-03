@@ -1,0 +1,96 @@
+<section class="d-flex flex-column gap-4">
+  <div class="hero-card p-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-start">
+      <div>
+        <p class="text-uppercase text-muted mb-1">Client</p>
+        <h1 class="h4 mb-2">Vue portefeuille et IA</h1>
+        <p class="mb-0 text-body-secondary">
+          Suivez vos positions, vos encours et lancez rapidement vos analyses.
+        </p>
+      </div>
+      <a class="btn btn-primary" [routerLink]="['/', userPaths.Finance]">Nouvelle analyse</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">Valeur portefeuille</p>
+          <div class="h3 mb-0">{{ loading ? '...' : (overview.totalPortfolioValue | currency: 'USD' : 'symbol' : '1.0-0') }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">Capital investi</p>
+          <div class="h3 mb-0">{{ loading ? '...' : (overview.totalInvested | currency: 'USD' : 'symbol' : '1.0-0') }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">Encours</p>
+          <div class="h3 mb-0">{{ loading ? '...' : (overview.totalOutstanding | currency: 'USD' : 'symbol' : '1.0-0') }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">P/L du jour</p>
+          <div class="h3 mb-0" [class]="dayProfitLossClass">
+            {{ loading ? '...' : (overview.dayProfitLoss | currency: 'USD' : 'symbol' : '1.0-0') }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 text-uppercase text-muted mb-0">Dernieres analyses</h2>
+        <a class="btn btn-sm btn-outline-primary" [routerLink]="['/', userPaths.Finance]">Voir tout</a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Valeur</th>
+              <th>Pattern</th>
+              <th>Confiance</th>
+              <th>Action</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (analysis of recentAnalyses; track analysis.id) {
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ analysis.symbol }}</div>
+                  <small class="text-muted">{{ analysis.companyName }}</small>
+                </td>
+                <td>{{ analysis.pattern }}</td>
+                <td>{{ analysis.confidence | percent: '1.0-0' }}</td>
+                <td>
+                  <span class="badge" [class]="getBadgeClass(analysis.recommendation)">
+                    {{ analysis.recommendation }}
+                  </span>
+                </td>
+                <td>{{ analysis.predictedAt | date: 'dd/MM HH:mm' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">Aucune analyse disponible.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

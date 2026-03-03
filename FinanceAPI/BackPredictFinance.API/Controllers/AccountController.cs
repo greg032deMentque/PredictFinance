@@ -1,6 +1,5 @@
-using BackPredictFinance.Services;
-using BackPredictFinance.Services.UserServices;
-using BackPredictFinance.ViewModels.CommonViewModels;
+using BackPredictFinance.Services.AuthServices;
+using BackPredictFinance.ViewModels.UserViewModels.AuthViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -12,43 +11,40 @@ namespace BackPredictFinance.API.Controllers
     [ApiController]
     public class AccountController : ControllerBase
     {
-        private readonly AccountService _accountService;
-        private readonly UserService _userService;
+        private readonly IAccountService _accountService;
         private readonly IMemoryCache _cache;
 
-        public AccountController(
-          AccountService accountService, UserService userService, IMemoryCache cache)
+        public AccountController(IAccountService accountService, IMemoryCache cache)
         {
             _accountService = accountService;
-            _userService = userService;
             _cache = cache;
-
         }
 
         [AllowAnonymous]
         [HttpGet("ForgotPassword")]
-        public async Task<IActionResult> ForgotPassword(string email)
+        public async Task<IActionResult> ForgotPassword([FromQuery] string email)
         {
-           await _accountService.ForgotPassword(email);
-
+            await _accountService.ForgotPassword(email);
             return Ok();
-
         }
 
         [AllowAnonymous]
         [HttpPost("ResetPassword")]
-        public async Task<IActionResult> ResetPassword(ResetPasswordPayloadViewModel model)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestViewModel model)
         {
-            await _accountService.ResetPassword(model);
+            var result = await _accountService.ResetPassword(model);
+            if (!result.Succeeded)
+            {
+                return BadRequest(result.Errors.Select(x => x.Description));
+            }
 
             return Ok();
         }
 
         [HttpPost("ChangePassword")]
-        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel resetPassword)
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordViewModel model)
         {
-            await _accountService.ChangePassword(resetPassword);
-
+            await _accountService.ChangePassword(model);
             return Ok();
         }
 
@@ -57,39 +53,46 @@ namespace BackPredictFinance.API.Controllers
         public async Task<IActionResult> Login([FromBody] LoginViewModel model)
         {
             var result = await _accountService.Login(model);
-
-            return Ok(result);
+            return result is null ? Unauthorized() : Ok(result);
         }
 
+        [AllowAnonymous]
+        [HttpPost("LoginAdmin")]
+        public async Task<IActionResult> LoginAdmin([FromBody] LoginViewModel model)
+        {
+            var result = await _accountService.LoginAdmin(model);
+            return result is null ? Unauthorized() : Ok(result);
+        }
 
+        [AllowAnonymous]
+        [HttpPost("Refresh")]
+        public async Task<IActionResult> Refresh([FromBody] TokenViewModel model)
+        {
+            var result = await _accountService.RefreshTokenAsync(model);
+            return result is null ? Unauthorized() : Ok(result);
+        }
+
+        [AllowAnonymous]
         [HttpPost("Logout")]
         public async Task<IActionResult> Logout()
         {
             await _accountService.Logout();
-
             return Ok();
         }
 
         [Authorize(Roles = "Admin,SuperAdmin")]
         [HttpPost("UnlockUser/{userId}")]
-        public async Task<IActionResult> UnlockUser(string userId)
+        public async Task<IActionResult> UnlockUser([FromRoute] string userId)
         {
             await _accountService.UnlockUser(userId);
             return Ok();
         }
 
-        /// <summary>
-        /// Si l'IP a été bloquée
-        /// </summary>
-        /// <param name="ipAddress"></param>
-        /// <returns></returns>
         [HttpDelete("UnblockIp/{ipAddress}")]
-        public IActionResult UnblockIP(string ipAddress)
+        public IActionResult UnblockIp([FromRoute] string ipAddress)
         {
-            var key = $"RateLimit_{ipAddress}";
-            _cache.Remove(key);
-            return Ok($"L'IP {ipAddress} a été débloquée.");
+            _cache.Remove($"RateLimit_{ipAddress}");
+            return Ok($"L'IP {ipAddress} a ete debloquee.");
         }
     }
-
 }

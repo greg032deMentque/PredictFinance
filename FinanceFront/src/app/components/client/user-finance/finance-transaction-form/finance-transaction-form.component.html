@@ -1,0 +1,48 @@
+<div class="card border-0 shadow-sm h-100">
+  <div class="card-body">
+    <h2 class="h6 text-uppercase text-muted mb-3">Saisir une transaction</h2>
+
+    <div class="alert alert-warning py-2" *ngIf="selectedSymbol.length === 0">
+      Selectionne d'abord une valeur dans la watchlist ou la recherche.
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="d-flex flex-column gap-2">
+      <div>
+        <label class="form-label">Valeur</label>
+        <input class="form-control" [value]="selectedSymbol || '-'" readonly />
+      </div>
+
+      <div>
+        <label class="form-label">Type</label>
+        <select class="form-select" formControlName="transactionType">
+          <option value="Buy">Achat</option>
+          <option value="Sell">Vente</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label">Quantite</label>
+        <input class="form-control" type="number" step="0.0001" formControlName="quantity" />
+      </div>
+
+      <div>
+        <label class="form-label">Prix unitaire</label>
+        <input class="form-control" type="number" step="0.0001" formControlName="unitPrice" />
+      </div>
+
+      <div>
+        <label class="form-label">Frais</label>
+        <input class="form-control" type="number" step="0.01" formControlName="fees" />
+      </div>
+
+      <div>
+        <label class="form-label">Date/heure</label>
+        <input class="form-control" type="datetime-local" formControlName="timestampUtc" />
+      </div>
+
+      <button class="btn btn-primary mt-2" [disabled]="submitting" type="submit">
+        {{ submitting ? 'Enregistrement...' : 'Enregistrer' }}
+      </button>
+    </form>
+  </div>
+</div>

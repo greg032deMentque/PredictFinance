@@ -1,0 +1,70 @@
+<div class="d-flex flex-column min-vh-100">
+  <header class="navbar navbar-light bg-light shadow-sm">
+    <div class="container-fluid d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <img src="assets/money.svg" alt="Logo app" style="height: 60px; cursor: pointer" />
+      </div>
+
+      <span class="fw-bold text-vert text-center" style="font-size: 25px; cursor: pointer">
+        {{ title }}
+      </span>
+
+      <button
+        class="btn btn-outline-danger d-inline-flex align-items-center gap-2 px-3 py-2 text-nowrap"
+        type="button"
+        (click)="logout()"
+      >
+        <i class="bi bi-box-arrow-right"></i>
+        <span>Deconnexion</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="container-fluid flex-fill" style="height: calc(100vh - 60px);">
+    <div class="row h-100">
+      <aside class="col-lg-3 col-xl-2 d-none d-lg-block border-end p-0">
+        <div class="h-100 p-3">
+          <div class="d-flex flex-column gap-4">
+            @for (block of menuBlocks; track block.label) {
+              <section>
+                <div class="fw-bold fs-5 mb-2">
+                  {{ block.label }}
+                </div>
+
+                <div class="list-group list-group-flush">
+                  @for (link of block.links; track link.path) {
+                    <a
+                      class="list-group-item list-group-item-action d-flex align-items-center gap-2 border-0 px-2 py-2 rounded-2"
+                      [routerLink]="'/' + link.path"
+                      routerLinkActive="active"
+                      [routerLinkActiveOptions]="{ exact: true }"
+                    >
+                      <span class="me-1">-</span>
+
+                      @if (link.icon) {
+                        <i class="bi flex-shrink-0" [class]="link.icon"></i>
+                      }
+
+                      <span class="flex-grow-1 text-break">
+                        {{ link.label }}
+                      </span>
+                    </a>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+        </div>
+      </aside>
+
+      <main
+        class="col-12 col-lg-9 col-xl-10 py-3 pb-5 overflow-auto"
+        style="overflow-x: hidden !important"
+      >
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  </div>
+
+  <footer class="footer text-center py-2 shadow-sm">Moi 2026</footer>
+</div>

@@ -1,12 +1,9 @@
-﻿using BackPredictFinance.Datas.Models;
+using BackPredictFinance.Datas.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Security.Claims;
-using System.Text.Json;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace BackPredictFinance.Datas.Context
 {
@@ -38,32 +35,22 @@ namespace BackPredictFinance.Datas.Context
 
         // Audit & Analytics
         #region Audit & Analytics
-        public DbSet<AuditTrail> AuditTrails { get; set; } = null!;
         public DbSet<Analytic> Analytics { get; set; }
         #endregion
 
         #region User Data
         public DbSet<IdentityUserRole<string>> UserRoles { get; set; }
         public DbSet<IdentityRole> Roles { get; set; }
-        public DbSet<Document> Documents { get; set; }
         public DbSet<UserAsset> UserAssets { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         #endregion
 
         #region Finance
         public DbSet<Asset> Assets { get; set; }
-        public DbSet<AssetTransaction> AssetTransactions { get; set; }
-        public DbSet<Currency> Currencies { get; set; }
-        public DbSet<MarketPrice> MarketPrices { get; set; }
-        public DbSet<Portfolio> Portfolios { get; set; }
-        public DbSet<PriceAlert> PriceAlerts { get; set; }
-
+        public DbSet<Recommendation> Recommendations { get; set; }
         public DbSet<PriceHistory> PriceHistories { get; set; }
-        public DbSet<IAModelVersion> IAModelVersions { get; set; }
-
-        
-
-
+        public DbSet<AssetTransaction> AssetTransactions { get; set; }
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -178,3 +165,4 @@ namespace BackPredictFinance.Datas.Context
 
     }
 }
+

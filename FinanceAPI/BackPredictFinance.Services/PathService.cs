@@ -1,57 +1,63 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 
 namespace BackPredictFinance.Services
 {
-    public class PathService
+    public interface IPathService
     {
-        private ILogService _logger;
+        string GetFilePath(string fileName);
+        string GetMiniPicturePath(string fileName);
+        string GetFolderPath();
+        string GetPublicUrl(string docId, string originalFileName);
+    }
 
-        /// <summary>
-        /// path for save the <see cref="Multimedia"/>
-        /// </summary>
-        public string _mediaSavePath;
-        public string _logoSavePath;
+    public class PathService : IPathService
+    {
+        private readonly string _uploadsPath;
+        private readonly IHttpContextAccessor _http;
 
-        IConfiguration _configuration;
-
-        public PathService(ILogService logger, IConfiguration configuration)
+        public PathService(IWebHostEnvironment env, IHttpContextAccessor http)
         {
-            _logger = logger;
-            _configuration = configuration;
-            _mediaSavePath = Path.GetFullPath(_configuration.GetSection("Uploads").Value);
+            var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
+            _uploadsPath = Path.Combine(webRoot, "uploads");
+            Directory.CreateDirectory(_uploadsPath);
+            _http = http;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="folderName"></param>
-        /// <param name="fileName"></param>
-        /// <returns></returns>
         public string GetFilePath(string fileName)
         {
-            return Path.GetFullPath(Path.Combine(_mediaSavePath, fileName));
+            return Path.Combine(_uploadsPath, fileName);
         }
 
-		public string GetMiniPicturePath(string fileName)
-		{
-			return Path.GetFullPath(Path.Combine(_mediaSavePath, fileName + "_mini"));
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="folderName"></param>
-		/// <returns></returns>
-		public string GetFolderPath()
+        public string GetMiniPicturePath(string fileName)
         {
-            return Path.GetFullPath(_mediaSavePath);
+            return Path.Combine(_uploadsPath, fileName + "_mini");
         }
 
-
-        public string GetPublicUrl(string fileName)
+        public string GetFolderPath()
         {
-            var baseUrl = _configuration["PublicBaseUrl"];
-            return $"{baseUrl}/uploads/{fileName}";
+            return _uploadsPath;
+        }
+
+        public string GetPublicUrl(string docId, string originalFileName)
+        {
+            var fileName = docId;
+            if (!Path.HasExtension(fileName))
+            {
+                var extension = Path.GetExtension(originalFileName);
+                if (!string.IsNullOrWhiteSpace(extension))
+                {
+                    fileName += extension;
+                }
+            }
+
+            return GetUploadsUrl(fileName);
+        }
+
+        private string GetUploadsUrl(string fileName)
+        {
+            var context = _http.HttpContext ?? throw new InvalidOperationException("No HttpContext available");
+            return $"{context.Request.Scheme}://{context.Request.Host}/uploads/{fileName}";
         }
     }
 }

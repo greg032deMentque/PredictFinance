@@ -1,123 +1,237 @@
-﻿using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Context;
-using BackPredictFinance.Datas.Models;
+using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services;
 using BackPredictFinance.Services.UserServices;
-using BackPredictFinance.ViewModels;
 using BackPredictFinance.ViewModels.UserViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-
 
 namespace BackPredictFinance.API.Data
 {
     public static class DatabaseUpdater
     {
-        /// <summary>
-        /// Initializes the database with the roles and the admin account.
-        /// </summary>
-        /// <param name="app"></param>
-        /// <returns></returns>
         public static async Task RunDatabaseUpdate(WebApplication app)
         {
-            // create the database from the migrations
-            using (var scope = app.Services.CreateScope())
-            {
-                var serviceProvider = scope.ServiceProvider;
-                var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
-                var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-                var logger = serviceProvider.GetRequiredService<ILogger<BaseService>>();
-                var userService = serviceProvider.GetRequiredService<UserService>();
-                var config = app.Services.GetRequiredService<IConfiguration>();
-                var financeDbContext = serviceProvider.GetRequiredService<FinanceDbContext>();
+            await using var scope = app.Services.CreateAsyncScope();
 
-                logger.LogInformation("Initializing Wagram data start...");
+            var serviceProvider = scope.ServiceProvider;
+            var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
+            var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var logger = serviceProvider.GetRequiredService<ILogger<BaseService>>();
+            var userService = serviceProvider.GetRequiredService<UserService>();
+            var config = app.Services.GetRequiredService<IConfiguration>();
+            var financeDbContext = serviceProvider.GetRequiredService<FinanceDbContext>();
 
-                logger.LogInformation("Database migrations (if needed) start....");
-                await RunMigrationsAsync(financeDbContext, logger);
-                logger.LogInformation("Database migrations done");
+            logger.LogInformation("Initializing finance data start...");
 
-                await InitializeRoles(serviceProvider);
+            logger.LogInformation("Database migrations (if needed) start...");
+            await RunMigrationsAsync(financeDbContext, logger);
+            await EnsureRefreshTokenStorageAsync(financeDbContext, logger);
+            logger.LogInformation("Database migration phase done");
 
-                logger.LogInformation("Ensure admin account is up to date start...");
-                await UpdateAdminAccountAsync(config["adminEmail"], config["adminPwd"], userManager, logger, userService);
-                logger.LogInformation("Ensure admin account is up to date done");
+            await InitializeRoles(roleManager);
+            await EnsureAdminAccountAsync(config["adminEmail"], config["adminPwd"], userManager, logger, userService);
+            await EnsureSimpleUserAccountAsync(config["userEmail"], config["userPwd"], userManager, logger);
 
-                logger.LogInformation("Initializing Wagram data done");
-            }
+            logger.LogInformation("Initializing finance data done");
         }
 
         private static async Task RunMigrationsAsync(FinanceDbContext context, ILogger<BaseService> logger)
         {
-            var pendingMigrations = context.Database.GetPendingMigrations().Count();
-            if (pendingMigrations > 0)
+            try
             {
-                logger.LogInformation($"Trying adding {pendingMigrations} new migrations start...");
-                await context.Database.MigrateAsync();
-                logger.LogInformation($"Trying adding {pendingMigrations} new migrations done");
+                var pendingMigrations = (await context.Database.GetPendingMigrationsAsync()).Count();
+                if (pendingMigrations > 0)
+                {
+                    logger.LogInformation("Applying {Count} pending migrations...", pendingMigrations);
+                    await context.Database.MigrateAsync();
+                    logger.LogInformation("Migrations applied");
+                }
+                else
+                {
+                    logger.LogInformation("No migration needed");
+                }
             }
-            else
+            catch (InvalidOperationException ex) when (ex.Message.Contains("pending changes", StringComparison.OrdinalIgnoreCase))
             {
-                logger.LogInformation($"No migrations needed");
+                logger.LogWarning("Pending model changes detected. Falling back to EnsureCreated().");
+                await context.Database.EnsureCreatedAsync();
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="email"></param>
-        /// <param name="password"></param>
-        /// <param name="logService"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        private static async Task UpdateAdminAccountAsync(string? email, string? password, UserManager<User> usermanager, ILogger<BaseService> logService, UserService userService)
+        private static async Task EnsureRefreshTokenStorageAsync(FinanceDbContext context, ILogger<BaseService> logger)
+        {
+            const string script = """
+                IF OBJECT_ID(N'[dbo].[RefreshTokens]', N'U') IS NULL
+                BEGIN
+                    CREATE TABLE [dbo].[RefreshTokens](
+                        [Id] [bigint] IDENTITY(1,1) NOT NULL,
+                        [UserId] [nvarchar](450) NOT NULL,
+                        [TokenHash] [nvarchar](512) NOT NULL,
+                        [ReplacedByTokenHash] [nvarchar](512) NULL,
+                        [ExpiresAtUtc] [datetime2](7) NOT NULL,
+                        [CreatedAtUtc] [datetime2](7) NOT NULL,
+                        [RevokedAtUtc] [datetime2](7) NULL,
+                        [DeviceId] [nvarchar](200) NULL,
+                        [FingerprintHash] [nvarchar](512) NULL,
+                        CONSTRAINT [PK_RefreshTokens] PRIMARY KEY CLUSTERED ([Id] ASC),
+                        CONSTRAINT [FK_RefreshTokens_AspNetUsers_UserId]
+                            FOREIGN KEY([UserId]) REFERENCES [dbo].[AspNetUsers]([Id]) ON DELETE CASCADE
+                    );
+                END;
+
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_RefreshTokens_TokenHash' AND object_id = OBJECT_ID(N'[dbo].[RefreshTokens]'))
+                BEGIN
+                    CREATE UNIQUE INDEX [IX_RefreshTokens_TokenHash] ON [dbo].[RefreshTokens]([TokenHash]);
+                END;
+
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_RefreshTokens_UserId' AND object_id = OBJECT_ID(N'[dbo].[RefreshTokens]'))
+                BEGIN
+                    CREATE INDEX [IX_RefreshTokens_UserId] ON [dbo].[RefreshTokens]([UserId]);
+                END;
+
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_RefreshTokens_ExpiresAtUtc' AND object_id = OBJECT_ID(N'[dbo].[RefreshTokens]'))
+                BEGIN
+                    CREATE INDEX [IX_RefreshTokens_ExpiresAtUtc] ON [dbo].[RefreshTokens]([ExpiresAtUtc]);
+                END;
+                """;
+
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(script);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "RefreshTokens storage ensure failed; API auth refresh may not work.");
+                throw;
+            }
+        }
+
+        private static async Task EnsureAdminAccountAsync(
+            string? email,
+            string? password,
+            UserManager<User> userManager,
+            ILogger<BaseService> logger,
+            UserService userService)
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
-                throw new ArgumentNullException("email or password", "Missing one of the arguments");
+                throw new ArgumentNullException("email/password", "Missing admin credentials in configuration.");
             }
 
-            var user = await usermanager.FindByEmailAsync(email);
-
-            if (user == null)
+            var existingUser = await userManager.FindByEmailAsync(email);
+            if (existingUser is not null)
             {
-                logService.LogInformation($"No admin account \"{email}\" found in database! I will create it");
-
-                var userVm = new UserViewModel();
-                userVm.Email = email;
-                userVm.FirstName = "admin";
-                userVm.LastName = "admin";
-                userVm.Password = password;
-                userVm.IsActive = true;
-
-                await userService.CreateUser(userVm);
-
-                logService.LogInformation($"Admin account has been created");
+                await EnsureSuperAdminRoleAsync(existingUser, userManager, logger);
+                return;
             }
+
+            logger.LogInformation("No admin account '{Email}' found. Creating one.", email);
+
+            var userVm = new UserViewModel
+            {
+                Email = email,
+                FirstName = "admin",
+                LastName = "admin",
+                Password = password,
+                IsActive = true
+            };
+
+            await userService.Register(userVm);
+            var createdUser = await userManager.FindByEmailAsync(email);
+            if (createdUser is not null)
+            {
+                await EnsureSuperAdminRoleAsync(createdUser, userManager, logger);
+            }
+            logger.LogInformation("Admin account created");
         }
 
-        private static async Task InitializeRoles(IServiceProvider serviceProvider)
+        private static async Task EnsureSuperAdminRoleAsync(
+            User user,
+            UserManager<User> userManager,
+            ILogger<BaseService> logger)
         {
-            var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-            var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
-
-            // Liste des rôles définis dans l'enum
-            var enumRoleNames = Enum.GetNames(typeof(UserRoleEnum)).ToHashSet();
-
-            // Liste des rôles existants en base
-            var existingRoles = roleManager.Roles.ToList();
-
-            // 1. Créer les rôles manquants
-            foreach (var roleName in enumRoleNames)
+            var superAdminRole = UserRoleEnum.SuperAdmin.ToString();
+            if (await userManager.IsInRoleAsync(user, superAdminRole))
             {
-                if (!existingRoles.Any(r => r.Name == roleName))
+                return;
+            }
+
+            var currentRoles = await userManager.GetRolesAsync(user);
+            if (currentRoles.Count > 0)
+            {
+                await userManager.RemoveFromRolesAsync(user, currentRoles);
+            }
+
+            await userManager.AddToRoleAsync(user, superAdminRole);
+            logger.LogInformation("User {Email} set as {Role}", user.Email, superAdminRole);
+        }
+
+        private static async Task EnsureSimpleUserAccountAsync(
+            string? email,
+            string? password,
+            UserManager<User> userManager,
+            ILogger<BaseService> logger)
+        {
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+            {
+                throw new ArgumentNullException("email/password", "Missing simple user credentials in configuration.");
+            }
+
+            var userRole = UserRoleEnum.User.ToString();
+            var existingUser = await userManager.FindByEmailAsync(email);
+            if (existingUser is null)
+            {
+                var newUser = new User
                 {
-                    var newRole = new IdentityRole(roleName)
-                    {
-                        ConcurrencyStamp = Guid.NewGuid().ToString()
-                    };
-                    await roleManager.CreateAsync(newRole);
+                    UserName = email,
+                    Email = email,
+                    FirstName = "user",
+                    LastName = "user",
+                    IsActive = true,
+                    RefreshToken = string.Empty
+                };
+
+                var createResult = await userManager.CreateAsync(newUser, password);
+                if (!createResult.Succeeded)
+                {
+                    var reason = string.Join(" | ", createResult.Errors.Select(x => x.Description));
+                    throw new InvalidOperationException($"Simple user creation failed: {reason}");
                 }
+
+                await userManager.AddToRoleAsync(newUser, userRole);
+                logger.LogInformation("Simple user account created for {Email}", email);
+                return;
+            }
+
+            var currentRoles = await userManager.GetRolesAsync(existingUser);
+            if (currentRoles.Count > 0)
+            {
+                await userManager.RemoveFromRolesAsync(existingUser, currentRoles);
+            }
+
+            await userManager.AddToRoleAsync(existingUser, userRole);
+            logger.LogInformation("User {Email} set as {Role}", existingUser.Email, userRole);
+        }
+
+        private static async Task InitializeRoles(RoleManager<IdentityRole> roleManager)
+        {
+            var roleNames = Enum.GetNames(typeof(UserRoleEnum));
+
+            foreach (var roleName in roleNames)
+            {
+                if (await roleManager.RoleExistsAsync(roleName))
+                {
+                    continue;
+                }
+
+                var newRole = new IdentityRole(roleName)
+                {
+                    ConcurrencyStamp = Guid.NewGuid().ToString()
+                };
+
+                await roleManager.CreateAsync(newRole);
             }
         }
     }

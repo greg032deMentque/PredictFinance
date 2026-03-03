@@ -10,7 +10,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace BackPredictFinance.API.Controllers
 {
     [Authorize(Policy = "Bearer")]
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class TradingController : ControllerBase
     {

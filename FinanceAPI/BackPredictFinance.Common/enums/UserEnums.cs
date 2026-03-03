@@ -1,10 +1,9 @@
-﻿namespace BackPredictFinance.Common.enums
+namespace BackPredictFinance.Common.enums
 {
     public enum UserRoleEnum
     {
-       User, 
-       Admin
+        User,
+        SuperAdmin,
+        Admin,
     }
-
-  
 }

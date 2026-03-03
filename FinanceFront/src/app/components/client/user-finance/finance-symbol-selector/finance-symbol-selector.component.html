@@ -1,0 +1,46 @@
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <h2 class="h6 text-uppercase text-muted mb-3">1. Selection de la valeur</h2>
+
+    <div class="position-relative">
+      <input
+        type="text"
+        class="form-control"
+        [ngModel]="searchTerm"
+        (ngModelChange)="onSearchChanged($event)"
+        placeholder="Ex: AAPL, Microsoft, TSLA..."
+        autocomplete="off"
+      />
+
+      @if (loading) {
+        <div class="small text-muted mt-2">Recherche en cours...</div>
+      }
+
+      @if (!loading && options.length > 0) {
+        <div class="search-results border rounded-3 mt-2 overflow-auto">
+          @for (asset of options; track asset.symbol) {
+            <button class="result-item" type="button" (click)="selectAsset(asset)">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">{{ asset.symbol }} - {{ asset.companyName }}</div>
+                  <small class="text-muted">{{ asset.market }} • {{ asset.currency }}</small>
+                </div>
+                <div class="text-end">
+                  <div>{{ asset.lastPrice | number: '1.2-2' }}</div>
+                  <small [class.text-success]="asset.dayVariationPct >= 0" [class.text-danger]="asset.dayVariationPct < 0">
+                    {{ asset.dayVariationPct | number: '1.2-2' }}%
+                  </small>
+                </div>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="selected-box mt-3" *ngIf="selectedAsset as asset">
+      <div class="fw-semibold">Valeur selectionnee: {{ asset.symbol }}</div>
+      <div class="text-muted small">{{ asset.companyName }} ({{ asset.market }})</div>
+    </div>
+  </div>
+</div>

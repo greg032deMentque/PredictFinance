@@ -1,5 +1,5 @@
-ï»¿using AutoMapper;
-using BackPredictFinance.Datas.Models;
+using AutoMapper;
+using BackPredictFinance.Datas.Entities;
 
 
 namespace BackPredictFinance.ViewModels.UserViewModels
@@ -51,9 +51,9 @@ namespace BackPredictFinance.ViewModels.UserViewModels
 
     public static class UserMapper
     {
-        // MÃ©thode d'extension pour User â†’ UserViewModel
+        // Méthode d'extension pour User ? UserViewModel
         // Le 'this' devant 'User user' indique que c'est une extension :
-        // on peut appeler user.ToViewModel() comme s'il s'agissait d'une mÃ©thode d'instance.
+        // on peut appeler user.ToViewModel() comme s'il s'agissait d'une méthode d'instance.
         public static UserViewModel ToViewModel(this User user)
         {
             if (user == null) return null;
@@ -73,7 +73,7 @@ namespace BackPredictFinance.ViewModels.UserViewModels
                 LockoutEnabled = user.LockoutEnabled,
                 AccessFailedCount = user.AccessFailedCount,
 
-                // MÃ©tier
+                // Métier
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 CreatedAt = user.CreatedAt,
@@ -84,7 +84,7 @@ namespace BackPredictFinance.ViewModels.UserViewModels
             };
         }
 
-        // MÃ©thode d'extension pour UserViewModel â†’ User
+        // Méthode d'extension pour UserViewModel ? User
         // Le 'this' devant 'UserViewModel vm' indique que c'est une extension :
         // on peut appeler vm.ToEntity() directement sur n'importe quel UserViewModel.
         public static User ToEntity(this UserViewModel vm)
@@ -106,7 +106,7 @@ namespace BackPredictFinance.ViewModels.UserViewModels
                 LockoutEnabled = vm.LockoutEnabled,
                 AccessFailedCount = vm.AccessFailedCount,
 
-                // MÃ©tier
+                // Métier
                 FirstName = vm.FirstName,
                 LastName = vm.LastName,
                 CreatedAt = vm.CreatedAt,
@@ -118,3 +118,4 @@ namespace BackPredictFinance.ViewModels.UserViewModels
         }
     }
 }
+

@@ -1,92 +1,108 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Serilog;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
 
 namespace BackPredictFinance.Services
 {
-	public interface ILogService
-	{
-		public void LogError(string message, [CallerMemberName] string functionName = "");
-		public void LogError(string customMessage, Exception ex, [CallerMemberName] string functionName = "");
-		public void LogError(Exception ex, [CallerMemberName] string functionName = "");
-		public void LogInformation(string message, [CallerMemberName] string functionName = "");
-		public void LogWarning(string message, [CallerMemberName] string functionName = "");
-        public void LogWarning(string customMessage, Exception ex, [CallerMemberName] string functionName = "");
-		public void LogDebug(string message, [CallerMemberName] string functionName = "");
+    public interface ILogService
+    {
+        void LogError(string message, [CallerMemberName] string functionName = "");
+        void LogError(string customMessage, Exception ex, [CallerMemberName] string functionName = "");
+        void LogError(Exception ex, [CallerMemberName] string functionName = "");
 
+        void LogInformation(string message, [CallerMemberName] string functionName = "");
+
+        void LogWarning(string message, [CallerMemberName] string functionName = "");
+        void LogWarning(string customMessage, Exception ex, [CallerMemberName] string functionName = "");
+
+        void LogDebug(string message, [CallerMemberName] string functionName = "");
+
+        void LogWarning(string messageTemplate, params object[] propertyValues);
+        void LogInformation(string messageTemplate, params object[] propertyValues);
+        void LogDebug(string messageTemplate, params object[] propertyValues);
+        void LogError(string messageTemplate, params object[] propertyValues);
     }
-	public class LogService : ILogService
-	{
-		protected string _currentUserId;
 
-		// c'est déprécié mais je n'ai pas trouvé d'autre solution
-		public readonly HttpContext _context;
+    public class LogService : ILogService
+    {
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-		public IConfiguration _configuration { get; set; }
-
-		public LogService(IHttpContextAccessor httpContextAccessor)
-		{
-			_context = httpContextAccessor.HttpContext;
-
-			// Get connected user
-			if (_context?.User.FindFirst(ClaimTypes.Sid) != null)
-			{
-				_currentUserId = Convert.ToString(_context.User.FindFirst(ClaimTypes.Sid).Value);
-			}
-			else
-			{
-				_currentUserId = "null";
-			}
-		}
-
-
-		public void LogError(string message, [CallerMemberName] string functionName = "")
-		{
-			Log.Error($"User id: {_currentUserId}. Function: {functionName}. Message: {message}");
-		}
-		public void LogError(string customMessage, Exception ex, [CallerMemberName] string functionName = "")
-		{
-			Log.Error(
-				$"User id: {_currentUserId}. " +
-				$"Function: {functionName}. " +
-				$"Custom message: {customMessage}. " +
-				$"Exception message: {ex.Message}. " +
-				$"Exception StackTrace: {ex.StackTrace}");
-		}
-		public void LogError(Exception ex, [CallerMemberName] string functionName = "")
-		{
-			Log.Error(
-				$"User id: {_currentUserId}. " +
-				$"Function: {functionName}. " +
-				$"Message: {ex.Message}. " +
-				$"StackTrace: {ex.StackTrace}");
-		}
-
-		public void LogWarning(string message, [CallerMemberName] string functionName = "")
-		{
-			Log.Warning($"User id: {_currentUserId}. Function: {functionName}. Message: {message}");
-		}
-        public void LogWarning(string customMessage, Exception ex, [CallerMemberName] string functionName = "")
+        public LogService(IHttpContextAccessor httpContextAccessor)
         {
-            Log.Warning(
-                $"User id: {_currentUserId}. " +
-                $"Function: {functionName}. " +
-                $"Custom message: {customMessage}. " +
-                $"Exception message: {ex.Message}. " +
-                $"Exception StackTrace: {ex.StackTrace}");
+            _httpContextAccessor = httpContextAccessor;
         }
 
+        private ILogger WithContext(string functionName)
+        {
+            var context = _httpContextAccessor.HttpContext;
+
+            var userId = context?.User.FindFirstValue(ClaimTypes.Sid) ?? "null";
+            var traceId = context?.TraceIdentifier ?? "";
+
+            var endpoint = context?.GetEndpoint();
+            var endpointName = endpoint?.DisplayName ?? "";
+
+            var rv = context?.Request.RouteValues;
+            var controller = rv is null ? "" : (rv.TryGetValue("controller", out var c) ? c?.ToString() ?? "" : "");
+            var action = rv is null ? "" : (rv.TryGetValue("action", out var a) ? a?.ToString() ?? "" : "");
+
+            var path = context?.Request.Path.Value ?? "";
+            var method = context?.Request.Method ?? "";
+
+            return Log.ForContext("UserId", userId)
+                .ForContext("TraceId", traceId)
+                .ForContext("Function", functionName)
+                .ForContext("Endpoint", endpointName)
+                .ForContext("Controller", controller)
+                .ForContext("Action", action)
+                .ForContext("Path", path)
+                .ForContext("Method", method);
+        }
+
+        public void LogError(string message, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Error("{Message}", message);
+
+        public void LogError(string customMessage, Exception ex, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Error(ex, "{CustomMessage}", customMessage);
+
+        public void LogError(Exception ex, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Error(ex, "Unhandled exception");
+
+        public void LogWarning(string message, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Warning("{Message}", message);
+
+        public void LogWarning(string customMessage, Exception ex, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Warning(ex, "{CustomMessage}", customMessage);
+
         public void LogInformation(string message, [CallerMemberName] string functionName = "")
-		{
-			Log.Information($"User id: {_currentUserId}. Function: {functionName}. Message: {message}");
-		}
+            => WithContext(functionName).Information("{Message}", message);
 
-		public void LogDebug(string message, [CallerMemberName] string functionName = "")
-		{
-			Log.Debug($"User id: {_currentUserId}. Function: {functionName}. Message: {message}");
-		}
-	}
+        public void LogDebug(string message, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Debug("{Message}", message);
 
+        public void LogWarning(string messageTemplate, params object[] propertyValues)
+            => LogWarningTemplateCore(messageTemplate, propertyValues);
+
+        public void LogInformation(string messageTemplate, params object[] propertyValues)
+            => LogInformationTemplateCore(messageTemplate, propertyValues);
+
+        public void LogDebug(string messageTemplate, params object[] propertyValues)
+            => LogDebugTemplateCore(messageTemplate, propertyValues);
+
+        public void LogError(string messageTemplate, params object[] propertyValues)
+            => LogErrorTemplateCore(messageTemplate, propertyValues);
+
+        private void LogWarningTemplateCore(string messageTemplate, object[] propertyValues, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Warning(messageTemplate, propertyValues);
+
+        private void LogInformationTemplateCore(string messageTemplate, object[] propertyValues, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Information(messageTemplate, propertyValues);
+
+        private void LogDebugTemplateCore(string messageTemplate, object[] propertyValues, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Debug(messageTemplate, propertyValues);
+
+        private void LogErrorTemplateCore(string messageTemplate, object[] propertyValues, [CallerMemberName] string functionName = "")
+            => WithContext(functionName).Error(messageTemplate, propertyValues);
+    }
 }

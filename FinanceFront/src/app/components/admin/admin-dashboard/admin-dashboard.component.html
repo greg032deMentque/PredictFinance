@@ -1,0 +1,114 @@
+<section class="d-flex flex-column gap-4">
+  <div class="hero-card p-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+      <div>
+        <p class="text-uppercase text-muted mb-1">Administration</p>
+        <h1 class="h4 mb-2">Pilotage plateforme</h1>
+        <p class="mb-0 text-body-secondary">
+          Supervision des comptes, de l'activite IA et de la qualite operationnelle.
+        </p>
+      </div>
+      <div class="d-flex gap-2 align-items-start">
+        <a class="btn btn-outline-primary" [routerLink]="['/', adminPaths.UsersList]">Gerer les utilisateurs</a>
+        <a class="btn btn-primary" [routerLink]="['/', adminPaths.Analysis]">Lancer une analyse</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">Utilisateurs total</p>
+          <div class="display-6 fw-semibold">{{ loading ? '...' : stats.totalUsers }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">Taux utilisateurs actifs</p>
+          <div class="display-6 fw-semibold">{{ loading ? '...' : (activeUsersRate | percent: '1.0-0') }}</div>
+          <small class="text-muted">{{ stats.activeUsers }} actifs</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">Analyses du jour</p>
+          <div class="display-6 fw-semibold">{{ loading ? '...' : stats.analysesToday }}</div>
+          <small class="text-muted">{{ stats.queuedAnalyses }} en attente</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-muted mb-1">Couverture admin</p>
+          <div class="display-6 fw-semibold">{{ loading ? '...' : (adminCoverageRate | percent: '1.0-0') }}</div>
+          <small class="text-muted">{{ stats.admins }} admins / {{ stats.superAdmins }} super admins</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-xl-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6 text-uppercase text-muted mb-3">Derniers comptes crees</h2>
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Nom</th>
+                  <th>Role</th>
+                  <th>Statut</th>
+                  <th>Creation</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (user of recentUsers; track user.id) {
+                  <tr>
+                    <td>{{ user.firstName }} {{ user.lastName }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>
+                      <span class="badge" [class.text-bg-success]="user.isActive" [class.text-bg-secondary]="!user.isActive">
+                        {{ user.isActive ? 'Actif' : 'Inactif' }}
+                      </span>
+                    </td>
+                    <td>{{ user.createdAt | date: 'dd/MM/yyyy' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="text-center text-muted py-4">Aucun utilisateur a afficher.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6 text-uppercase text-muted mb-3">Activite recente</h2>
+          <div class="d-flex flex-column gap-3">
+            @for (item of recentActivities; track item.id) {
+              <div class="activity-item p-3 rounded-3 border">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                  <p class="mb-1">{{ item.label }}</p>
+                  <span class="badge text-bg-light">{{ item.type }}</span>
+                </div>
+                <small class="text-muted">{{ item.at | date: 'dd/MM/yyyy HH:mm' }}</small>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

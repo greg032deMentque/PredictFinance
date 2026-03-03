@@ -1,19 +1,27 @@
-export interface PatternProbability {
-  pattern: string;
-  probability: number;
+export class PatternProbability {
+  pattern = '';
+  probability = 0;
+
+  constructor(init?: Partial<PatternProbability>) {
+    Object.assign(this, init);
+  }
 }
 
-export interface PredictionResult {
-  symbol: string;
-  predictedAt: string;
-  pattern: string;
-  lastProbability: number;
-  meanProbability: number;
-  maxProbability: number;
-  probabilityPct: number;
-  suggestedAction: 'buy' | 'hold' | 'sell';
-  actionConfidence: number;
-  actionReason: string;
-  nWindows: number;
-  patterns: PatternProbability[];
+export class PredictionResult {
+  symbol = '';
+  predictedAt = '';
+  pattern = '';
+  lastProbability = 0;
+  meanProbability = 0;
+  maxProbability = 0;
+  probabilityPct = 0;
+  suggestedAction: 'buy' | 'hold' | 'sell' = 'hold';
+  actionConfidence = 0;
+  actionReason = '';
+  nWindows = 0;
+  patterns: PatternProbability[] = [];
+
+  constructor(init?: Partial<PredictionResult>) {
+    Object.assign(this, init);
+  }
 }

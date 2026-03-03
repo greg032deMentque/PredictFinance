@@ -1,15 +1,25 @@
-ï»¿using BackPredictFinance.Common.enums;
-using BackPredictFinance.Datas.Models;
+using BackPredictFinance.Common.enums;
+using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services;
 using BackPredictFinance.ViewModels.UserViewModels;
-using Microsoft.AspNet.Identity;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-
+using System.Data;
 
 namespace BackPredictFinance.Services.UserServices
 {
-   
-    public class UserRoleDataService : BaseService
+
+    public interface IUserRoleDataService
+    {
+        Task AddUserRole(List<UserRoleViewModel> rolesVm, User user);
+        Task<List<UserRoleViewModel>> SetUserRoleViewModel(string userId);
+        Task<bool> IsUserInRole(string userId, UserRoleEnum roleEnum);
+        Task<bool> IsUserInRole(User user, UserRoleEnum roleEnum);
+        Task<List<UserRoleViewModel>> GetAllRoles(CancellationToken ct);
+        Task<User?> GetFirstUserInRole(UserRoleEnum roleEnum);
+
+    }
+
+    public class UserRoleDataService : BaseService, IUserRoleDataService
     {
 
         public UserRoleDataService(IServiceProvider serviceProvider)
@@ -17,12 +27,19 @@ namespace BackPredictFinance.Services.UserServices
         {
         }
 
+        public async Task<User?> GetFirstUserInRole(UserRoleEnum roleEnum)
+        {
+            var roleName = roleEnum.ToString();
 
+            var usersInRole = await _userManager.GetUsersInRoleAsync(roleName);
 
-        public async Task<List<UserRoleViewModel>> GetAllRoles()
+            return usersInRole.FirstOrDefault();
+        }
+
+        public async Task<List<UserRoleViewModel>> GetAllRoles(CancellationToken ct)
         {
             var listVm = new List<UserRoleViewModel>();
-            var existingRoles = await _roleManager.Roles.ToListAsync();
+            var existingRoles = await _roleManager.Roles.ToListAsync(ct);
 
             foreach (var role in existingRoles)
             {
@@ -39,21 +56,23 @@ namespace BackPredictFinance.Services.UserServices
 
                 switch (userRole)
                 {
-                    case UserRoleEnum.User:
-                        vm.RoleName = "Utilisateur";
-                        break;
-
                     case UserRoleEnum.Admin:
                         vm.RoleName = "Admin";
                         break;
 
+                    case UserRoleEnum.SuperAdmin:
+                        vm.RoleName = "Super admin";
+                        break;
 
+                    case UserRoleEnum.User:
+                        vm.RoleName = "User";
+                        break;
 
                     default:
-                        // Fallback to the raw name if you haven't handled it
-                        vm.RoleName = role.Name;
+                        vm.RoleName = "Utilisateur";
                         break;
                 }
+
 
                 listVm.Add(vm);
             }
@@ -67,13 +86,13 @@ namespace BackPredictFinance.Services.UserServices
 
             var currentRoles = (await _userManager.GetRolesAsync(user)).ToList();
 
-            // Ajoute les rÃ´les manquants
+            // Ajoute les rôles manquants
             foreach (var role in newRoles.Except(currentRoles))
             {
                 await _userManager.AddToRoleAsync(user, role);
             }
 
-            // Supprime les rÃ´les obsolÃ¨tes
+            // Supprime les rôles obsolètes
             foreach (var role in currentRoles.Except(newRoles))
             {
                 await _userManager.RemoveFromRoleAsync(user, role);
@@ -81,21 +100,23 @@ namespace BackPredictFinance.Services.UserServices
         }
 
 
-        /// <summary>
-        /// check role
-        /// </summary>
-        /// <param name="userEmail"></param>
-        /// <param name="role"></param>
-        /// <returns></returns>
-        public async Task<bool> IsUserInRole(string userEmail, UserRoleViewModel rolesVm)
+        public async Task<bool> IsUserInRole(string userId, UserRoleEnum roleEnum)
         {
-            var user = await _userManager.FindByEmailAsync(userEmail);
-            return user != null && await _userManager.IsInRoleAsync(user, rolesVm.RoleName);
+            var user = await _userManager.FindByIdAsync(userId);
+            var roleName = roleEnum.ToString();
+
+            return user != null && await _userManager.IsInRoleAsync(user, roleName);
         }
 
+        public async Task<bool> IsUserInRole(User user, UserRoleEnum roleEnum)
+        {
+            var roleName = roleEnum.ToString();
+
+            return user != null && await _userManager.IsInRoleAsync(user, roleName);
+        }
 
         /// <summary>
-        /// crÃ©Ã© une liste de role pour un user. Le nom des roles est formatÃ©s.
+        /// créé une liste de role pour un user. Le nom des roles est formatés.
         /// </summary>
         /// <param name="userId"></param>
         /// <returns></returns>
@@ -124,16 +145,20 @@ namespace BackPredictFinance.Services.UserServices
                     Enum.TryParse<UserRoleEnum>(x.Name, true, out var userRole);
 
                     vm.UserRole = userRole;
-
                     switch (userRole)
                     {
-                        case UserRoleEnum.User:
-                            vm.RoleName = "Utilisateur";
-                            break;
-
                         case UserRoleEnum.Admin:
                             vm.RoleName = "Admin";
                             break;
+
+                        case UserRoleEnum.SuperAdmin:
+                            vm.RoleName = "Super admin";
+                            break;
+
+                        case UserRoleEnum.User:
+                            vm.RoleName = "Consultant";
+                            break;
+
                         default:
                             vm.RoleName = "nul";
                             break;
@@ -146,7 +171,11 @@ namespace BackPredictFinance.Services.UserServices
             return vms;
         }
 
+
+
+
     }
 
 
 }
+

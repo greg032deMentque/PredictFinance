@@ -1,191 +1,183 @@
+using AutoMapper;
+using BackPredictFinance.API.Data;
+using BackPredictFinance.API.Middleware;
 using BackPredictFinance.Common;
+using BackPredictFinance.Common.Email;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.Jwt;
 using BackPredictFinance.Datas.Context;
-using BackPredictFinance.Datas.Models;
+using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services;
+using BackPredictFinance.Services.AuthServices;
+using BackPredictFinance.Services.ClientFinanceServices;
 using BackPredictFinance.Services.PythonServices;
 using BackPredictFinance.Services.TwelveDataServices;
+using BackPredictFinance.Services.UserServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
-using SixLabors.ImageSharp;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
-// ---------- Logging Configuration ----------
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-
-// ---------- Database & Identity ----------
-// Add DbContext
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<FinanceDbContext>(options =>
-options.UseSqlServer(connectionString, o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)), ServiceLifetime.Transient);
-
-// Configure Identity with Roles and Token Providers
-builder.Services.AddIdentity<User, IdentityRole>(options =>
+builder.Host.UseSerilog((_, loggerConfiguration) =>
 {
-    // Password settings
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 6;
+    loggerConfiguration
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.File("Logs/finance_log_.txt", rollingInterval: RollingInterval.Day)
+        .WriteTo.File("Logs/finance_error_.txt", rollingInterval: RollingInterval.Day, restrictedToMinimumLevel: LogEventLevel.Error);
+});
 
-    // Lockout settings
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-    options.Lockout.MaxFailedAccessAttempts = 5;
-    options.Lockout.AllowedForNewUsers = true;
+var connectionString = configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing.");
+}
 
-    // User settings
-    options.User.RequireUniqueEmail = true;
-})
-.AddEntityFrameworkStores<FinanceDbContext>()
-.AddDefaultTokenProviders();
+builder.Services.AddDbContext<FinanceDbContext>(options =>
+    options.UseSqlServer(connectionString, sql => sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
-// ---------- Authentication (JWT) ----------
-builder.Services.Configure<DataProtectionTokenProviderOptions>(opts => opts.TokenLifespan = TimeSpan.FromHours(10));
+builder.Services
+    .AddIdentity<User, IdentityRole>(options =>
+    {
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredLength = 6;
 
-var jWTToken = configuration.GetRequiredSection(nameof(JWTToken));
-builder.Services.Configure<JWTToken>(jWTToken);
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.AllowedForNewUsers = true;
+
+        options.User.RequireUniqueEmail = true;
+    })
+    .AddEntityFrameworkStores<FinanceDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.Configure<DataProtectionTokenProviderOptions>(opts =>
+    opts.TokenLifespan = TimeSpan.FromHours(10));
+
+builder.Services.Configure<JWTToken>(configuration.GetRequiredSection(nameof(JWTToken)));
+var jwtOptions = configuration.GetRequiredSection(nameof(JWTToken)).Get<JWTToken>()
+    ?? throw new InvalidOperationException("JWTToken configuration is missing.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.RequireHttpsMetadata = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            RequireExpirationTime = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
+            ClockSkew = TimeSpan.FromSeconds(20),
+            NameClaimType = ClaimTypes.NameIdentifier,
+            RoleClaimType = ClaimTypes.Role
+        };
+    });
 
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Bearer", policy =>
-        policy.RequireAssertion(context =>
-            context.User.HasClaim(c =>
-                c.Type == ClaimTypes.Role &&
-                (c.Value == UserRoleEnum.User.ToString() ||
-                 c.Value == UserRoleEnum.Admin.ToString())
-            )
-        )
-        .AddAuthenticationSchemes(nameof(JWTToken))
-    );
-});
-builder.Services.AddEndpointsApiExplorer();
-
-
-builder.Services.AddAuthentication(x =>
-{
-    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(nameof(JWTToken), x =>
-{
-    x.RequireHttpsMetadata = true;
-    x.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateAudience = true,
-        ValidateIssuer = true,
-        ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
-        RequireExpirationTime = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jWTToken.Get<JWTToken>().Issuer,
-        ValidAudience = jWTToken.Get<JWTToken>().Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jWTToken.Get<JWTToken>().Secret)),
-        ClockSkew = TimeSpan.FromSeconds(20),
-        NameClaimType = JwtRegisteredClaimNames.Sub,
-        RoleClaimType = "role" // ou ClaimTypes.Role
-    };
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+    });
+
+    options.AddPolicy("RequireAdminRole", policy =>
+        policy.RequireRole(UserRoleEnum.Admin.ToString(), UserRoleEnum.SuperAdmin.ToString()));
+
+    options.AddPolicy("RequireSuperAdminRole", policy =>
+        policy.RequireRole(UserRoleEnum.SuperAdmin.ToString()));
 });
 
-
-
-// ---------- Authorization Policies ----------
-builder.Services.AddAuthorization(options =>
+builder.Services.AddCors(options =>
 {
-    options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("admin"));
-    options.AddPolicy("RequireSuperAdminRole", policy => policy.RequireRole("superadmin"));
+    options.AddPolicy("FrontPolicy", cors =>
+    {
+        cors.WithOrigins("http://localhost:4200", "https://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
 });
 
-// ---------- Log ----------
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
+builder.Services.AddLocalization();
 
+var mapperExpression = new MapperConfigurationExpression();
+var mapperConfiguration = new MapperConfiguration(mapperExpression, NullLoggerFactory.Instance);
+builder.Services.AddSingleton<IMapper>(new Mapper(mapperConfiguration));
 
-var logTemplate = "[{Level:u4}] [{UserName}] [{Timestamp:HH:mm:ss}] {Message:lj}{NewLine}{Exception}";
-builder.Host.UseSerilog((ctx, lc) => lc
-        .WriteTo.Logger(lc => lc
-        .WriteTo.Console(outputTemplate: logTemplate))
+builder.Services.Configure<EmailServiceConfiguration>(configuration.GetSection("EmailService"));
+builder.Services.Configure<PythonCliOptions>(configuration.GetSection("PythonCli"));
+builder.Services.Configure<TwelveDataOptions>(configuration.GetSection("TwelveData"));
 
-        .WriteTo.Logger(lc => lc
-        .MinimumLevel.Is(LogEventLevel.Information)
-        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                    .Filter.ByIncludingOnly(logEvent => logEvent.Level == LogEventLevel.Error)
-                    .WriteTo.File("Logs/fianance_error_.txt",
-                    rollingInterval: RollingInterval.Day,
-                    outputTemplate: logTemplate)).Enrich.FromLogContext()
+builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<IPathService, PathService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IJwtGeneratorService, JwtGeneratorService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IUserAssetService, UserAssetService>();
+builder.Services.AddScoped<IUserRoleDataService, UserRoleDataService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<IPythonApiService, PythonApiService>();
+builder.Services.AddScoped<IAssetService, AssetService>();
+builder.Services.AddScoped<AnalyticService>();
+builder.Services.AddScoped<ITickerService, TickerService>();
+builder.Services.AddScoped<IClientFinanceService, ClientFinanceService>();
 
-        .WriteTo.Logger(lc => lc
-        .MinimumLevel.Is(LogEventLevel.Information)
-        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
-                    .WriteTo.File("Logs/finance_log_.txt",
-                    rollingInterval: RollingInterval.Day,
-                    outputTemplate: logTemplate)).Enrich.FromLogContext()
-    );
-
-// ---------- Controllers & Swagger ----------
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-// customize the schema ID generation so that each type gets a unique identifier
 builder.Services.AddSwaggerGen(options =>
 {
     options.CustomSchemaIds(type => type.FullName);
-});
-
-builder.Services.AddSwaggerGen(c =>
-{
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
+        In = ParameterLocation.Header
     });
-    c.AddSecurityRequirement(
-        new OpenApiSecurityRequirement {
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
                 {
-                    new OpenApiSecurityScheme {
-                        Reference = new OpenApiReference {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    }
-                },
-                new string[] {}
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
                 }
-            });
+            },
+            Array.Empty<string>()
+        }
+    });
 });
-
-// ---------- Python CLI ----------
-builder.Services.Configure<PythonCliOptions>(
-    builder.Configuration.GetSection("PythonCli"));
-builder.Services.AddScoped<IPythonApiService, PythonApiService>();
-
-// ------------ TwelData ---------- 
-builder.Services.Configure<TwelveDataOptions>(
-    builder.Configuration.GetSection("TwelveData"));
-
-builder.Services
-    .AddHttpClient<ITickerService, TickerService>()  // HttpClient injected
-    .SetHandlerLifetime(TimeSpan.FromMinutes(5));   // rotation de handler. evite SocketException
 
 var app = builder.Build();
 
-
-// ---------- Middleware Pipeline ----------
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -197,11 +189,15 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseCors("FrontPolicy");
+app.UseGlobalExceptionHandler();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+await DatabaseUpdater.RunDatabaseUpdate(app);
 
 app.Run();
 

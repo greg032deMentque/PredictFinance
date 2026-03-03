@@ -1,0 +1,48 @@
+<div class="login-page d-flex flex-column min-vh-100">
+  <header class="navbar navbar-light bg-light shadow-sm">
+    <div class="container-fluid d-flex align-items-center justify-content-center gap-2">
+      <img src="assets/money.svg" alt="Logo app" class="login-logo" />
+      <span class="fw-bold text-vert login-title">PredictFinance</span>
+    </div>
+  </header>
+
+  <main class="flex-fill d-flex justify-content-center align-items-center px-3">
+    <form [formGroup]="form" class="w-100" style="max-width: 400px;">
+      <h2 class="text-center mb-4">Se connecter</h2>
+
+      <div class="bg-light p-4 rounded shadow-sm">
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <input id="email" type="email" class="form-control no-autofill" formControlName="Email" />
+          @if (form.get('Email')?.invalid && form.get('Email')?.touched) {
+            <div class="text-danger small mt-1">
+              @if (form.get('Email')?.hasError('required')) { Email requis. }
+              @if (form.get('Email')?.hasError('email')) { Format email invalide. }
+            </div>
+          }
+        </div>
+
+        <div class="mb-3">
+          <label for="password" class="form-label">Mot de passe</label>
+          <input id="password" type="password" class="form-control" formControlName="Password" (keyup.enter)="submit()" />
+          @if (form.get('Password')?.invalid && form.get('Password')?.touched) {
+            <div class="text-danger small mt-1">
+              @if (form.get('Password')?.hasError('required')) { Mot de passe requis. }
+              @if (form.get('Password')?.hasError('minlength')) { 4 caracteres minimum. }
+            </div>
+          }
+        </div>
+
+        <div class="d-grid mb-3 d-flex justify-content-center mt-3">
+          <button type="button" class="btn btn-primary" (click)="submit()" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            } @else {
+              <span>Connexion</span>
+            }
+          </button>
+        </div>
+      </div>
+    </form>
+  </main>
+</div>

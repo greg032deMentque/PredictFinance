@@ -1,112 +1,166 @@
 ﻿using BackPredictFinance.Common;
-using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Http;
+using BackPredictFinance.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using System.Diagnostics;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
 
 namespace BackPredictFinance.API.Middleware
 {
-    public class CustomExceptionReturn
+    public class CustomErrorMessage
     {
-        public string Exception { get; set; }
         public int StatusCode { get; set; }
+        public string Exception { get; set; } = "";
+        public string Request_uri { get; set; } = "";
+        public string Request_method { get; set; } = "";
+        public string CurrentUserId { get; set; } = "";
+        public string TraceId { get; set; } = "";
     }
+
     public class ExceptionMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly ILogger<ExceptionMiddleware> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IWebHostEnvironment _env;
 
-        public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
+        public ExceptionMiddleware(
+            RequestDelegate next,
+            IServiceScopeFactory scopeFactory,
+            IWebHostEnvironment env)
         {
             _next = next;
-            _logger = logger;
+            _scopeFactory = scopeFactory;
+            _env = env;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, IAuthenticationService auth)
         {
             try
             {
                 await _next(context);
             }
-            catch (SecurityTokenExpiredException)
-            {
-                await HandleSecurityTokenExpiredExceptionAsync(context);
-            }
-            catch (CustomException ex)
-            {
-                await HandleCustomExceptionAsync(context, ex);
-            }
             catch (Exception ex)
             {
-                await HandleInternalServerErrorAsync(context, ex);
+                await HandleExceptionAsync(context, ex, auth);
             }
         }
 
-        private async Task HandleSecurityTokenExpiredExceptionAsync(HttpContext context)
+
+        private async Task HandleExceptionAsync(
+                HttpContext context,
+                Exception ex,
+                IAuthenticationService auth)
         {
-            context.Response.StatusCode = 401;
+            using var scope = _scopeFactory.CreateScope();
+            var logSvc = scope.ServiceProvider.GetRequiredService<ILogService>();
 
-            await WriteErrorResponseAsync(context, "", "token expired");
-        }
+            var traceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
 
-        private async Task HandleCustomExceptionAsync(HttpContext context, CustomException ex)
-        {
-            context.Response.StatusCode = (int)ex.StatusCode;
-            await WriteErrorResponseAsync(context, ex.FunctionName, ex.Message, ex.FrontMessage);
-        }
+            var statusCode = MapStatusCode(ex);
+            var userMessage = MapUserMessage(statusCode, ex);
+            string detail = ex.Message;
 
-        private async Task HandleInternalServerErrorAsync(HttpContext context, Exception ex)
-        {
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            string message = ex.Message;
-            if (message == "Exception of type 'System.Exception' was thrown")
-                message = "Une erreur est survenue";
-
-            await WriteErrorResponseAsync(context, ex.StackTrace, message);
-        }
-
-        private async Task WriteErrorResponseAsync(HttpContext context, string trace, string logMessage, string frontMessage = null)
-        {
-            context.Response.ContentType = "application/json";
-            string currentUserId = context.User.FindFirst(ClaimTypes.Sid)?.Value ?? "Unknown user";
-
-            var errorObject = new CustomErrorMessage
+            if (ex is SecurityTokenExpiredException)
             {
-                DateTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss,fff"),
-                StatusCode = context.Response.StatusCode,
-                Exception = logMessage,
-                Source_ip = context.Connection.RemoteIpAddress?.ToString(),
-                Host_ip = context.Connection.LocalIpAddress?.ToString(),
-                Hostname = context.Request.Host.Host,
-                protocol = context.Request.Scheme,
-                Port = context.Request.Host.Port,
-                Request_uri = context.Request.Path,
-                Request_method = context.Request.Method,
-                Trace = trace,
-                CurrentUserId = currentUserId,
-            };
-
-            var stringObject = JsonConvert.SerializeObject(errorObject);
-
-            var stringObjectArray = stringObject.Split("\\r\\n");
-            foreach (var item in stringObjectArray)
+                statusCode = HttpStatusCode.Unauthorized;
+                userMessage = "Veuillez vous reconnecter.";
+                detail = "Le token a expiré.";
+            }
+            else if (ex is CustomException customEx)
             {
-                _logger.LogError(item);
+                statusCode = customEx.StatusCode;
+                userMessage = string.IsNullOrWhiteSpace(customEx.FrontMessage)
+                    ? "Requête invalide."
+                    : customEx.FrontMessage;
+                detail = customEx.Message;
             }
 
-            frontMessage = frontMessage ?? "Une erreur est survenue";
+          
 
-            var responseBody = new CustomExceptionReturn()
+            context.Response.Headers["X-Trace-Id"] = traceId;
+
+            context.Response.ContentType = "application/problem+json";
+            context.Response.StatusCode = (int)statusCode;
+
+            var problem = new
             {
-                Exception = frontMessage,
-                StatusCode = context.Response.StatusCode,
+                type = "about:blank",
+                title = StatusCodeTitle(statusCode),
+                status = (int)statusCode,
+                detail,
+                traceId,
+                instance = context.Request.Path.Value,
+                method = context.Request.Method,
             };
 
-            stringObject = JsonConvert.SerializeObject(responseBody);
-            await context.Response.WriteAsync(stringObject, Encoding.UTF8);
+            await context.Response.WriteAsync(JsonConvert.SerializeObject(problem));
+
+            var endpoint = context.GetEndpoint();
+            var endpointName = endpoint?.DisplayName ?? "";
+
+            var rv = context.Request.RouteValues;
+            var controller = rv.TryGetValue("controller", out var c) ? c?.ToString() ?? "" : "";
+            var action = rv.TryGetValue("action", out var a) ? a?.ToString() ?? "" : "";
+
+            logSvc.LogError(
+                $"Unhandled exception middleware. traceId={traceId} path={context.Request.Path.Value} method={context.Request.Method} endpoint={endpointName} controller={controller} action={action}",
+                ex
+            );
         }
+
+        private static HttpStatusCode MapStatusCode(Exception ex)
+            => ex switch
+            {
+                SecurityTokenExpiredException => HttpStatusCode.Unauthorized, // 401
+                SecurityTokenException => HttpStatusCode.Unauthorized,        // 401
+                UnauthorizedAccessException => HttpStatusCode.Unauthorized,   // 401
+                CustomException cex => cex.StatusCode,
+
+                TaskCanceledException => HttpStatusCode.GatewayTimeout,      // 504
+                OperationCanceledException => HttpStatusCode.GatewayTimeout, // 504
+
+                KeyNotFoundException => HttpStatusCode.NotFound,             // 404
+                ArgumentException => HttpStatusCode.BadRequest,              // 400
+                _ => HttpStatusCode.InternalServerError
+            };
+
+        private static string MapUserMessage(HttpStatusCode status, Exception ex) => status switch
+        {
+            HttpStatusCode.Unauthorized => "Veuillez vous reconnecter.",
+            HttpStatusCode.Forbidden => "Action non autorisée.",
+            HttpStatusCode.NotFound => "Ressource introuvable.",
+            HttpStatusCode.TooManyRequests => "Trop de requêtes. Patientez un instant.",
+            HttpStatusCode.RequestTimeout => "Temps de réponse dépassé. Réessayez plus tard.",
+            HttpStatusCode.GatewayTimeout => "Temps de réponse dépassé. Réessayez plus tard.",
+            HttpStatusCode.Conflict => "Conflit sur la ressource.",
+            (HttpStatusCode)422 => "Données invalides.",
+            _ when (int)status >= 500 => "Service momentanément indisponible.",
+            _ => "Une erreur est survenue."
+        };
+
+        private static string StatusCodeTitle(HttpStatusCode status) => status switch
+        {
+            HttpStatusCode.BadRequest => "Requête invalide",
+            HttpStatusCode.Unauthorized => "Authentification requise",
+            HttpStatusCode.Forbidden => "Interdit",
+            HttpStatusCode.NotFound => "Introuvable",
+            HttpStatusCode.Conflict => "Conflit",
+            (HttpStatusCode)422 => "Entité non traitable",
+            HttpStatusCode.TooManyRequests => "Trop de requêtes",
+            HttpStatusCode.RequestTimeout => "Délai dépassé",
+            HttpStatusCode.GatewayTimeout => "Délai dépassé",
+            HttpStatusCode.BadGateway => "Passerelle en erreur",
+            HttpStatusCode.ServiceUnavailable => "Service indisponible",
+            _ => "Erreur"
+        };
+    }
+
+    public static class ExceptionMiddlewareExtension
+    {
+        public static IApplicationBuilder UseGlobalExceptionHandler(this IApplicationBuilder app)
+            => app.UseMiddleware<ExceptionMiddleware>();
     }
 }

@@ -1,0 +1,22 @@
+@import "../../../styles.scss";
+
+.login-page {
+  background: $finance-bg;
+}
+
+.login-logo {
+  height: 52px;
+}
+
+.login-title {
+  font-size: 1.5rem;
+}
+
+.no-autofill:-webkit-autofill,
+.no-autofill:-webkit-autofill:hover,
+.no-autofill:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  box-shadow: 0 0 0px 1000px white inset !important;
+  -webkit-text-fill-color: #000 !important;
+  transition: background-color 9999s ease-in-out 0s !important;
+}

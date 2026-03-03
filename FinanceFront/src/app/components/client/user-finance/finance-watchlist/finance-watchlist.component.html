@@ -1,0 +1,68 @@
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <h2 class="h6 text-uppercase text-muted mb-3">Watchlist et positions</h2>
+
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Valeur</th>
+            <th>Dernier cours</th>
+            <th>Variation</th>
+            <th>Qt detenu</th>
+            <th>Prix moyen</th>
+            <th>Encours</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of watchlist; track item.userAssetId) {
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ item.symbol }}</div>
+                <small class="text-muted">{{ item.companyName }}</small>
+              </td>
+              <td>{{ item.lastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td [class.text-success]="item.dayVariationPct >= 0" [class.text-danger]="item.dayVariationPct < 0">
+                {{ item.dayVariationPct | number: '1.2-2' }}%
+              </td>
+              <td>{{ item.heldQuantity | number: '1.2-4' }}</td>
+              <td>{{ item.averageBuyPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td>{{ item.outstandingAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td>
+                <div class="d-flex gap-2 justify-content-end">
+                  <button class="btn btn-sm btn-outline-primary" type="button" (click)="onSelectSymbol(item.symbol)">
+                    Cours live
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" (click)="onRemoveSymbol(item.symbol)">
+                    Retirer
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">Aucune valeur suivie.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="quote-box mt-3" *ngIf="quote as liveQuote">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-semibold">{{ liveQuote.symbol }} - Cours live</div>
+          <small class="text-muted">Mise a jour {{ liveQuote.asOfUtc | date: 'dd/MM HH:mm:ss' }}</small>
+        </div>
+        <div class="text-end">
+          <div class="h5 mb-0">{{ liveQuote.lastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</div>
+          <small [class.text-success]="liveQuote.dayVariationPct >= 0" [class.text-danger]="liveQuote.dayVariationPct < 0">
+            {{ liveQuote.dayVariationPct | number: '1.2-2' }}%
+          </small>
+        </div>
+      </div>
+      <div class="small text-muted mt-2" *ngIf="quoteLoading">Rafraichissement en cours...</div>
+    </div>
+  </div>
+</div>

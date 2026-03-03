@@ -1,0 +1,38 @@
+<div class="card border-0 shadow-sm h-100">
+  <div class="card-body">
+    <h2 class="h6 text-uppercase text-muted mb-3">Simulation d'investissement</h2>
+
+    <div class="alert alert-warning py-2" *ngIf="selectedSymbol.length === 0">
+      Selectionne une valeur pour lancer la simulation.
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="d-flex flex-column gap-2">
+      <div>
+        <label class="form-label">Valeur</label>
+        <input class="form-control" [value]="selectedSymbol || '-'" readonly />
+      </div>
+
+      <div>
+        <label class="form-label">Montant investi</label>
+        <input class="form-control" type="number" step="1" formControlName="investmentAmount" />
+      </div>
+
+      <div>
+        <label class="form-label">Horizon (jours)</label>
+        <input class="form-control" type="number" step="1" formControlName="horizonDays" />
+      </div>
+
+      <button class="btn btn-outline-primary mt-2" [disabled]="loading" type="submit">
+        {{ loading ? 'Simulation...' : 'Simuler' }}
+      </button>
+    </form>
+
+    <div class="result-box mt-3" *ngIf="result as simulationResult">
+      <div class="fw-semibold mb-2">Resultat</div>
+      <div>Rendement estime: <strong>{{ simulationResult.estimatedReturnAmount | currency: 'USD' }}</strong></div>
+      <div>Rendement %: <strong>{{ simulationResult.estimatedReturnPct | percent: '1.1-2' }}</strong></div>
+      <div>Montant final estime: <strong>{{ simulationResult.estimatedFinalAmount | currency: 'USD' }}</strong></div>
+      <small class="text-muted d-block mt-2">{{ simulationResult.assumption }}</small>
+    </div>
+  </div>
+</div>

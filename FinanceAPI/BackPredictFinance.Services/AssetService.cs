@@ -1,4 +1,4 @@
-﻿using BackPredictFinance.Datas.Models;
+using BackPredictFinance.Datas.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -28,8 +28,6 @@ namespace BackPredictFinance.Services
         public async Task<Asset?> GetAssetByIdAsync(string assetId)
         {
             return await _financeDbContext.Assets
-                .Include(a => a.Prices)
-                .Include(a => a.PriceHistories)
                 .FirstOrDefaultAsync(a => a.Id == assetId);
         }
 
@@ -58,3 +56,4 @@ namespace BackPredictFinance.Services
         }
     }
 }
+

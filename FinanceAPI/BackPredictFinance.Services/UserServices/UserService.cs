@@ -1,252 +1,368 @@
-﻿using BackPredictFinance.Common;
+using BackPredictFinance.Common;
+using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Common;
-using BackPredictFinance.Datas.Context;
-using BackPredictFinance.Datas.Models;
+using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services.AuthServices;
 using BackPredictFinance.ViewModels.CommonViewModels;
 using BackPredictFinance.ViewModels.UserViewModels;
+using BackPredictFinance.ViewModels.UserViewModels.AuthViewModels;
 using BackPredictFinance.ViewModels.WebViewModels.PaginateViewModels;
-using BackPredictFinance.ViewModels.WebViewModels.PaginateViewModels.Filters;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.JsonWebTokens;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.UserServices
 {
     public interface IUserService
     {
-        // Création d'un utilisateur
-        Task<UserViewModel> CreateUser(UserViewModel user);
-        // Récupération d'un utilisateur par ID
-        Task<UserViewModel> GetUserById(string userId);
-        // Récupération de tous les utilisateurs
-        Task<List<UserViewModel>> GetAllUsers();
-        // Mise à jour d'un utilisateur
-        Task<UserViewModel> UpdateUser(UserViewModel user);
-        // Suppression d'un utilisateur
-        Task DeleteUser(string userId);
-
-        // Génération et confirmation d'email
-        Task<string> GenerateEmailConfirmationToken(UserViewModel user);
-        Task<UserViewModel> ConfirmEmail(UserViewModel user, string token);
-
-        // Génération et réinitialisation de mot de passe
-        Task<string> GeneratePasswordResetToken(UserViewModel user);
-        Task<UserViewModel> ResetPassword(UserViewModel user, string token, string newPassword);
-
-        // Connexion et tokens JWT
-        Task<TokenViewModel> Login(LoginViewModel loginModel);
-        Task<TokenViewModel> RefreshTokenAsync(TokenViewModel tokenRequest);
-        Task<string> RenewRefreshToken(UserViewModel user);
-        Task Logout();
-
-        // Mot de passe oublié et déverrouillage
-        Task ForgotPassword(string email);
-        Task UnlockUser(string userId);
-        Task ChangePassword(ChangePasswordViewModel changePasswordModel);
-
-        // Pagination utilisateur par companyId
-        Task<UserPaginateViewModel> GetByPaginationByCompanyId(PaginateViewModel paginateVm, string companyId);
+        Task<TokenViewModel?> Register(UserViewModel model, CancellationToken ct = default);
+        Task<UserViewModel> UpsertProfilData(UserViewModel model, CancellationToken ct = default);
+        Task<UserViewModel> GetUserData(CancellationToken ct = default);
+        Task DeleteUser(string userId, CancellationToken ct = default);
+        Task<PagedResultViewModel<UserViewModel>> GetUsersPaged(PaginateSettingsViewModel model, CancellationToken ct = default);
+        Task<UserViewModel> GetUserDetails(string userId, CancellationToken ct = default);
+        Task<object> GetProfileCompletionDetails(CancellationToken ct = default);
+        Task<UserViewModel> CreateUserAdmin(AdminUserUpsertViewModel model, CancellationToken ct = default);
+        Task<UserViewModel> UpdateUserAdmin(string userId, AdminUserUpsertViewModel model, CancellationToken ct = default);
     }
 
     public class UserService : BaseService, IUserService
     {
-        private readonly JwtGeneratorService _jwtGenerator;
-        private readonly UserRoleDataService _userRoleDataService;
-        private readonly EmailService _emailService;
-
-        // Utilisation du service de logs centralisé
-        public ILogService _logger;
+        private readonly IPathService _pathService;
+        private readonly IAccountService _accountService;
+        private readonly IUserRoleDataService _userRoleDataService;
 
         public UserService(
             IServiceProvider serviceProvider,
-            JwtGeneratorService jwtGenerator,
-            UserRoleDataService userRoleDataService,
-            EmailService emailService) : base(serviceProvider)
+            IPathService pathService,
+            IUserRoleDataService userRoleDataService,
+            IAccountService accountService)
+            : base(serviceProvider)
         {
-            _jwtGenerator = jwtGenerator;
+            _pathService = pathService;
             _userRoleDataService = userRoleDataService;
-            _emailService = emailService;
-            _logger = serviceProvider.GetRequiredService<ILogService>();
+            _accountService = accountService;
         }
 
-        /// <summary>Crée un nouvel utilisateur</summary>
-        public async Task<UserViewModel> CreateUser(UserViewModel vm)
+        public async Task<PagedResultViewModel<UserViewModel>> GetUsersPaged(PaginateSettingsViewModel model, CancellationToken ct = default)
         {
-            vm.Id = Guid.NewGuid().ToString();
-            var user = vm.ToEntity();
-            user.CreatedAt = DateTime.UtcNow;
+            var sort = string.IsNullOrWhiteSpace(model.SortActive) ? "Email" : model.SortActive;
+            var take = model.PageSize > 0 ? model.PageSize : 25;
+            var start = model.PageIndex >= 0 ? model.PageIndex * take : 0;
 
-            _logger.LogInformation("Création user: {UserName}");
-            foreach (var validator in _userManager.PasswordValidators)
+            var query = _financeDbContext.Set<User>().AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(model.Filter))
             {
-                var validation = await validator.ValidateAsync(_userManager, user, vm.Password);
-                if (!validation.Succeeded)
-                    throw new CustomException(string.Join("; ", validation.Errors.Select(e => e.Description)));
+                var filter = model.Filter.Trim();
+                query = query.Where(x =>
+                    (x.FirstName != null && x.FirstName.Contains(filter)) ||
+                    (x.LastName != null && x.LastName.Contains(filter)) ||
+                    (x.Email != null && x.Email.Contains(filter)) ||
+                    (x.PhoneNumber != null && x.PhoneNumber.Contains(filter)));
             }
 
-            var result = await _userManager.CreateAsync(user, vm.Password);
+            var total = await query.CountAsync(ct);
+            var users = await query
+                .OrderByDynamic(sort, model.SortDirection)
+                .Skip(start)
+                .Take(take)
+                .ToListAsync(ct);
+
+            var vmList = users.Select(x => x.ToViewModel()).ToList();
+            foreach (var userViewModel in vmList.Where(x => !string.IsNullOrWhiteSpace(x.Id)))
+            {
+                userViewModel.Roles = await _userRoleDataService.SetUserRoleViewModel(userViewModel.Id!);
+            }
+
+            return new PagedResultViewModel<UserViewModel>
+            {
+                Items = vmList,
+                Total = total,
+                Page = model.PageIndex + 1,
+                PageSize = take
+            };
+        }
+
+        public async Task DeleteUser(string userId, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                throw new CustomException("userId is required");
+            }
+
+            if (string.Equals(_currentUserId, userId, StringComparison.Ordinal))
+            {
+                throw new CustomException("Un administrateur ne peut pas se supprimer lui-meme.");
+            }
+
+            var user = await _userManager.Users.FirstOrDefaultAsync(x => x.Id == userId, ct);
+            if (user is null)
+            {
+                return;
+            }
+
+            var result = await _userManager.DeleteAsync(user);
             if (!result.Succeeded)
-                throw new CustomException(string.Join("; ", result.Errors.Select(e => e.Description)));
+            {
+                throw new InvalidOperationException(string.Join(" | ", result.Errors.Select(e => e.Description)));
+            }
+
+            await _financeDbContext.SaveChangesAsync(ct);
+        }
+
+        public async Task<UserViewModel> GetUserData(CancellationToken ct = default)
+        {
+            var user = await _financeDbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == _currentUserId, ct);
+
+            if (user is null)
+            {
+                throw new CustomException("User not found");
+            }
 
             return user.ToViewModel();
         }
 
-        /// <summary>Récupère un utilisateur par son ID</summary>
-        public async Task<UserViewModel> GetUserById(string userId)
-            => (await _userManager.FindByIdAsync(userId))?.ToViewModel();
-
-        /// <summary>Récupère tous les utilisateurs</summary>
-        public Task<List<UserViewModel>> GetAllUsers()
-            => Task.FromResult(_userManager.Users.Select(u => u.ToViewModel()).ToList());
-
-        /// <summary>Met à jour un utilisateur existant</summary>
-        public async Task<UserViewModel> UpdateUser(UserViewModel vm)
+        public async Task<TokenViewModel?> Register(UserViewModel model, CancellationToken ct = default)
         {
-            var existing = await _userManager.FindByIdAsync(vm.Id);
-            if (existing == null) return null;
-            _logger.LogInformation("Mise à jour user: {UserName}");
-            existing.UserName = vm.UserName;
-            existing.Email = vm.Email;
-            existing.PhoneNumber = vm.PhoneNumber;
-            existing.FirstName = vm.FirstName;
-            existing.LastName = vm.LastName;
-            existing.UpdatedAt = DateTime.UtcNow;
-            var res = await _userManager.UpdateAsync(existing);
-            return res.Succeeded ? existing.ToViewModel() : null;
+            var existing = await _userManager.FindByEmailAsync(model.Email);
+            if (existing != null)
+            {
+                return null;
+            }
+
+            var user = new User
+            {
+                UserName = model.Email,
+                Email = model.Email,
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                RefreshToken = string.Empty
+            };
+
+            var create = await _userManager.CreateAsync(user, model.Password);
+            if (!create.Succeeded)
+            {
+                return null;
+            }
+
+            await _userManager.AddToRoleAsync(user, UserRoleEnum.User.ToString());
+
+            var loginVm = new LoginViewModel
+            {
+                Email = model.Email,
+                Password = model.Password
+            };
+
+            return await _accountService.Login(loginVm);
         }
 
-        /// <summary>Supprime un utilisateur</summary>
-        public async Task DeleteUser(string userId)
+        public async Task<UserViewModel> UpsertProfilData(UserViewModel model, CancellationToken ct = default)
         {
-            var user = await _userManager.FindByIdAsync(userId) ?? throw new CustomException("User not found");
-            _logger.LogInformation("Suppression user: {UserName}");
-            await _userManager.DeleteAsync(user);
+            var principal = _httpContextAccessor?.HttpContext?.User;
+            if (principal is null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            var user = await _userManager.GetUserAsync(principal);
+            if (user is null)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.FirstName))
+            {
+                user.FirstName = model.FirstName;
+            }
+            if (!string.IsNullOrWhiteSpace(model.LastName))
+            {
+                user.LastName = model.LastName;
+            }
+            if (!string.IsNullOrWhiteSpace(model.PhoneNumber))
+            {
+                user.PhoneNumber = model.PhoneNumber;
+            }
+            user.IsActive = model.IsActive;
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(string.Join(" | ", result.Errors.Select(e => e.Description)));
+            }
+
+            return user.ToViewModel();
         }
 
-       
-
-        /// <summary>Génère un token de confirmation email</summary>
-        public async Task<string> GenerateEmailConfirmationToken(UserViewModel vm)
-            => await _userManager.GenerateEmailConfirmationTokenAsync(await _userManager.FindByIdAsync(vm.Id));
-
-        /// <summary>Confirme l'email d'un utilisateur</summary>
-        public async Task<UserViewModel> ConfirmEmail(UserViewModel vm, string token)
+        public async Task<UserViewModel> GetUserDetails(string userId, CancellationToken ct = default)
         {
-            var user = await _userManager.FindByIdAsync(vm.Id);
-            return (await _userManager.ConfirmEmailAsync(user, token)).Succeeded ? user.ToViewModel() : null;
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                throw new ArgumentException("userId is required", nameof(userId));
+            }
+
+            var user = await _userManager.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == userId, ct);
+
+            if (user is null)
+            {
+                throw new KeyNotFoundException($"User {userId} not found");
+            }
+
+            var viewModel = user.ToViewModel();
+            viewModel.Roles = await _userRoleDataService.SetUserRoleViewModel(user.Id);
+            return viewModel;
         }
 
-        /// <summary>Génère un token de reset mot de passe</summary>
-        public async Task<string> GeneratePasswordResetToken(UserViewModel vm)
-            => await _userManager.GeneratePasswordResetTokenAsync(await _userManager.FindByIdAsync(vm.Id));
-
-        /// <summary>Réinitialise le mot de passe d'un utilisateur</summary>
-        public async Task<UserViewModel> ResetPassword(UserViewModel vm, string token, string newPassword)
+        public async Task<UserViewModel> CreateUserAdmin(AdminUserUpsertViewModel model, CancellationToken ct = default)
         {
-            var user = await _userManager.FindByIdAsync(vm.Id);
-            return (await _userManager.ResetPasswordAsync(user, token, newPassword)).Succeeded ? user.ToViewModel() : null;
+            if (string.IsNullOrWhiteSpace(model.Email))
+            {
+                throw new CustomException("Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(model.Password))
+            {
+                throw new CustomException("Password is required.");
+            }
+
+            var existing = await _userManager.FindByEmailAsync(model.Email);
+            if (existing is not null)
+            {
+                throw new CustomException("A user with this email already exists.");
+            }
+
+            var user = new User
+            {
+                UserName = model.Email,
+                Email = model.Email,
+                FirstName = model.FirstName?.Trim() ?? string.Empty,
+                LastName = model.LastName?.Trim() ?? string.Empty,
+                IsActive = model.IsActive,
+                RefreshToken = string.Empty
+            };
+
+            var createResult = await _userManager.CreateAsync(user, model.Password);
+            if (!createResult.Succeeded)
+            {
+                throw new CustomException(string.Join(" | ", createResult.Errors.Select(x => x.Description)));
+            }
+
+            var targetRole = ResolveRoleName(model.Role);
+            if (!await _roleManager.RoleExistsAsync(targetRole))
+            {
+                targetRole = UserRoleEnum.User.ToString();
+            }
+
+            await _userManager.AddToRoleAsync(user, targetRole);
+            return await GetUserDetails(user.Id, ct);
         }
 
-        /// <summary>Authentifie un utilisateur et retourne un JWT</summary>
-        public async Task<TokenViewModel> Login(LoginViewModel loginModel)
+        public async Task<UserViewModel> UpdateUserAdmin(string userId, AdminUserUpsertViewModel model, CancellationToken ct = default)
         {
-            var user = await _userManager.FindByEmailAsync(loginModel.Email) ?? throw new CustomException("Invalid credentials");
-            var signIn = await _signInManager.CheckPasswordSignInAsync(user, loginModel.Password, false);
-            if (!signIn.Succeeded) throw new CustomException("Invalid credentials");
-            var jwt = await _jwtGenerator.GenerateJwtToken(user);
-            var refresh = _jwtGenerator.GenerateRefreshToken();
-            await _jwtGenerator.UpdateRefreshTokenAsync(user.Id, refresh);
-            return new TokenViewModel { Token = jwt, RefreshToken = refresh, Firstname = user.FirstName, Lastname = user.LastName };
-        }
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                throw new ArgumentException("userId is required", nameof(userId));
+            }
 
-        /// <summary>Rafraîchit un JWT via le refresh token</summary>
-        public async Task<TokenViewModel> RefreshTokenAsync(TokenViewModel request)
-        {
-            var principal = _jwtGenerator.GetPrincipalFromExpiredToken(request.Token) ?? throw new CustomException("Invalid token");
-            var userId = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            var stored = await _jwtGenerator.GetRefreshTokenAsync(userId);
-            if (stored != request.RefreshToken) throw new CustomException("Invalid refresh token");
             var user = await _userManager.FindByIdAsync(userId);
-            var newJwt = await _jwtGenerator.GenerateJwtToken(user);
-            var newRefresh = _jwtGenerator.GenerateRefreshToken();
-            await _jwtGenerator.UpdateRefreshTokenAsync(userId, newRefresh);
-            return new TokenViewModel { Token = newJwt, RefreshToken = newRefresh, Firstname = user.FirstName, Lastname = user.LastName };
+            if (user is null)
+            {
+                throw new KeyNotFoundException($"User {userId} not found");
+            }
+
+            var email = model.Email?.Trim();
+            if (!string.IsNullOrWhiteSpace(email) && !string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+            {
+                var existing = await _userManager.FindByEmailAsync(email);
+                if (existing is not null && existing.Id != userId)
+                {
+                    throw new CustomException("Another user already uses this email.");
+                }
+
+                var setEmailResult = await _userManager.SetEmailAsync(user, email);
+                if (!setEmailResult.Succeeded)
+                {
+                    throw new CustomException(string.Join(" | ", setEmailResult.Errors.Select(x => x.Description)));
+                }
+
+                var setUserNameResult = await _userManager.SetUserNameAsync(user, email);
+                if (!setUserNameResult.Succeeded)
+                {
+                    throw new CustomException(string.Join(" | ", setUserNameResult.Errors.Select(x => x.Description)));
+                }
+            }
+
+            user.FirstName = model.FirstName?.Trim() ?? user.FirstName;
+            user.LastName = model.LastName?.Trim() ?? user.LastName;
+            user.PhoneNumber = model.PhoneNumber?.Trim() ?? user.PhoneNumber;
+            user.IsActive = model.IsActive;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                throw new CustomException(string.Join(" | ", updateResult.Errors.Select(x => x.Description)));
+            }
+
+            var targetRole = ResolveRoleName(model.Role);
+            if (await _roleManager.RoleExistsAsync(targetRole))
+            {
+                var currentRoles = await _userManager.GetRolesAsync(user);
+                if (!currentRoles.Contains(targetRole, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (currentRoles.Count > 0)
+                    {
+                        await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                    }
+                    await _userManager.AddToRoleAsync(user, targetRole);
+                }
+            }
+
+            return await GetUserDetails(userId, ct);
         }
 
-        /// <summary>Renouvelle uniquement le refresh token</summary>
-        public async Task<string> RenewRefreshToken(UserViewModel vm)
+        private static string ResolveRoleName(string? roleFromClient)
         {
-            var user = await _userManager.FindByIdAsync(vm.Id) ?? throw new CustomException("User not found");
-            var newRefresh = _jwtGenerator.GenerateRefreshToken();
-            await _jwtGenerator.UpdateRefreshTokenAsync(user.Id, newRefresh);
-            return newRefresh;
+            if (string.IsNullOrWhiteSpace(roleFromClient))
+            {
+                return UserRoleEnum.User.ToString();
+            }
+
+            if (Enum.TryParse<UserRoleEnum>(roleFromClient, ignoreCase: true, out var parsed))
+            {
+                return parsed.ToString();
+            }
+
+            return UserRoleEnum.User.ToString();
         }
 
-        /// <summary>Déconnecte l'utilisateur</summary>
-        public async Task Logout()
-            => await _signInManager.SignOutAsync();
-
-        /// <summary>Envoie un email de réinitialisation de mot de passe</summary>
-        public async Task ForgotPassword(string email)
+        public async Task<object> GetProfileCompletionDetails(CancellationToken ct = default)
         {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null) { _logger.LogWarning("Email non trouvé"); return; }
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var link = $"{_configuration["domain"]}/ForgotPassword?token={WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token))}&email={user.Email}";
-            _emailService.SendEmailPasswordReset(user.Email, link);
-        }
+            var profile = await GetUserData(ct);
 
-        /// <summary>Déverrouille un utilisateur verrouillé</summary>
-        public async Task UnlockUser(string userId)
-        {
-            var user = await _userManager.FindByIdAsync(userId) ?? throw new CustomException("User not found");
-            await _userManager.SetLockoutEndDateAsync(user, null);
-            await _userManager.ResetAccessFailedCountAsync(user);
-        }
+            var completedFields = 0;
+            var totalFields = 4;
 
-        /// <summary>Change le mot de passe de l'utilisateur courant</summary>
-        public async Task ChangePassword(ChangePasswordViewModel model)
-        {
-            var current = await GetCurrentUserAsync() ?? throw new CustomException("Unauthorized");
-            if (model.NewPassword != model.ConfirmNewPassword) throw new CustomException("Passwords do not match");
-            var res = await _userManager.ChangePasswordAsync(current, model.CurrentPassword, model.NewPassword);
-            if (!res.Succeeded) throw new CustomException(string.Join("; ", res.Errors.Select(e => e.Description)));
-        }
+            if (!string.IsNullOrWhiteSpace(profile.FirstName)) completedFields++;
+            if (!string.IsNullOrWhiteSpace(profile.LastName)) completedFields++;
+            if (!string.IsNullOrWhiteSpace(profile.Email)) completedFields++;
+            if (!string.IsNullOrWhiteSpace(profile.PhoneNumber)) completedFields++;
 
-        /// <summary>Pagination des utilisateurs par companyId</summary>
-        public async Task<UserPaginateViewModel> GetByPaginationByCompanyId(PaginateViewModel paginateVm, string companyId)
-        {
-            var filter = string.IsNullOrWhiteSpace(paginateVm.Filter)
-                ? new UserFilter()
-                : JsonSerializer.Deserialize<UserFilter>(paginateVm.Filter);
-            var predicate = GetFilter(companyId, filter);
-            var users = await _financeDbContext.Set<User>().GetByPaginationAsync(
-                paginateVm.PageIndex * paginateVm.PageSize,
-                paginateVm.PageSize,
-                paginateVm.SortActive,
-                paginateVm.SortDirection,
-                predicate);
-            var vms = users.Select(u => u.ToViewModel()).ToList();
-            var total = await _financeDbContext.Users.GetTotalCountAsync(predicate);
-            var result = new UserPaginateViewModel(total, vms);
-            foreach (var uvm in result.Datas)
-                uvm.Roles = await _userRoleDataService.SetUserRoleViewModel(uvm.Id);
-            return result;
-        }
+            var completionPercent = totalFields == 0
+                ? 0
+                : (int)Math.Round((completedFields / (double)totalFields) * 100);
 
-        private Expression<Func<User, bool>> GetFilter(string companyId, UserFilter filter)
-            => u =>
-                (string.IsNullOrWhiteSpace(filter.Name) ||
-                 (u.FirstName + " " + u.LastName).ToLower().Contains(filter.Name.ToLower())) &&
-                (!filter.ActiveStatus.HasValue || u.IsActive == filter.ActiveStatus.Value);
+            return new ProfileCompletionViewModel
+            {
+                CompletionPercent = completionPercent,
+                CompletedFields = completedFields,
+                TotalFields = totalFields
+            };
+        }
     }
 }
+
+
+

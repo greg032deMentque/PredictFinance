@@ -1,0 +1,61 @@
+@import "./variables.scss";
+
+button {
+  width: 140px;
+  height: 40px;
+  border-radius: 8px;
+  color: #fff;
+  border: none;
+  background-color: $finance-navy;
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.syncButton {
+  background-color: $finance-gold !important;
+  color: white !important;
+}
+
+.disable-hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.syncButton {
+  background-color: $finance-gold !important;
+  color: white !important;
+  border: none;
+
+  &:hover {
+    background-color: darken($finance-gold, 7%) !important;
+  }
+}
+
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.8rem;
+}
+
+.btn-danger {
+  background-color: $finance-loss-red;
+  border-color: $finance-loss-red;
+  color: #fff;
+}
+
+.btn-primary {
+  background-color: $finance-navy !important;
+  color: white !important;
+}
+
+.btn-info {
+  background-color: $finance-emerald !important;
+  color: white !important;
+}
