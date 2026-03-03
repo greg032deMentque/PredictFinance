@@ -1,93 +1,101 @@
-# FianceAPI
+﻿# PredictFinance
 
+Ce projet contient une refonte IA simple et maintenable pour la prediction de patterns boursiers.
 
+Le chemin actif est `FinanceIA` et le MVP se concentre uniquement sur un cas:
 
-## Getting started
+- pattern `Double Top`
+- cible binaire (`target=1` sur le second pic)
+- un seul modele (`LightGBMClassifier`)
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Structure utile
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- `FinanceIA/src/finance_ia/`: pipeline IA modulaire (data, features, dataset, model, io, cli)
+- `FinanceIA/tests/`: tests unitaires + smoke tests
+- `FinanceIA/main.py`: wrapper CLI minimal (`train` / `predict`)
+- `FinanceIA/API/`: hors perimetre de cette refonte
 
-## Add your files
+## Demarrage rapide (Windows PowerShell)
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+Depuis la racine du repo:
 
+```powershell
+cd .\FinanceIA
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -e .
+pip install -e .[dev]
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/greg9850916/fianceapi.git
-git branch -M main
-git push -uf origin main
+
+`Activate.ps1` active l'environnement virtuel: les commandes Python utilisent alors les dependances locales du projet.
+
+## Commandes principales
+
+### 1) Entrainement
+
+```powershell
+python -m finance_ia.cli.train --output-dir artifacts/double_top --tickers AAPL MSFT NVDA AMZN GOOGL META JPM XOM --start 2018-01-01 --end 2025-12-31
 ```
 
-## Integrate with your tools
+Cette commande:
 
-- [ ] [Set up project integrations](https://gitlab.com/greg9850916/fianceapi/-/settings/integrations)
+1. telecharge les donnees OHLCV Yahoo Finance
+2. calcule les features techniques
+3. detecte/labelise les `Double Top`
+4. construit le dataset multi-tickers
+5. applique un split temporel (train ancien, test recent)
+6. entraine LightGBM (`class_weight='balanced'`)
+7. evalue le modele et sauvegarde les artefacts
 
-## Collaborate with your team
+Objets generes dans `--output-dir`:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+- `model.joblib`: modele entraine
+- `feature_columns.json`: ordre exact des features attendues en inference
+- `metrics.json`: metriques de test (`roc_auc`, `precision`, `recall`, `f1`, confusion matrix, etc.)
+- `train_config.json`: configuration complete d'entrainement (tickers, periode, hyperparametres)
 
-## Test and Deploy
+### 2) Prediction
 
-Use the built-in continuous integration in GitLab.
+```powershell
+python -m finance_ia.cli.predict --ticker AAPL --model-dir artifacts/double_top --period 6mo
+```
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Cette commande:
 
-***
+1. charge le modele et les colonnes de features depuis `--model-dir`
+2. telecharge les dernieres donnees du ticker
+3. recalcule les features
+4. produit les probabilites du modele sur les fenetres valides
+5. retourne un JSON de synthese sur stdout
 
-# Editing this README
+Sortie JSON:
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+- `ticker`: ticker demande
+- `as_of`: date de la derniere fenetre evaluee
+- `mean_prob`: probabilite moyenne sur la periode
+- `max_prob`: probabilite maximale observee
+- `last_prob`: probabilite sur la derniere fenetre
+- `n_windows`: nombre de fenetres utilisees
 
-## Suggestions for a good README
+### 3) Wrapper simple
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```powershell
+python main.py train --output-dir artifacts/double_top
+python main.py predict --ticker AAPL --model-dir artifacts/double_top
+```
 
-## Name
-Choose a self-explaining name for your project.
+### 4) Tests
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+```powershell
+pytest tests -q
+```
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+Les tests couvrent detection `Double Top`, indicateurs, dataset, entrainement, prediction CLI, et anti-fuite temporelle.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## Limites connues du MVP
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- un seul pattern (`Double Top`) et une seule cible binaire
+- pas d'optimisation hyperparametres avancee
+- pas de tracking MLflow
+- pas de refonte FastAPI dans cette iteration
