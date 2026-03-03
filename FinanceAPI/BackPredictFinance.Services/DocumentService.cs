@@ -35,12 +35,12 @@ namespace BackPredictFinance.Services
 		/// <returns></returns>
 		public async Task<Document?> AddDocument(DocumentViewModel documentViewModel, CancellationToken cancellationToken = default)
 		{
-			var newDocument = Mapper.Map<Document>(documentViewModel);
+			var newDocument = _mapper.Map<Document>(documentViewModel);
 			newDocument.SetParams();
 
-			await FinanceDbContext.Documents.AddAsync(newDocument, cancellationToken);
+			await _financeDbContext.Documents.AddAsync(newDocument, cancellationToken);
 
-			await FinanceDbContext.SaveChangesAsync(cancellationToken);	
+			await _financeDbContext.SaveChangesAsync(cancellationToken);	
 
 			await _driveService.AddFile(documentViewModel.File, newDocument.Id);
 
@@ -49,10 +49,10 @@ namespace BackPredictFinance.Services
 
 		public async Task DeleteDocument(string documentId)
 		{
-			var document = await FinanceDbContext.Documents.FirstOrDefaultAsync(x => x.Id == documentId);
+			var document = await _financeDbContext.Documents.FirstOrDefaultAsync(x => x.Id == documentId);
 
-			FinanceDbContext.Documents.Remove(document);
-			await FinanceDbContext.SaveChangesAsync();
+			_financeDbContext.Documents.Remove(document);
+			await _financeDbContext.SaveChangesAsync();
 
             _driveService.DeleteFile(_pathService.GetFilePath(document.Id));
 
@@ -72,11 +72,11 @@ namespace BackPredictFinance.Services
 
 		public async Task<DocumentPaginateViewModel> GetAllDocumentByPagination(PaginateViewModel paginate)
 		{
-			var documentList = await FinanceDbContext.Documents.GetByPaginationAsync(paginate.PageIndex * paginate.PageSize, paginate.PageSize, paginate.SortActive, paginate.SortDirection, GetFilter(paginate.Filter));
+			var documentList = await _financeDbContext.Documents.GetByPaginationAsync(paginate.PageIndex * paginate.PageSize, paginate.PageSize, paginate.SortActive, paginate.SortDirection, GetFilter(paginate.Filter));
 
-            var documentListVm = Mapper.Map<List<DocumentViewModel>>(documentList);
+            var documentListVm = _mapper.Map<List<DocumentViewModel>>(documentList);
 
-			var count = await FinanceDbContext.Documents.GetTotalCountAsync();
+			var count = await _financeDbContext.Documents.GetTotalCountAsync();
 
 			var documentPaginate = new DocumentPaginateViewModel(count, documentListVm);
 
@@ -98,14 +98,14 @@ namespace BackPredictFinance.Services
 
         public async Task<DocumentViewModel> GetDocumentDatas(string documentId)
 		{
-            var document = await FinanceDbContext.Documents.FirstOrDefaultAsync(x => x.Id == documentId);
-            var documentVm = Mapper.Map<DocumentViewModel>(document);
+            var document = await _financeDbContext.Documents.FirstOrDefaultAsync(x => x.Id == documentId);
+            var documentVm = _mapper.Map<DocumentViewModel>(document);
 			return documentVm;
 		}
 
 		public async Task UpdateDocument(DocumentViewModel documentVm)
 		{
-            var document = await FinanceDbContext.Documents.FirstOrDefaultAsync(x => x.Id == documentVm.Id);
+            var document = await _financeDbContext.Documents.FirstOrDefaultAsync(x => x.Id == documentVm.Id);
 			if (document == null)
 				throw new CustomException("Document not found");
 
@@ -128,9 +128,9 @@ namespace BackPredictFinance.Services
             document.FileName = documentVm.File.FileName;
             document.UpdatedAtUtc = DateTime.UtcNow;
 
-            FinanceDbContext.Documents.Update(document);
+            _financeDbContext.Documents.Update(document);
 
-			await FinanceDbContext.SaveChangesAsync();
+			await _financeDbContext.SaveChangesAsync();
 
             await _driveService.AddFile(documentVm.File, documentVm.Id);
         }
@@ -138,7 +138,7 @@ namespace BackPredictFinance.Services
 
         public async Task<byte[]> DownloadFile(string documentId)
 		{
-			var document = await FinanceDbContext.Documents.FirstOrDefaultAsync(x => x.Id == documentId);
+			var document = await _financeDbContext.Documents.FirstOrDefaultAsync(x => x.Id == documentId);
             var path = _pathService.GetFilePath(document.Id);
             byte[] bytes = await File.ReadAllBytesAsync(path);
 

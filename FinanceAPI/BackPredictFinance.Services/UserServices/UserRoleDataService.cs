@@ -101,9 +101,9 @@ namespace BackPredictFinance.Services.UserServices
         /// <returns></returns>
         public async Task<List<UserRoleViewModel>> SetUserRoleViewModel(string userId)
         {
-            var rawRoles = await FinanceDbContext.UserRoles
+            var rawRoles = await _financeDbContext.UserRoles
                 .Where(ur => ur.UserId == userId)
-                .Join(FinanceDbContext.Roles,
+                .Join(_financeDbContext.Roles,
                       ur => ur.RoleId,
                       r => r.Id,
                       (ur, r) => new { r.Id, r.Name })

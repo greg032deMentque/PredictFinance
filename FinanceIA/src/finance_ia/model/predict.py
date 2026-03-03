@@ -19,6 +19,8 @@ class PredictResult:
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "schema_version": "1.0",
+            "pattern": "double_top",
             "ticker": self.ticker,
             "as_of": self.as_of,
             "mean_prob": self.mean_prob,

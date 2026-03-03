@@ -44,8 +44,6 @@ namespace BackPredictFinance.Datas.Context
 
         #region User Data
         public DbSet<IdentityUserRole<string>> UserRoles { get; set; }
-        public DbSet<Device> Devices { get; set; }
-
         public DbSet<IdentityRole> Roles { get; set; }
         public DbSet<Document> Documents { get; set; }
         public DbSet<UserAsset> UserAssets { get; set; }

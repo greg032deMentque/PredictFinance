@@ -18,15 +18,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\BackPredictFinance.API.Services\BackPredictFinance.Services.csproj" />
-    <ProjectReference Include="..\BackPredictFinance.Common\BackPredictFinance.Common.csproj" />
-    <ProjectReference Include="..\BackPredictFinance.Datas\BackPredictFinance.Datas.csproj" />
-    <ProjectReference Include="..\BackPredictFinance.Services\BackPredictFinance.Services.csproj" />
-    <ProjectReference Include="..\FinanceAPI.Data\BackPredictFinance.Datas.csproj" />
-    <ProjectReference Include="..\FinanceAPI.ViewModels\BackPredictFinance.ViewModels.csproj" />
-    <ProjectReference Include="..\FinanceAPI\BackPredictFinance.API.csproj" />
-  </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />

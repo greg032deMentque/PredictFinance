@@ -15,11 +15,8 @@
   <ItemGroup>
     <ProjectReference Include="..\BackPredictFinance.Common\BackPredictFinance.Common.csproj" />
     <ProjectReference Include="..\BackPredictFinance.Datas\BackPredictFinance.Datas.csproj" />
-    <ProjectReference Include="..\FinanceAPI.Data\BackPredictFinance.Datas.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="MobileViewModels\" />
-  </ItemGroup>
+
 
 </Project>

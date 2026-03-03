@@ -20,14 +20,14 @@ namespace BackPredictFinance.Services
         public async Task<Asset> CreateAssetAsync(Asset asset)
         {
             asset.Id = asset.Id ?? Guid.NewGuid().ToString();
-            await FinanceDbContext.Assets.AddAsync(asset);
-            await FinanceDbContext.SaveChangesAsync();
+            await _financeDbContext.Assets.AddAsync(asset);
+            await _financeDbContext.SaveChangesAsync();
             return asset;
         }
 
         public async Task<Asset?> GetAssetByIdAsync(string assetId)
         {
-            return await FinanceDbContext.Assets
+            return await _financeDbContext.Assets
                 .Include(a => a.Prices)
                 .Include(a => a.PriceHistories)
                 .FirstOrDefaultAsync(a => a.Id == assetId);
@@ -35,25 +35,25 @@ namespace BackPredictFinance.Services
 
         public async Task<IEnumerable<Asset>> GetAllAssetsAsync()
         {
-            return await FinanceDbContext.Assets
+            return await _financeDbContext.Assets
                 .AsNoTracking()
                 .ToListAsync();
         }
 
         public async Task<Asset> UpdateAssetAsync(Asset asset)
         {
-            FinanceDbContext.Assets.Update(asset);
-            await FinanceDbContext.SaveChangesAsync();
+            _financeDbContext.Assets.Update(asset);
+            await _financeDbContext.SaveChangesAsync();
             return asset;
         }
 
         public async Task DeleteAssetAsync(string assetId)
         {
-            var asset = await FinanceDbContext.Assets.FindAsync(assetId);
+            var asset = await _financeDbContext.Assets.FindAsync(assetId);
             if (asset != null)
             {
-                FinanceDbContext.Assets.Remove(asset);
-                await FinanceDbContext.SaveChangesAsync();
+                _financeDbContext.Assets.Remove(asset);
+                await _financeDbContext.SaveChangesAsync();
             }
         }
     }

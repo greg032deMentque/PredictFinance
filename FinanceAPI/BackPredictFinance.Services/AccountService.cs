@@ -97,7 +97,6 @@ namespace BackPredictFinance.Services
                 return null;
 
             var user = await _userManager.Users
-             .Include(u => u.Device)
              .FirstOrDefaultAsync(u => u.Email == model.Email);
 
             if (user == null)
@@ -117,7 +116,6 @@ namespace BackPredictFinance.Services
             if (result.Succeeded)
             {
 
-                var isFirstConnection = user.Device == null;
 
                 user.LastConnection = DateTime.Now;
 
@@ -138,8 +136,6 @@ namespace BackPredictFinance.Services
                     Token = token,
                     Firstname = user.FirstName,
                     Lastname = user.LastName,
-
-                    IsFirstConnection = isFirstConnection,
                     RefreshToken = user.RefreshToken
                 };
             }
@@ -204,26 +200,10 @@ namespace BackPredictFinance.Services
         public async Task RegisterDevice(string mobileId, string userId)
         {
             var user = await _financeDbContext.Users
-            .Include(u => u.Device)
             .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null) throw new CustomException("User was null");
             if (string.IsNullOrEmpty(mobileId)) throw new CustomException("mobileId was null", "Une erreur est survenue pour récupérer l'identifiant de votre téléphone");
-
-            if (user.Device == null)
-            {
-                user.Device = new Device();
-                user.Device.MobileId = mobileId;
-                user.Device.UserId = user.Id;
-                user.Device.Id = Guid.NewGuid().ToString();
-
-                await _financeDbContext.Devices.AddAsync(user.Device);
-            }
-            else
-            {
-                user.Device.MobileId = mobileId;
-                _financeDbContext.Devices.Update(user.Device);
-            }
 
             await _financeDbContext.SaveChangesAsync();
         }

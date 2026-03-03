@@ -81,6 +81,8 @@ Ce que fait la commande:
 
 Sortie JSON:
 
+- `schema_version`: version du contrat de sortie
+- `pattern`: pattern score (`double_top`)
 - `ticker`: ticker demande
 - `as_of`: date de la derniere observation utilisee
 - `mean_prob`: moyenne des probabilites

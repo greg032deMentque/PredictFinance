@@ -1,5 +1,4 @@
 using AutoMapper;
-using Wagram.ONE.Data.Models;
 
 namespace BackPredictFinance.ViewModels.CommonViewModels
 {

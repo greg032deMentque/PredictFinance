@@ -169,27 +169,20 @@ builder.Services.AddSwaggerGen(c =>
             });
 });
 
-// ---------- PythonApi ----------
-
-builder.Services
-   .AddHttpClient<IPythonApiService, PythonApiService>(client =>
-   {
-       client.BaseAddress = new Uri(builder.Configuration["PythonApi:BaseUrl"]!);
-       client.Timeout = TimeSpan.FromSeconds(10);
-   });
-
-
-
-var app = builder.Build();
-
+// ---------- Python CLI ----------
+builder.Services.Configure<PythonCliOptions>(
+    builder.Configuration.GetSection("PythonCli"));
+builder.Services.AddScoped<IPythonApiService, PythonApiService>();
 
 // ------------ TwelData ---------- 
 builder.Services.Configure<TwelveDataOptions>(
     builder.Configuration.GetSection("TwelveData"));
 
 builder.Services
-    .AddHttpClient<ITickerService, TickerService>()  // HttpClient injecté
+    .AddHttpClient<ITickerService, TickerService>()  // HttpClient injected
     .SetHandlerLifetime(TimeSpan.FromMinutes(5));   // rotation de handler. evite SocketException
+
+var app = builder.Build();
 
 
 // ---------- Middleware Pipeline ----------
@@ -211,3 +204,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

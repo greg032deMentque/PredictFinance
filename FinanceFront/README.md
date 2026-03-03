@@ -1,59 +1,36 @@
 # FinanceFront
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.0.4.
+Front Angular (Bootstrap) pour le MVP PredictFinance.
 
-## Development server
+## Ecrans inclus
 
-To start a local development server, run:
+- `/login`: ecran de connexion local (prototype front)
+- `/app/dashboard`: dashboard prediction avec menu lateral
 
-```bash
-ng serve
-```
+## Fonctionnement
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+1. L'utilisateur se connecte (session locale navigateur).
+2. Il choisit un ticker (ex: `AAPL`) dans le dashboard.
+3. Le front appelle l'API .NET:
+   - `GET /api/trading/predict/{symbol}`
+4. Le front affiche:
+   - probabilite du pattern (`last/mean/max`)
+   - action conseillee (`buy`, `hold`, `sell`)
+   - raison de la recommandation
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Lancer en local
 
 ```bash
-ng generate --help
+npm install
+npm start
 ```
 
-## Building
+Application disponible sur `http://localhost:4200`.
 
-To build the project run:
+## Build
 
 ```bash
-ng build
+npm run build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Build de production dans `dist/FinanceFront`.

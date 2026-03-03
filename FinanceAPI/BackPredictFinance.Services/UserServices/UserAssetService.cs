@@ -25,21 +25,21 @@ namespace BackPredictFinance.Services.UserServices
                 AssetId = assetId,
                 Quantity = quantity
             };
-            await FinanceDbContext.UserAssets.AddAsync(entity);
-            await FinanceDbContext.SaveChangesAsync();
+            await _financeDbContext.UserAssets.AddAsync(entity);
+            await _financeDbContext.SaveChangesAsync();
             return entity;
         }
 
         public async Task<UserAsset?> GetUserAssetAsync(string userId, string assetId)
         {
-            return await FinanceDbContext.UserAssets
+            return await _financeDbContext.UserAssets
                 .Include(ua => ua.Asset)
                 .FirstOrDefaultAsync(ua => ua.UserId == userId && ua.AssetId == assetId);
         }
 
         public async Task<IEnumerable<UserAsset>> GetUserAssetsAsync(string userId)
         {
-            return await FinanceDbContext.UserAssets
+            return await _financeDbContext.UserAssets
                 .Include(ua => ua.Asset)
                 .Where(ua => ua.UserId == userId)
                 .ToListAsync();
@@ -52,8 +52,8 @@ namespace BackPredictFinance.Services.UserServices
                 throw new InvalidOperationException("UserAsset not found.");
 
             entity.Quantity = quantity;
-            FinanceDbContext.UserAssets.Update(entity);
-            await FinanceDbContext.SaveChangesAsync();
+            _financeDbContext.UserAssets.Update(entity);
+            await _financeDbContext.SaveChangesAsync();
             return entity;
         }
 
@@ -62,8 +62,8 @@ namespace BackPredictFinance.Services.UserServices
             var entity = await GetUserAssetAsync(userId, assetId);
             if (entity != null)
             {
-                FinanceDbContext.UserAssets.Remove(entity);
-                await FinanceDbContext.SaveChangesAsync();
+                _financeDbContext.UserAssets.Remove(entity);
+                await _financeDbContext.SaveChangesAsync();
             }
         }
     }

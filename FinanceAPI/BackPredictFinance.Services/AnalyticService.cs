@@ -100,9 +100,9 @@ namespace BackPredictFinance.Services
             }
            
             // Add new analytic
-            await FinanceDbContext.Analytics.AddAsync(analyticAdded);
+            await _financeDbContext.Analytics.AddAsync(analyticAdded);
 
-            await FinanceDbContext.SaveChangesAsync();
+            await _financeDbContext.SaveChangesAsync();
 
             return true;
         }

@@ -22,8 +22,6 @@ namespace BackPredictFinance.Datas.Models
 
         public bool IsActive { get; set; }
 
-        public Device? Device { get; set; }
-
         public List<UserAsset>? UserAssets { get; set; }
     }
 }

@@ -1,0 +1,82 @@
+.shell-wrapper {
+  min-height: 100vh;
+  background:
+    radial-gradient(1000px 220px at 100% 0%, rgba(20, 184, 166, 0.08), transparent 70%),
+    radial-gradient(800px 200px at 0% 100%, rgba(251, 191, 36, 0.12), transparent 65%),
+    #f8fafc;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.brand-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #14b8a6, #0ea5e9);
+  box-shadow: 0 0 0 0.22rem rgba(20, 184, 166, 0.2);
+}
+
+.shell-content {
+  min-height: calc(100vh - 65px);
+}
+
+.sidebar {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.sidebar-title {
+  color: #64748b;
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+}
+
+.shell-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 0.75rem;
+  color: #334155;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.shell-link i {
+  font-size: 1rem;
+}
+
+.shell-link:hover {
+  background: #e6fffb;
+  color: #0f766e;
+}
+
+.shell-link.active {
+  background: linear-gradient(120deg, #0f766e, #0ea5e9);
+  color: #ffffff;
+}
+
+.shell-link.disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.main-panel {
+  animation: fade-up 0.35s ease;
+}
+
+@keyframes fade-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

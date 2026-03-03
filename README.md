@@ -13,7 +13,7 @@ Le chemin actif est `FinanceIA` et le MVP se concentre uniquement sur un cas:
 - `FinanceIA/src/finance_ia/`: pipeline IA modulaire (data, features, dataset, model, io, cli)
 - `FinanceIA/tests/`: tests unitaires + smoke tests
 - `FinanceIA/main.py`: wrapper CLI minimal (`train` / `predict`)
-- `FinanceIA/API/`: hors perimetre de cette refonte
+- `FinanceAPI/`: API .NET (consomme la prediction Python via CLI)
 
 ## Demarrage rapide (Windows PowerShell)
 
@@ -92,6 +92,48 @@ pytest tests -q
 ```
 
 Les tests couvrent detection `Double Top`, indicateurs, dataset, entrainement, prediction CLI, et anti-fuite temporelle.
+
+## Integration API .NET (simple)
+
+Les endpoints:
+
+- `POST /api/trading/predict` (body JSON avec `symbol`)
+- `GET /api/trading/predict/{symbol}`
+
+appellent localement:
+
+```powershell
+python -m finance_ia.cli.predict --ticker <SYMBOL> --model-dir artifacts/double_top --period 6mo
+```
+
+Puis l'API renvoie:
+
+- probabilites du pattern (`last/mean/max`)
+- pourcentage (`ProbabilityPct`)
+- action suggeree (`buy`, `hold`, `sell`)
+- raison textuelle (`ActionReason`)
+
+Les seuils sont configurables dans `FinanceAPI/BackPredictFinance.API/appsettings*.json`:
+
+- `PythonCli:BuyThreshold` (defaut `0.20`)
+- `PythonCli:SellThreshold` (defaut `0.65`)
+
+Exemple de body `POST /api/trading/predict`:
+
+```json
+{
+  "symbol": "AAPL",
+  "quantity": 0
+}
+```
+
+Champs importants en reponse:
+
+- `symbol`
+- `pattern` (`DOUBLE_TOP`)
+- `lastProbability` / `probabilityPct`
+- `suggestedAction` (`buy`, `hold`, `sell`)
+- `actionReason`
 
 ## Limites connues du MVP
 

@@ -222,6 +222,32 @@ namespace BackPredictFinance.Datas.Migrations
                     b.ToTable("Documents");
                 });
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Models.IAModelVersion", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DeployedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("IAModelVersions");
+                });
+
             modelBuilder.Entity("BackPredictFinance.Datas.Models.MarketPrice", b =>
                 {
                     b.Property<string>("Id")
@@ -260,6 +286,43 @@ namespace BackPredictFinance.Datas.Migrations
                     b.HasIndex("AssetId");
 
                     b.ToTable("MarketPrices");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Models.PatternPrediction", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AssetId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IAModelVersionId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("PatternType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PredictedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Probability")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetId");
+
+                    b.HasIndex("IAModelVersionId");
+
+                    b.ToTable("PatternPrediction");
                 });
 
             modelBuilder.Entity("BackPredictFinance.Datas.Models.Portfolio", b =>
@@ -357,6 +420,43 @@ namespace BackPredictFinance.Datas.Migrations
                     b.HasIndex("AssetId");
 
                     b.ToTable("PriceHistories");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Models.Recommendation", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Confidence")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RecommendedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("TargetPrice")
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserAssetId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserAssetId");
+
+                    b.ToTable("Recommendation");
                 });
 
             modelBuilder.Entity("BackPredictFinance.Datas.Models.User", b =>
@@ -642,6 +742,25 @@ namespace BackPredictFinance.Datas.Migrations
                     b.Navigation("Asset");
                 });
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Models.PatternPrediction", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Models.Asset", "Asset")
+                        .WithMany("PatternPredictions")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BackPredictFinance.Datas.Models.IAModelVersion", "IAModelVersion")
+                        .WithMany()
+                        .HasForeignKey("IAModelVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Asset");
+
+                    b.Navigation("IAModelVersion");
+                });
+
             modelBuilder.Entity("BackPredictFinance.Datas.Models.Portfolio", b =>
                 {
                     b.HasOne("BackPredictFinance.Datas.Models.User", "User")
@@ -683,6 +802,17 @@ namespace BackPredictFinance.Datas.Migrations
                     b.Navigation("Asset");
                 });
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Models.Recommendation", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Models.UserAsset", "UserAsset")
+                        .WithMany("Recommendations")
+                        .HasForeignKey("UserAssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("UserAsset");
+                });
+
             modelBuilder.Entity("BackPredictFinance.Datas.Models.UserAsset", b =>
                 {
                     b.HasOne("BackPredictFinance.Datas.Models.Asset", "Asset")
@@ -696,7 +826,7 @@ namespace BackPredictFinance.Datas.Migrations
                         .HasForeignKey("PortfolioId");
 
                     b.HasOne("BackPredictFinance.Datas.Models.User", "User")
-                        .WithMany()
+                        .WithMany("UserAssets")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -759,6 +889,8 @@ namespace BackPredictFinance.Datas.Migrations
 
             modelBuilder.Entity("BackPredictFinance.Datas.Models.Asset", b =>
                 {
+                    b.Navigation("PatternPredictions");
+
                     b.Navigation("PriceHistories");
 
                     b.Navigation("Prices");
@@ -769,6 +901,16 @@ namespace BackPredictFinance.Datas.Migrations
             modelBuilder.Entity("BackPredictFinance.Datas.Models.Portfolio", b =>
                 {
                     b.Navigation("UserAssets");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Models.User", b =>
+                {
+                    b.Navigation("UserAssets");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Models.UserAsset", b =>
+                {
+                    b.Navigation("Recommendations");
                 });
 #pragma warning restore 612, 618
         }

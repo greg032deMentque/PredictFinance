@@ -21,10 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BackPredictFinance.Common\BackPredictFinance.Common.csproj" />
     <ProjectReference Include="..\BackPredictFinance.Datas\BackPredictFinance.Datas.csproj" />
     <ProjectReference Include="..\BackPredictFinance.ViewModels\BackPredictFinance.ViewModels.csproj" />
-    <ProjectReference Include="..\FinanceAPI.Data\BackPredictFinance.Datas.csproj" />
-    <ProjectReference Include="..\FinanceAPI.ViewModels\BackPredictFinance.ViewModels.csproj" />
   </ItemGroup>
+
 
 </Project>

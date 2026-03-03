@@ -146,6 +146,22 @@ namespace BackPredictFinance.Datas.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "IAModelVersions",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Version = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DeployedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_IAModelVersions", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -353,6 +369,36 @@ namespace BackPredictFinance.Datas.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PatternPrediction",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    AssetId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    PatternType = table.Column<int>(type: "int", nullable: false),
+                    Probability = table.Column<decimal>(type: "decimal(5,4)", nullable: false),
+                    PredictedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IAModelVersionId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PatternPrediction", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PatternPrediction_Assets_AssetId",
+                        column: x => x.AssetId,
+                        principalTable: "Assets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PatternPrediction_IAModelVersions_IAModelVersionId",
+                        column: x => x.IAModelVersionId,
+                        principalTable: "IAModelVersions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "UserAssets",
                 columns: table => new
                 {
@@ -411,6 +457,31 @@ namespace BackPredictFinance.Datas.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Recommendation",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserAssetId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Action = table.Column<int>(type: "int", nullable: false),
+                    Confidence = table.Column<decimal>(type: "decimal(5,4)", nullable: false),
+                    RecommendedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TargetPrice = table.Column<decimal>(type: "decimal(18,8)", nullable: true),
+                    Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Recommendation", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Recommendation_UserAssets_UserAssetId",
+                        column: x => x.UserAssetId,
+                        principalTable: "UserAssets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -461,6 +532,16 @@ namespace BackPredictFinance.Datas.Migrations
                 column: "AssetId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PatternPrediction_AssetId",
+                table: "PatternPrediction",
+                column: "AssetId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PatternPrediction_IAModelVersionId",
+                table: "PatternPrediction",
+                column: "IAModelVersionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Portfolios_UserId",
                 table: "Portfolios",
                 column: "UserId");
@@ -479,6 +560,11 @@ namespace BackPredictFinance.Datas.Migrations
                 name: "IX_PriceHistories_AssetId",
                 table: "PriceHistories",
                 column: "AssetId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Recommendation_UserAssetId",
+                table: "Recommendation",
+                column: "UserAssetId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserAssets_AssetId",
@@ -533,13 +619,22 @@ namespace BackPredictFinance.Datas.Migrations
                 name: "MarketPrices");
 
             migrationBuilder.DropTable(
+                name: "PatternPrediction");
+
+            migrationBuilder.DropTable(
                 name: "PriceAlerts");
 
             migrationBuilder.DropTable(
                 name: "PriceHistories");
 
             migrationBuilder.DropTable(
+                name: "Recommendation");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "IAModelVersions");
 
             migrationBuilder.DropTable(
                 name: "UserAssets");

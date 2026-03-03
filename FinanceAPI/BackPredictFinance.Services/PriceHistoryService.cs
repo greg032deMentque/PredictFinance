@@ -24,14 +24,14 @@ namespace BackPredictFinance.Services
                 Price = price,
                 Volume = volume
             };
-            await FinanceDbContext.PriceHistories.AddAsync(entry);
-            await FinanceDbContext.SaveChangesAsync();
+            await _financeDbContext.PriceHistories.AddAsync(entry);
+            await _financeDbContext.SaveChangesAsync();
             return entry;
         }
 
         public async Task<IEnumerable<PriceHistory>> GetPriceHistoryAsync(string assetId, DateTime fromUtc, DateTime toUtc)
         {
-            return await FinanceDbContext.PriceHistories
+            return await _financeDbContext.PriceHistories
                 .AsNoTracking()
                 .Where(ph => ph.AssetId == assetId
                              && ph.RetrievedAtUtc >= fromUtc

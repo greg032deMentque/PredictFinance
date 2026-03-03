@@ -165,7 +165,7 @@ namespace BackPredictFinance.Services.UserServices
             var jwt = await _jwtGenerator.GenerateJwtToken(user);
             var refresh = _jwtGenerator.GenerateRefreshToken();
             await _jwtGenerator.UpdateRefreshTokenAsync(user.Id, refresh);
-            return new TokenViewModel { Token = jwt, RefreshToken = refresh, Firstname = user.FirstName, Lastname = user.LastName, IsFirstConnection = user.LastConnection == null };
+            return new TokenViewModel { Token = jwt, RefreshToken = refresh, Firstname = user.FirstName, Lastname = user.LastName };
         }
 
         /// <summary>Rafraîchit un JWT via le refresh token</summary>
@@ -201,7 +201,7 @@ namespace BackPredictFinance.Services.UserServices
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null) { _logger.LogWarning("Email non trouvé"); return; }
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var link = $"{Configuration["domain"]}/ForgotPassword?token={WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token))}&email={user.Email}";
+            var link = $"{_configuration["domain"]}/ForgotPassword?token={WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token))}&email={user.Email}";
             _emailService.SendEmailPasswordReset(user.Email, link);
         }
 
@@ -229,14 +229,14 @@ namespace BackPredictFinance.Services.UserServices
                 ? new UserFilter()
                 : JsonSerializer.Deserialize<UserFilter>(paginateVm.Filter);
             var predicate = GetFilter(companyId, filter);
-            var users = await FinanceDbContext.Set<User>().GetByPaginationAsync(
+            var users = await _financeDbContext.Set<User>().GetByPaginationAsync(
                 paginateVm.PageIndex * paginateVm.PageSize,
                 paginateVm.PageSize,
                 paginateVm.SortActive,
                 paginateVm.SortDirection,
                 predicate);
             var vms = users.Select(u => u.ToViewModel()).ToList();
-            var total = await FinanceDbContext.Users.GetTotalCountAsync(predicate);
+            var total = await _financeDbContext.Users.GetTotalCountAsync(predicate);
             var result = new UserPaginateViewModel(total, vms);
             foreach (var uvm in result.Datas)
                 uvm.Roles = await _userRoleDataService.SetUserRoleViewModel(uvm.Id);
