@@ -1,21 +1,26 @@
 @import "../../../../../themes/variables.scss";
 
-.search-results {
-  max-height: 260px;
-  background-color: $finance-white;
+.finance-select {
+  display: block;
 }
 
-.result-item {
-  width: 100%;
-  border: 0;
-  border-bottom: 1px solid $finance-surface-hover;
-  background: transparent;
-  text-align: left;
-  padding: 0.75rem;
+:host ::ng-deep .finance-select .ng-select-container {
+  min-height: 44px;
+  border-color: $finance-border-soft;
+  border-radius: 0.5rem;
 }
 
-.result-item:hover {
-  background-color: $finance-surface;
+:host ::ng-deep .finance-select.ng-select-focused .ng-select-container {
+  border-color: $finance-navy;
+  box-shadow: 0 0 0 0.2rem rgba(15, 39, 66, 0.12);
+}
+
+:host ::ng-deep .finance-select .ng-dropdown-panel {
+  border-color: $finance-border-soft;
+}
+
+:host ::ng-deep .finance-select .ng-option {
+  padding: 0.65rem 0.75rem;
 }
 
 .selected-box {

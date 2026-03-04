@@ -1,16 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { MarketAssetOption } from '../../../../Models/client-finance';
 
 @Component({
   selector: 'app-finance-symbol-selector',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NgSelectModule],
   templateUrl: './finance-symbol-selector.component.html',
   styleUrl: './finance-symbol-selector.component.scss'
 })
-export class FinanceSymbolSelectorComponent {
+export class FinanceSymbolSelectorComponent implements OnChanges {
   @Input() selectedAsset: MarketAssetOption | null = null;
   @Input() options: MarketAssetOption[] = [];
   @Input() loading = false;
@@ -18,15 +19,27 @@ export class FinanceSymbolSelectorComponent {
   @Output() searchChanged = new EventEmitter<string>();
   @Output() assetSelected = new EventEmitter<MarketAssetOption>();
 
-  searchTerm = '';
+  selectedSymbol: string | null = null;
 
-  onSearchChanged(value: string): void {
-    this.searchTerm = value;
-    this.searchChanged.emit(value);
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['selectedAsset']) {
+      this.selectedSymbol = this.selectedAsset?.symbol ?? null;
+    }
   }
 
-  selectAsset(asset: MarketAssetOption): void {
-    this.searchTerm = `${asset.symbol} - ${asset.companyName}`;
+  onSearch(event: { term: string }): void {
+    this.searchChanged.emit((event?.term ?? '').trim());
+  }
+
+  onSelectionChanged(symbol: string | null): void {
+    if (!symbol) {
+      this.selectedSymbol = null;
+      return;
+    }
+
+    const asset = this.options.find((item) => item.symbol === symbol);
+    if (!asset) return;
+
     this.assetSelected.emit(asset);
   }
 }
