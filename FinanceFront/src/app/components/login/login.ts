@@ -29,6 +29,7 @@ export class LoginComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly storageService = inject(StorageService);
   private readonly auth = inject(AuthStore);
+  private readonly authService = inject(AuthService);
 
   readonly isSubmitting = signal(false);
 
@@ -95,13 +96,16 @@ export class LoginComponent {
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isSubmitting.set(false)))
       .subscribe({
         next: (obj) => {
+          console.log(obj)
           this.storageService.SetToken(obj.Token);
           this.storageService.SetRefreshToken(obj.RefreshToken);
 
           this.auth.syncFromStorage();
+          this.authService.scheduleTokenRefresh(obj.Token, obj.RefreshToken);
+          const isAdmin = this.authService.isAdmin(obj.Token);
 
           void this.router.navigate([
-            this.auth.canAccessAdmin() ? AdminPaths.Dashboard : UserPaths.Dashboard
+            isAdmin ? AdminPaths.Dashboard : UserPaths.Dashboard
           ]);
 
         },

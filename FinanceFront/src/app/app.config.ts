@@ -9,6 +9,7 @@ import {
   withXsrfConfiguration
 } from '@angular/common/http';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { JwtHelperService, JWT_OPTIONS } from '@auth0/angular-jwt';
 import { provideToastr } from 'ngx-toastr';
 import { routes } from './app.routes';
 import { AuthService } from './services/AuthService.service';
@@ -37,6 +38,8 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: ErrorHandlingInterceptor, multi: true },
     { provide: LOCALE_ID, useValue: 'fr' },
+    { provide: JWT_OPTIONS, useValue: JWT_OPTIONS },
+    JwtHelperService,
     DatePipe,
     AuthService
   ]

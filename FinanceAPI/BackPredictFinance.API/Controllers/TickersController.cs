@@ -1,6 +1,4 @@
 using BackPredictFinance.Services.TwelveDataServices;
-using BackPredictFinance.Services.UserServices;
-using BackPredictFinance.ViewModels.CommonViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -17,20 +15,20 @@ namespace BackPredictFinance.API.Controllers
         public TickersController(ITickerService tickerService)
             => _tickerService = tickerService;
 
-        [HttpGet("Exchanges")]
+        [HttpGet("exchanges")]
         public async Task<IActionResult> GetExchanges()
             => Ok(await _tickerService.GetExchangesAsync());
 
-        [HttpGet("GetSymbols")]
-        public async Task<IActionResult> GetSymbols(string exchange)
+        [HttpGet("symbols")]
+        public async Task<IActionResult> GetSymbols([FromQuery] string exchange)
             => Ok(await _tickerService.GetSymbolsByExchangeAsync(exchange));
 
-        [HttpGet("GetAllSymbols")]
+        [HttpGet("symbols/all")]
         public async Task<IActionResult> GetAllSymbols()
             => Ok(await _tickerService.GetAllSymbolsAsync());
 
-        [HttpGet("GetTimeSeries")]
-        public async Task<IActionResult> GetTimeSeries( string symbol,[FromQuery] string interval = "1day", [FromQuery] int outputSize = 100)
+        [HttpGet("timeseries/{symbol}")]
+        public async Task<IActionResult> GetTimeSeries([FromRoute] string symbol, [FromQuery] string interval = "1day", [FromQuery] int outputSize = 100)
         {
             var data = await _tickerService.GetTimeSeriesAsync(symbol, interval, outputSize);
             return Ok(data);

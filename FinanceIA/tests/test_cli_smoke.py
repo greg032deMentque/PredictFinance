@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
+from finance_ia.cli import evaluate as evaluate_cli
 from finance_ia.cli import predict as predict_cli
+from finance_ia.cli import simulate as simulate_cli
 from finance_ia.cli import train as train_cli
 from finance_ia.model.predict import PredictResult
+from finance_ia.model.simulate import SimulationResult
 from finance_ia.model.train import TrainResult
+from finance_ia.model.validate import ValidationResult
 
 
 def test_train_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
@@ -69,3 +74,97 @@ def test_predict_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
     payload = json.loads(stdout)
     assert payload["ticker"] == "AAPL"
     assert payload["n_windows"] == 120
+
+
+def test_evaluate_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
+    monkeypatch.setattr(
+        evaluate_cli,
+        "validate_model_on_ticker",
+        lambda **_kwargs: ValidationResult(
+            ticker="AAPL",
+            start="2025-01-01",
+            end="2025-12-31",
+            rows=100,
+            positive_rate=0.12,
+            metrics={"f1": 0.61},
+            threshold_analysis=[
+                {
+                    "threshold": 0.2,
+                    "precision": 0.4,
+                    "recall": 0.8,
+                    "f1": 0.53,
+                    "positive_rate_pred": 0.1,
+                    "confusion_matrix": [[80, 10], [2, 8]],
+                }
+            ],
+            best_threshold_by_f1=0.2,
+        ),
+    )
+
+    exit_code = evaluate_cli.main(
+        [
+            "--ticker",
+            "AAPL",
+            "--model-dir",
+            str(tmp_path),
+            "--start",
+            "2025-01-01",
+            "--end",
+            "2025-12-31",
+        ]
+    )
+    assert exit_code == 0
+
+    stdout = capsys.readouterr().out
+    payload = json.loads(stdout)
+    assert payload["ticker"] == "AAPL"
+    assert payload["rows"] == 100
+    assert payload["best_threshold_by_f1"] == 0.2
+    report_file = Path(payload["report_file"])
+    assert report_file.name == "evaluation_AAPL.json"
+    assert report_file.parent.name.startswith("evaluation_")
+    assert report_file.exists()
+
+
+def test_simulate_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
+    monkeypatch.setattr(
+        simulate_cli,
+        "simulate_ticker",
+        lambda **_kwargs: SimulationResult(
+            ticker="AAPL",
+            pattern="DOUBLE_TOP",
+            as_of="2025-12-31",
+            investment_amount=1000.0,
+            horizon_days=30,
+            estimated_return_pct=0.012,
+            estimated_return_amount=12.0,
+            estimated_final_amount=1012.0,
+            recommendation="buy",
+            confidence=0.9,
+            assumption="Simulation based on IA confidence and simplified market profile.",
+            last_prob=0.1,
+            mean_prob=0.2,
+            max_prob=0.3,
+            n_windows=100,
+        ),
+    )
+
+    exit_code = simulate_cli.main(
+        [
+            "--ticker",
+            "AAPL",
+            "--model-dir",
+            str(tmp_path),
+            "--investment-amount",
+            "1000",
+            "--horizon-days",
+            "30",
+        ]
+    )
+    assert exit_code == 0
+
+    stdout = capsys.readouterr().out
+    payload = json.loads(stdout)
+    assert payload["ticker"] == "AAPL"
+    assert payload["recommendation"] == "buy"
+    assert payload["estimated_final_amount"] == 1012.0

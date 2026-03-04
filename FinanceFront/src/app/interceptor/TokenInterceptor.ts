@@ -32,9 +32,9 @@ export class TokenInterceptor implements HttpInterceptor {
       return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Session expired' }));
     }
 
-    return this.authService.refreshToken(refreshToken).pipe(
+    return this.authService.refreshToken(token, refreshToken).pipe(
       switchMap((response) =>
-        next.handle(this.addAuthorization(req, (response.Token ?? response.token ?? '').trim()))
+        next.handle(this.addAuthorization(req, (response.Token ?? '').trim()))
       ),
       catchError((err) => {
         this.authService.logout();

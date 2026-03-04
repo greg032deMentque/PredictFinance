@@ -19,7 +19,7 @@ namespace BackPredictFinance.API.Data
             var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var logger = serviceProvider.GetRequiredService<ILogger<BaseService>>();
-            var userService = serviceProvider.GetRequiredService<UserService>();
+            var userService = serviceProvider.GetRequiredService<IUserService>();
             var config = app.Services.GetRequiredService<IConfiguration>();
             var financeDbContext = serviceProvider.GetRequiredService<FinanceDbContext>();
 
@@ -113,7 +113,7 @@ namespace BackPredictFinance.API.Data
             string? password,
             UserManager<User> userManager,
             ILogger<BaseService> logger,
-            UserService userService)
+            IUserService userService)
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {

@@ -29,6 +29,14 @@ namespace BackPredictFinance.API.Controllers
         }
 
         [AllowAnonymous]
+        [HttpPost("ForgotPassword")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordViewModel model)
+        {
+            await _accountService.ForgotPassword(model.Email);
+            return Ok();
+        }
+
+        [AllowAnonymous]
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestViewModel model)
         {

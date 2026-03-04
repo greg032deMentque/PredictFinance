@@ -1,6 +1,8 @@
+@import "../../../../../themes/variables.scss";
+
 .reason-box {
-  border: 1px solid #d8e8ff;
+  border: 1px solid $finance-border-soft;
   border-radius: 10px;
-  background-color: #f8fbff;
+  background-color: $finance-surface-soft;
   padding: 0.75rem;
 }

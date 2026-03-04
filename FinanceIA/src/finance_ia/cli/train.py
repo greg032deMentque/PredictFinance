@@ -16,8 +16,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--start", default=DEFAULT_START, help="Start date YYYY-MM-DD")
     parser.add_argument("--end", default=DEFAULT_END, help="End date YYYY-MM-DD")
     parser.add_argument("--interval", default="1d", help="Yahoo interval (default: 1d)")
+    parser.add_argument("--val-size", type=float, default=0.15, help="Temporal validation ratio")
     parser.add_argument("--test-size", type=float, default=0.2, help="Temporal test ratio")
-    parser.add_argument("--threshold", type=float, default=0.5, help="Classification threshold")
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.5,
+        help="Fallback threshold if validation cannot auto-select one",
+    )
 
     parser.add_argument("--peak-window", type=int, default=3)
     parser.add_argument("--min-peak-distance", type=int, default=5)
@@ -39,6 +45,7 @@ def main(argv: list[str] | None = None) -> int:
         start=args.start,
         end=args.end,
         interval=args.interval,
+        val_size=args.val_size,
         test_size=args.test_size,
         classification_threshold=args.threshold,
     )
@@ -57,9 +64,12 @@ def main(argv: list[str] | None = None) -> int:
     summary = {
         "output_dir": str(config.output_dir),
         "train_rows": result.train_rows,
+        "val_rows": result.val_rows,
         "test_rows": result.test_rows,
         "train_positive_ratio": result.train_positive_ratio,
+        "val_positive_ratio": result.val_positive_ratio,
         "test_positive_ratio": result.test_positive_ratio,
+        "selected_threshold": result.metrics.get("selected_threshold"),
         "metrics": result.metrics,
     }
     print(json.dumps(summary, indent=2, sort_keys=True))

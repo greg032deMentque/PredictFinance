@@ -1,6 +1,7 @@
 using AutoMapper;
 using BackPredictFinance.API.Data;
 using BackPredictFinance.API.Middleware;
+using BackPredictFinance.API.ProgramSubFiles;
 using BackPredictFinance.Common;
 using BackPredictFinance.Common.Email;
 using BackPredictFinance.Common.enums;
@@ -23,6 +24,7 @@ using Serilog;
 using Serilog.Events;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -108,45 +110,38 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole(UserRoleEnum.SuperAdmin.ToString()));
 });
 
-builder.Services.AddCors(options =>
+builder.Services.AddCors(o =>
 {
-    options.AddPolicy("FrontPolicy", cors =>
-    {
-        cors.WithOrigins("http://localhost:4200", "https://localhost:4200")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
+    o.AddPolicy("default", p =>
+        p.AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+         .SetIsOriginAllowed(_ => true));
 });
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 builder.Services.AddLocalization();
 
-var mapperExpression = new MapperConfigurationExpression();
-var mapperConfiguration = new MapperConfiguration(mapperExpression, NullLoggerFactory.Instance);
-builder.Services.AddSingleton<IMapper>(new Mapper(mapperConfiguration));
+ProgramServiceDeclarator.ServicesDeclarator(builder.Services);
+
+var mapperConfiguration = new MapperConfiguration(cfg =>
+{
+    cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
+}, NullLoggerFactory.Instance);
+
+builder.Services.AddSingleton<IMapper>(mapperConfiguration.CreateMapper());
 
 builder.Services.Configure<EmailServiceConfiguration>(configuration.GetSection("EmailService"));
 builder.Services.Configure<PythonCliOptions>(configuration.GetSection("PythonCli"));
-builder.Services.Configure<TwelveDataOptions>(configuration.GetSection("TwelveData"));
 
-builder.Services.AddScoped<ILogService, LogService>();
-builder.Services.AddScoped<IPathService, PathService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IJwtGeneratorService, JwtGeneratorService>();
-builder.Services.AddScoped<IAccountService, AccountService>();
-builder.Services.AddScoped<IUserAssetService, UserAssetService>();
-builder.Services.AddScoped<IUserRoleDataService, UserRoleDataService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<IPythonApiService, PythonApiService>();
-builder.Services.AddScoped<IAssetService, AssetService>();
-builder.Services.AddScoped<AnalyticService>();
-builder.Services.AddScoped<ITickerService, TickerService>();
-builder.Services.AddScoped<IClientFinanceService, ClientFinanceService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNamingPolicy = null);
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -189,7 +184,7 @@ else
 }
 
 app.UseHttpsRedirection();
-app.UseCors("FrontPolicy");
+app.UseCors("default");
 app.UseGlobalExceptionHandler();
 
 app.UseAuthentication();

@@ -12,6 +12,7 @@ import { ClientSimulationRequest, ClientSimulationResult } from '../../../../Mod
 })
 export class FinanceSimulationComponent {
   private readonly fb = inject(FormBuilder);
+  readonly availablePatterns = ['DOUBLE_TOP'] as const;
 
   @Input() selectedSymbol = '';
   @Input() loading = false;
@@ -20,6 +21,7 @@ export class FinanceSimulationComponent {
   @Output() launch = new EventEmitter<ClientSimulationRequest>();
 
   readonly form = this.fb.nonNullable.group({
+    pattern: this.fb.nonNullable.control<(typeof this.availablePatterns)[number]>('DOUBLE_TOP', [Validators.required]),
     investmentAmount: this.fb.nonNullable.control(1000, [Validators.required, Validators.min(1)]),
     horizonDays: this.fb.nonNullable.control(30, [Validators.required, Validators.min(1), Validators.max(365)])
   });
@@ -35,6 +37,7 @@ export class FinanceSimulationComponent {
     this.launch.emit(
       new ClientSimulationRequest({
         symbol: this.selectedSymbol,
+        pattern: payload.pattern,
         investmentAmount: payload.investmentAmount,
         horizonDays: payload.horizonDays
       })

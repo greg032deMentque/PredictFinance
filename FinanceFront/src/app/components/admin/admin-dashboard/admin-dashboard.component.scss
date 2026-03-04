@@ -1,13 +1,19 @@
+@import "../../../../themes/variables.scss";
+
 :host {
   display: block;
 }
 
 .hero-card {
-  background: linear-gradient(120deg, #f7f9fc 0%, #edf3ff 100%);
-  border: 1px solid #dbe6ff;
+  background: linear-gradient(120deg, $finance-surface 0%, $finance-role-bg 100%);
+  border: 1px solid $finance-border-soft;
   border-radius: 12px;
 }
 
-.activity-item {
-  background-color: #fbfcff;
+.stat-card {
+  border: 1px solid $finance-border-soft;
+}
+
+.stat-card .card-body {
+  background-color: $finance-white;
 }

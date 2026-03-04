@@ -4,7 +4,7 @@ button {
   width: 140px;
   height: 40px;
   border-radius: 8px;
-  color: #fff;
+  color: $finance-white;
   border: none;
   background-color: $finance-navy;
   cursor: pointer;
@@ -47,7 +47,7 @@ button {
 .btn-danger {
   background-color: $finance-loss-red;
   border-color: $finance-loss-red;
-  color: #fff;
+  color: $finance-white;
 }
 
 .btn-primary {

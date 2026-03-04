@@ -1,14 +1,19 @@
 @import "../styles.scss";
 
 footer {
-  background: $bleu;
+  background: $finance-navy;
   position: fixed;
   bottom: 0;
   width: 100%;
   height: 40px;
-  color: #f8f8f8;
+  color: $finance-text-inverse;
   font-size: 0.9rem;
 }
+
+.login-logo {
+  height: 52px;
+}
+
 
 html,
 body {
@@ -65,7 +70,7 @@ main {
 
   .navbar-toggler i {
     font-size: 1.8rem;
-    color: $bleu;
+    color: $finance-navy;
   }
 }
 

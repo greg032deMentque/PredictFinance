@@ -1,4 +1,5 @@
 /* based on angular-toastr css https://github.com/Foxandxss/angular-toastr/blob/cb508fe6801d6b288d3afc525bb40fee1b101650/dist/angular-toastr.css */
+@import "./variables.scss";
 
 /* position */
 .toast-center-center {
@@ -52,10 +53,10 @@
 }
 .toast-message a,
 .toast-message label {
-  color: #FFFFFF;
+  color: $finance-white;
 }
 .toast-message a:hover {
-  color: #CCCCCC;
+  color: $finance-scrollbar-border;
   text-decoration: none;
 }
 .toast-close-button {
@@ -65,13 +66,13 @@
   float: right;
   font-size: 20px;
   font-weight: bold;
-  color: #FFFFFF;
-  text-shadow: 0 1px 0 #ffffff;
+  color: $finance-white;
+  text-shadow: 0 1px 0 $finance-white;
   /* opacity: 0.8; */
 }
 .toast-close-button:hover,
 .toast-close-button:focus {
-  color: #000000;
+  color: $finance-black;
   text-decoration: none;
   cursor: pointer;
   opacity: 0.4;
@@ -103,11 +104,11 @@ button.toast-close-button {
   background-position: 15px center;
   background-repeat: no-repeat;
   background-size: 24px;
-  box-shadow: 0 0 12px #999999;
-  color: #FFFFFF;
+  box-shadow: 0 0 12px $finance-shadow-soft;
+  color: $finance-white;
 }
 .toast-container .ngx-toastr:hover {
-  box-shadow: 0 0 12px #000000;
+  box-shadow: 0 0 12px $finance-black;
   opacity: 1;
   cursor: pointer;
 }
@@ -140,27 +141,27 @@ button.toast-close-button {
   margin-right: auto;
 }
 .ngx-toastr {
-  background-color: #030303;
+  background-color: $finance-toast-bg;
   pointer-events: auto;
 }
 .toast-success {
-  background-color: #51A351;
+  background-color: $finance-toast-success;
 }
 .toast-error {
-  background-color: #BD362F;
+  background-color: $finance-toast-error;
 }
 .toast-info {
-  background-color: #2F96B4;
+  background-color: $finance-toast-info;
 }
 .toast-warning {
-  background-color: #F89406;
+  background-color: $finance-toast-warning;
 }
 .toast-progress {
   position: absolute;
   left: 0;
   bottom: 0;
   height: 4px;
-  background-color: #000000;
+  background-color: $finance-black;
   opacity: 0.4;
 }
 /* Responsive Design */

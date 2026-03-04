@@ -13,6 +13,15 @@
       </div>
 
       <div>
+        <label class="form-label">Pattern</label>
+        <select class="form-select" formControlName="pattern">
+          @for (pattern of availablePatterns; track pattern) {
+            <option [value]="pattern">{{ pattern }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
         <label class="form-label">Montant investi</label>
         <input class="form-control" type="number" step="1" formControlName="investmentAmount" />
       </div>
@@ -32,6 +41,7 @@
       <div>Rendement estime: <strong>{{ simulationResult.estimatedReturnAmount | currency: 'USD' }}</strong></div>
       <div>Rendement %: <strong>{{ simulationResult.estimatedReturnPct | percent: '1.1-2' }}</strong></div>
       <div>Montant final estime: <strong>{{ simulationResult.estimatedFinalAmount | currency: 'USD' }}</strong></div>
+      <div>Action recommandee: <strong>{{ simulationResult.recommendation || 'hold' }}</strong></div>
       <small class="text-muted d-block mt-2">{{ simulationResult.assumption }}</small>
     </div>
   </div>

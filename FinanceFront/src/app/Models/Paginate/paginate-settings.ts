@@ -3,5 +3,5 @@ export class PaginateSettings {
     SortActive = ""
     PageSize = 5;
     PageIndex = 0;
-    Filter = "";
+    Filter : string | null = null;
 }

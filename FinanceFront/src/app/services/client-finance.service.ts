@@ -109,6 +109,7 @@ export class ClientFinanceService {
     return this.http
       .post<Record<string, unknown>>(`${this.baseUrl}/simulation/run`, {
         Symbol: request.symbol,
+        Pattern: request.pattern,
         InvestmentAmount: request.investmentAmount,
         HorizonDays: request.horizonDays
       })

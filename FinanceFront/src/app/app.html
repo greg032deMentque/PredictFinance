@@ -1,11 +1,16 @@
 <body class="d-flex flex-column min-vh-100">
   <header class="navbar navbar-light bg-light shadow-sm">
-    <div class="container-fluid d-flex align-items-center justify-content-between">
+    <div
+      class="container-fluid d-flex align-items-center justify-content-between"
+    >
       <div class="d-flex align-items-center gap-2">
-        <img src="assets/money.png" alt="Logo FIDES" style="height: 60px; cursor: pointer" />
+        <img src="assets/money.svg" alt="Logo app" class="login-logo" />
       </div>
 
-      <span class="fw-bold text-vert text-center" style="font-size: 25px; cursor: pointer">
+      <span
+        class="fw-bold text-vert text-center"
+        style="font-size: 25px; cursor: pointer"
+      >
         {{ headerTitle() }}
       </span>
 
@@ -19,7 +24,10 @@
             style="cursor: pointer"
           ></i>
 
-          <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2" style="min-width: 280px">
+          <ul
+            class="dropdown-menu dropdown-menu-end shadow-sm p-2"
+            style="min-width: 280px"
+          >
             <li class="px-2 py-2">
               <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-person-circle fs-2 text-primary"></i>
@@ -53,7 +61,7 @@
 
   @if (showPrivateShell()) {
     <div class="container-fluid flex-fill">
-      <div class="row" style="height: calc(100% - 40px) !important;">
+      <div class="row" style="height: calc(100% - 40px) !important">
         <main
           class="col-12 col-lg-9 col-xl-10 py-3 pb-5 overflow-auto"
           style="overflow-x: hidden !important"
@@ -63,7 +71,10 @@
       </div>
     </div>
   } @else {
-    <main class="flex-fill overflow-auto pb-5" style="overflow-x: hidden !important">
+    <main
+      class="flex-fill overflow-auto pb-5"
+      style="overflow-x: hidden !important"
+    >
       <router-outlet></router-outlet>
     </main>
   }

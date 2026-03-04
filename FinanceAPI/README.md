@@ -18,6 +18,8 @@ API .NET de PredictFinance.
 3. Front appelle `GET /api/Trading/predict/{symbol}`.
 4. L'API execute la CLI Python et retourne prediction + action.
 5. Si access token expire, front appelle `POST /api/Account/Refresh`.
+6. L'API applique un quality gate modele (`GO/NO_GO`) avant recommandation finale.
+7. Pour la simulation client, l'API appelle maintenant la CLI Python `simulate` et ne calcule plus la simulation localement.
 
 ## Endpoints principaux
 
@@ -28,6 +30,9 @@ API .NET de PredictFinance.
 - `GET /api/Trading/predict/{symbol}`
 - `POST /api/Trading/predict`
 - `POST /api/Trading/recommend`
+- `POST /api/ClientFinance/simulation/run`
+- `GET /IA/Health` (etat global IA)
+- `GET /IA/Status` (details complets, admin)
 
 ## Refresh token (strategie)
 
@@ -57,6 +62,38 @@ Sections importantes:
 - `Frontend:BaseUrl`
 - `PythonCli`
 
+Champs `PythonCli` utiles pour le quality gate:
+
+- `MinPrecision`
+- `MinF1`
+- `MinRocAuc`
+- `MinPositives`
+
+## Contrat IA (enum + classes)
+
+Le contrat de reponse de prediction expose:
+
+- `modelStatus` (enum): `Go | NoGo`
+- `modelChecks` (liste typée) avec:
+  - `check` (enum): `Precision | F1 | RocAuc | MinimumPositives`
+  - `status` (enum): `Pass | Fail | NotApplicable`
+  - `value`, `threshold`, `detail`
+- `modelMessage` (texte court lisible front)
+
+Classes cle:
+
+- `PythonPredictRequest`, `PythonPredictPayload` (transport API -> IA -> API)
+- `PythonSimulationRequest`, `PythonSimulationPayload` (transport simulation API -> IA -> API)
+- `ModelQualityGate`, `ModelCheckResult` (quality gate metier)
+- `PredictOut`, `SimulationOut` (reponses finales API)
+
+Controller / service de supervision IA:
+
+- `IAController`:
+  - `GET /IA/Health`: etat global simple (`Up/Degraded/Down`)
+  - `GET /IA/Status`: details runtime + artefacts + quality gate
+- `IAStatusService`: centralise les checks de sante IA.
+
 ## Lancer en local
 
 ```powershell
@@ -71,6 +108,6 @@ HTTPS (optionnel): `dotnet run --project BackPredictFinance.API --launch-profile
 
 ## Qualite
 
-- Build solution: OK.
 - Design orientee classes (services/controllers/models).
 - Separation claire API / Services / Datas / ViewModels.
+- Quality gate modele explicite (enum + seuils config).

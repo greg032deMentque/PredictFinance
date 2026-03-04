@@ -26,11 +26,11 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(#748397, $finance-navy);
-  border: 0.08em solid #bfc8d3;
+  background: linear-gradient($finance-scrollbar-start, $finance-navy);
+  border: 0.08em solid $finance-scrollbar-border;
   border-radius: 100vw;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #435364;
+  background: $finance-scrollbar-hover;
 }

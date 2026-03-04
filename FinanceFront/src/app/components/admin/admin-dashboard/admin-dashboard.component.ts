@@ -1,65 +1,61 @@
-import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { AdminActivity, AdminDashboardStats, AdminUser } from '../../../Models/admin-user';
 import { AdminPaths } from '../../../Routes/app.routes.constants';
-import { AdminUsersService } from '../../../services/admin-users.service';
-import { AllModule } from '../../../module/allModule.module';
+import { PaginateInterface } from '../../../Models/Paginate/paginate-interface';
+import { PaginateSettings } from '../../../Models/Paginate/paginate-settings';
+import { User } from '../../../Models/User';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [AllModule, DatePipe, PercentPipe, RouterLink],
+  imports: [CommonModule, RouterLink],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.scss'
 })
 export class AdminDashboardComponent implements OnInit {
   readonly adminPaths = AdminPaths;
+  readonly activeRateMock = 0.72;
+  readonly activeUsersMockLabel = 'estimation (mock)';
 
-  stats = new AdminDashboardStats();
-  recentUsers: AdminUser[] = [];
-  recentActivities: AdminActivity[] = [];
+  totalUsers = 0;
+  activeUsersMock = 0;
   loading = false;
-
-  constructor(private readonly adminUsersService: AdminUsersService) {}
+  error: string | null = null;
+  private readonly http = inject(HttpClient);
 
   ngOnInit(): void {
-    this.loading = true;
+    this.loadTotalUsers();
+  }
 
-    this.adminUsersService
-      .getDashboardStats()
+  private loadTotalUsers(): void {
+    const payload: PaginateSettings = {
+      PageIndex: 0,
+      PageSize: 1,
+      Filter: '',
+      SortActive: 'LastName',
+      SortDirection: false
+    };
+
+    this.loading = true;
+    this.error = null;
+
+    this.http
+      .post<PaginateInterface<User>>(`${environment.apiUrl}User/GetUsersList`, payload)
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
-        next: (stats) => (this.stats = stats),
+        next: (response) => {
+          this.totalUsers = response.Count ?? 0;
+          this.activeUsersMock = Math.round(this.totalUsers * this.activeRateMock);
+        },
         error: () => {
-          this.stats = new AdminDashboardStats();
+          this.totalUsers = 0;
+          this.activeUsersMock = 0;
+          this.error = 'Impossible de charger les statistiques utilisateurs.';
         }
       });
-
-    this.adminUsersService.getUsers(0, 6).subscribe({
-      next: (users) => (this.recentUsers = users),
-      error: () => {
-        this.recentUsers = [];
-      }
-    });
-
-    this.recentActivities = this.adminUsersService.getRecentActivities();
-  }
-
-  get activeUsersRate(): number {
-    if (this.stats.totalUsers === 0) {
-      return 0;
-    }
-
-    return this.stats.activeUsers / this.stats.totalUsers;
-  }
-
-  get adminCoverageRate(): number {
-    if (this.stats.totalUsers === 0) {
-      return 0;
-    }
-
-    return (this.stats.admins + this.stats.superAdmins) / this.stats.totalUsers;
   }
 }

@@ -38,12 +38,12 @@ input:focus::placeholder {
 }
 
 .mdc-text-field--filled:not(.mdc-text-field--disabled) {
-  background-color: rgb(255, 255, 255) !important;
+  background-color: $finance-white !important;
 }
 
 .backgroodGreyInput .mdc-text-field--filled:not(.mdc-text-field--disabled) {
   background-color: $finance-bg !important;
-  border-color: #8796a7;
+  border-color: $finance-scrollbar-start;
   border: 1.5px solid;
   border-radius: 8px;
   width: 150px !important;

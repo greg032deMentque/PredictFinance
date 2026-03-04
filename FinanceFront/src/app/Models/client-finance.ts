@@ -112,6 +112,7 @@ export class ClientAnalysisResult {
 
 export class ClientSimulationRequest {
   symbol = '';
+  pattern = 'DOUBLE_TOP';
   investmentAmount = 0;
   horizonDays = 30;
 

@@ -1,4 +1,8 @@
 ﻿using BackPredictFinance.Services;
+using BackPredictFinance.Services.AuthServices;
+using BackPredictFinance.Services.ClientFinanceServices;
+using BackPredictFinance.Services.PythonServices;
+using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.Services.UserServices;
 
 namespace BackPredictFinance.API.ProgramSubFiles
@@ -28,11 +32,21 @@ Console.WriteLine($"services.AddScoped<{service}>();");
     {
         public static void ServicesDeclarator(IServiceCollection services)
         {
-            // --- API & Intégrations externes ---
-            services.AddScoped<UserAssetService>()
-                    .AddScoped<UserRoleDataService>()
-                    .AddScoped<EmailService>()
-                    .AddScoped<UserService>();
+
+            services.AddScoped<ILogService, LogService>();
+            services.AddScoped<IPathService, PathService>();
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IJwtGeneratorService, JwtGeneratorService>();
+            services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IUserAssetService, UserAssetService>();
+            services.AddScoped<IUserRoleDataService, UserRoleDataService>();
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IPythonApiService, PythonApiService>();
+            services.AddScoped<IIAStatusService, IAStatusService>();
+            services.AddScoped<IAssetService, AssetService>();
+            services.AddScoped<AnalyticService>();
+            services.AddScoped<ITickerService, TickerService>();
+            services.AddScoped<IClientFinanceService, ClientFinanceService>();
 
         }
 

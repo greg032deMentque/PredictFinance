@@ -5,47 +5,69 @@ using BackPredictFinance.Services.PythonServices.Models;
 using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace BackPredictFinance.Services.ClientFinanceServices
 {
     public interface IClientFinanceService
     {
-        Task<ClientDashboardViewModel> GetDashboardAsync(string userId, CancellationToken ct = default);
+        Task<ClientDashboardViewModel> GetDashboardAsync(CancellationToken ct = default);
         Task<List<AssetSearchItemViewModel>> SearchAssetsAsync(string query, CancellationToken ct = default);
-        Task<List<WatchlistItemViewModel>> GetWatchlistAsync(string userId, CancellationToken ct = default);
-        Task<WatchlistItemViewModel> AddToWatchlistAsync(string userId, WatchlistUpsertRequestViewModel request, CancellationToken ct = default);
-        Task RemoveFromWatchlistAsync(string userId, string symbol, CancellationToken ct = default);
+        Task<List<WatchlistItemViewModel>> GetWatchlistAsync(CancellationToken ct = default);
+        Task<WatchlistItemViewModel> AddToWatchlistAsync(WatchlistUpsertRequestViewModel request, CancellationToken ct = default);
+        Task RemoveFromWatchlistAsync(string symbol, CancellationToken ct = default);
         Task<LiveQuoteViewModel> GetLiveQuoteAsync(string symbol, CancellationToken ct = default);
-        Task<TransactionItemViewModel> RegisterTransactionAsync(string userId, TransactionCreateRequestViewModel request, CancellationToken ct = default);
-        Task<List<TransactionItemViewModel>> GetTransactionsAsync(string userId, int take, CancellationToken ct = default);
-        Task DeleteTransactionAsync(string userId, string transactionId, CancellationToken ct = default);
-        Task<AnalysisResultViewModel> RunAnalysisAsync(string userId, AnalysisRunRequestViewModel request, CancellationToken ct = default);
-        Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(string userId, int take, CancellationToken ct = default);
-        Task<SimulationResultViewModel> RunSimulationAsync(string userId, SimulationRequestViewModel request, CancellationToken ct = default);
+        Task<TransactionItemViewModel> RegisterTransactionAsync(TransactionCreateRequestViewModel request, CancellationToken ct = default);
+        Task<List<TransactionItemViewModel>> GetTransactionsAsync(int take, CancellationToken ct = default);
+        Task DeleteTransactionAsync(string transactionId, CancellationToken ct = default);
+        Task<AnalysisResultViewModel> RunAnalysisAsync(AnalysisRunRequestViewModel request, CancellationToken ct = default);
+        Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(int take, CancellationToken ct = default);
+        Task<SimulationResultViewModel> RunSimulationAsync(SimulationRequestViewModel request, CancellationToken ct = default);
     }
 
     public class ClientFinanceService : BaseService, IClientFinanceService
     {
+        private static readonly HashSet<string> DefaultTrainingSymbols = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "AAPL",
+            "MSFT",
+            "NVDA",
+            "AMZN",
+            "GOOGL",
+            "META",
+            "JPM",
+            "XOM",
+            "TSLA"
+        };
+
         private readonly ITickerService _tickerService;
         private readonly IPythonApiService _pythonApiService;
+        private readonly PythonCliOptions _pythonOptions;
+        private readonly IHostEnvironment _environment;
 
         public ClientFinanceService(
             IServiceProvider serviceProvider,
             ITickerService tickerService,
-            IPythonApiService pythonApiService)
+            IPythonApiService pythonApiService,
+            IOptions<PythonCliOptions> pythonOptions,
+            IHostEnvironment environment)
             : base(serviceProvider)
         {
             _tickerService = tickerService;
             _pythonApiService = pythonApiService;
+            _pythonOptions = pythonOptions.Value;
+            _environment = environment;
         }
 
-        public async Task<ClientDashboardViewModel> GetDashboardAsync(string userId, CancellationToken ct = default)
+        public async Task<ClientDashboardViewModel> GetDashboardAsync(CancellationToken ct = default)
         {
-            var watchlist = await GetWatchlistAsync(userId, ct);
+            var watchlist = await GetWatchlistAsync(ct);
             var analysesWeekStart = DateTime.UtcNow.AddDays(-7);
 
             var userAssetIds = await _financeDbContext.UserAssets
-                .Where(x => x.UserId == userId)
+                .Where(x => x.UserId == _currentUserId)
                 .Select(x => x.Id)
                 .ToListAsync(ct);
 
@@ -88,9 +110,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 return [];
             }
 
-            var allSymbols = await _tickerService.GetAllSymbolsAsync();
-            var matches = allSymbols
+            var trainingSymbols = GetTrainingSymbols();
+            var matches = trainingSymbols
                 .Where(symbol => symbol.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(symbol => symbol, StringComparer.OrdinalIgnoreCase)
                 .Take(20)
                 .ToList();
 
@@ -112,12 +135,12 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return response;
         }
 
-        public async Task<List<WatchlistItemViewModel>> GetWatchlistAsync(string userId, CancellationToken ct = default)
+        public async Task<List<WatchlistItemViewModel>> GetWatchlistAsync(CancellationToken ct = default)
         {
             var userAssets = await _financeDbContext.UserAssets
                 .AsNoTracking()
                 .Include(x => x.Asset)
-                .Where(x => x.UserId == userId)
+                .Where(x => x.UserId == _currentUserId)
                 .OrderBy(x => x.Asset.Symbol)
                 .ToListAsync(ct);
 
@@ -169,23 +192,24 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return response;
         }
 
-        public async Task<WatchlistItemViewModel> AddToWatchlistAsync(string userId, WatchlistUpsertRequestViewModel request, CancellationToken ct = default)
+        public async Task<WatchlistItemViewModel> AddToWatchlistAsync(WatchlistUpsertRequestViewModel request, CancellationToken ct = default)
         {
             var symbol = NormalizeSymbol(request.Symbol);
             if (string.IsNullOrWhiteSpace(symbol))
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
+            EnsureSymbolIsAllowed(symbol);
 
             var asset = await EnsureAssetAsync(symbol, request.CompanyName, ct);
             var userAsset = await _financeDbContext.UserAssets
-                .FirstOrDefaultAsync(x => x.UserId == userId && x.AssetId == asset.Id, ct);
+                .FirstOrDefaultAsync(x => x.UserId == _currentUserId && x.AssetId == asset.Id, ct);
 
             if (userAsset == null)
             {
                 userAsset = new UserAsset
                 {
-                    UserId = userId,
+                    UserId = _currentUserId,
                     AssetId = asset.Id,
                     Quantity = 0m
                 };
@@ -218,6 +242,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(symbol));
             }
+            EnsureSymbolIsAllowed(normalizedSymbol);
 
             var quote = await BuildQuoteAsync(normalizedSymbol);
             var asset = await EnsureAssetAsync(normalizedSymbol, normalizedSymbol, ct);
@@ -232,7 +257,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             };
         }
 
-        public async Task RemoveFromWatchlistAsync(string userId, string symbol, CancellationToken ct = default)
+        public async Task RemoveFromWatchlistAsync(string symbol, CancellationToken ct = default)
         {
             var normalizedSymbol = NormalizeSymbol(symbol);
             if (string.IsNullOrWhiteSpace(normalizedSymbol))
@@ -242,7 +267,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var userAsset = await _financeDbContext.UserAssets
                 .Include(x => x.Asset)
-                .FirstOrDefaultAsync(x => x.UserId == userId && x.Asset.Symbol == normalizedSymbol, ct);
+                .FirstOrDefaultAsync(x => x.UserId == _currentUserId && x.Asset.Symbol == normalizedSymbol, ct);
 
             if (userAsset == null)
             {
@@ -258,7 +283,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             await _financeDbContext.SaveChangesAsync(ct);
         }
 
-        public async Task<TransactionItemViewModel> RegisterTransactionAsync(string userId, TransactionCreateRequestViewModel request, CancellationToken ct = default)
+        public async Task<TransactionItemViewModel> RegisterTransactionAsync(TransactionCreateRequestViewModel request, CancellationToken ct = default)
         {
             if (request.Quantity <= 0m)
             {
@@ -280,18 +305,19 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
+            EnsureSymbolIsAllowed(symbol);
 
             var transactionType = ParseTransactionType(request.TransactionType);
             var asset = await EnsureAssetAsync(symbol, symbol, ct);
 
             var userAsset = await _financeDbContext.UserAssets
-                .FirstOrDefaultAsync(x => x.UserId == userId && x.AssetId == asset.Id, ct);
+                .FirstOrDefaultAsync(x => x.UserId == _currentUserId && x.AssetId == asset.Id, ct);
 
             if (userAsset == null)
             {
                 userAsset = new UserAsset
                 {
-                    UserId = userId,
+                    UserId = _currentUserId,
                     AssetId = asset.Id,
                     Quantity = 0m
                 };
@@ -339,7 +365,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             };
         }
 
-        public async Task<List<TransactionItemViewModel>> GetTransactionsAsync(string userId, int take, CancellationToken ct = default)
+        public async Task<List<TransactionItemViewModel>> GetTransactionsAsync(int take, CancellationToken ct = default)
         {
             var size = Math.Clamp(take, 1, 200);
 
@@ -347,37 +373,15 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .AsNoTracking()
                 .Include(x => x.UserAsset)
                 .ThenInclude(x => x.Asset)
-                .Where(x => x.UserAsset.UserId == userId)
+                .Where(x => x.UserAsset.UserId == _currentUserId)
                 .OrderByDescending(x => x.TimestampUtc)
                 .Take(size)
                 .ToListAsync(ct);
 
-            return transactions
-                .Select(transaction =>
-                {
-                    var gross = transaction.Quantity * transaction.UnitPrice;
-                    var net = transaction.TransactionType == TransactionTypeEnum.Buy
-                        ? gross + transaction.Fees
-                        : gross - transaction.Fees;
-
-                    return new TransactionItemViewModel
-                    {
-                        Id = transaction.Id,
-                        Symbol = transaction.UserAsset.Asset.Symbol,
-                        CompanyName = transaction.UserAsset.Asset.Name ?? transaction.UserAsset.Asset.Symbol,
-                        TransactionType = transaction.TransactionType.ToString(),
-                        Quantity = transaction.Quantity,
-                        UnitPrice = transaction.UnitPrice,
-                        Fees = transaction.Fees,
-                        GrossAmount = decimal.Round(gross, 2),
-                        NetAmount = decimal.Round(net, 2),
-                        TimestampUtc = transaction.TimestampUtc
-                    };
-                })
-                .ToList();
+            return _mapper.Map<List<TransactionItemViewModel>>(transactions);
         }
 
-        public async Task DeleteTransactionAsync(string userId, string transactionId, CancellationToken ct = default)
+        public async Task DeleteTransactionAsync(string transactionId, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(transactionId))
             {
@@ -387,7 +391,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             var transaction = await _financeDbContext.AssetTransactions
                 .Include(x => x.UserAsset)
                 .ThenInclude(x => x.Asset)
-                .FirstOrDefaultAsync(x => x.Id == transactionId && x.UserAsset.UserId == userId, ct);
+                .FirstOrDefaultAsync(x => x.Id == transactionId && x.UserAsset.UserId == _currentUserId, ct);
 
             if (transaction == null)
             {
@@ -414,17 +418,18 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             await _financeDbContext.SaveChangesAsync(ct);
         }
 
-        public async Task<AnalysisResultViewModel> RunAnalysisAsync(string userId, AnalysisRunRequestViewModel request, CancellationToken ct = default)
+        public async Task<AnalysisResultViewModel> RunAnalysisAsync(AnalysisRunRequestViewModel request, CancellationToken ct = default)
         {
             var symbol = NormalizeSymbol(request.Symbol);
             if (string.IsNullOrWhiteSpace(symbol))
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
+            EnsureSymbolIsAllowed(symbol);
 
             var prediction = await _pythonApiService.PredictAsync(new AssetIn { Symbol = symbol });
             var asset = await EnsureAssetAsync(symbol, symbol, ct);
-            var userAsset = await EnsureUserAssetAsync(userId, asset.Id, ct);
+            var userAsset = await EnsureUserAssetAsync(asset.Id, ct);
 
             var action = ParseRecommendationAction(prediction.SuggestedAction);
             var reason = BuildAnalysisReason(prediction.Pattern, prediction.ActionReason);
@@ -444,7 +449,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return MapAnalysisResult(recommendation.Id, asset, prediction, reason);
         }
 
-        public async Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(string userId, int take, CancellationToken ct = default)
+        public async Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(int take, CancellationToken ct = default)
         {
             var size = Math.Clamp(take, 1, 100);
 
@@ -452,38 +457,25 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .AsNoTracking()
                 .Include(x => x.UserAsset)
                 .ThenInclude(x => x.Asset)
-                .Where(x => x.UserAsset.UserId == userId)
+                .Where(x => x.UserAsset.UserId == _currentUserId)
                 .OrderByDescending(x => x.RecommendedAtUtc)
                 .Take(size)
                 .ToListAsync(ct);
 
-            return recommendations
-                .Select(rec =>
-                {
-                    var (pattern, reason) = ParseAnalysisReason(rec.Reason);
-
-                    return new AnalysisResultViewModel
-                    {
-                        Id = rec.Id,
-                        Symbol = rec.UserAsset.Asset.Symbol,
-                        CompanyName = rec.UserAsset.Asset.Name ?? rec.UserAsset.Asset.Symbol,
-                        Pattern = pattern,
-                        Confidence = rec.Confidence,
-                        Recommendation = rec.Action.ToString(),
-                        Reason = reason,
-                        RiskLevel = InferRiskLevel(rec.Confidence),
-                        HorizonDays = 5,
-                        PredictedAt = rec.RecommendedAtUtc
-                    };
-                })
-                .ToList();
+            return _mapper.Map<List<AnalysisResultViewModel>>(recommendations);
         }
 
-        public async Task<SimulationResultViewModel> RunSimulationAsync(string userId, SimulationRequestViewModel request, CancellationToken ct = default)
+        public async Task<SimulationResultViewModel> RunSimulationAsync(SimulationRequestViewModel request, CancellationToken ct = default)
         {
             if (request.InvestmentAmount <= 0m)
             {
                 throw new ArgumentException("Le montant d investissement doit etre strictement positif.", nameof(request.InvestmentAmount));
+            }
+
+            var normalizedPattern = (request.Pattern ?? string.Empty).Trim().ToUpperInvariant();
+            if (!string.IsNullOrWhiteSpace(normalizedPattern) && normalizedPattern != "DOUBLE_TOP")
+            {
+                throw new ArgumentException("Le pattern supporte est uniquement DOUBLE_TOP.", nameof(request.Pattern));
             }
 
             var symbol = NormalizeSymbol(request.Symbol);
@@ -491,32 +483,32 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
+            EnsureSymbolIsAllowed(symbol);
 
             var horizonDays = Math.Clamp(request.HorizonDays, 1, 365);
-            var prediction = await _pythonApiService.PredictAsync(new AssetIn { Symbol = symbol });
-
-            var trendFactor = prediction.SuggestedAction.ToLowerInvariant() switch
-            {
-                "buy" => 0.12m,
-                "sell" => -0.08m,
-                _ => 0.02m
-            };
-
-            var horizonFactor = horizonDays / 30m;
-            var confidenceFactor = Math.Clamp(prediction.ActionConfidence, 0m, 1m);
-            var estimatedReturnPct = trendFactor * confidenceFactor * horizonFactor;
-            var estimatedReturnAmount = request.InvestmentAmount * estimatedReturnPct;
+            var simulation = await _pythonApiService.SimulateAsync(
+                new PythonSimulationRequest
+                {
+                    Symbol = symbol,
+                    Pattern = normalizedPattern,
+                    ModelDir = _pythonOptions.ModelDir,
+                    Period = _pythonOptions.Period,
+                    InvestmentAmount = request.InvestmentAmount,
+                    HorizonDays = horizonDays,
+                    SellThreshold = _pythonOptions.SellThreshold,
+                    BuyThreshold = _pythonOptions.BuyThreshold
+                });
 
             return new SimulationResultViewModel
             {
                 Symbol = symbol,
-                InvestmentAmount = decimal.Round(request.InvestmentAmount, 2),
-                HorizonDays = horizonDays,
-                EstimatedReturnAmount = decimal.Round(estimatedReturnAmount, 2),
-                EstimatedReturnPct = decimal.Round(estimatedReturnPct, 4),
-                EstimatedFinalAmount = decimal.Round(request.InvestmentAmount + estimatedReturnAmount, 2),
-                Recommendation = prediction.SuggestedAction,
-                Assumption = "Simulation basee sur la confiance IA et un profil de marche simplifie."
+                InvestmentAmount = decimal.Round(simulation.InvestmentAmount, 2),
+                HorizonDays = simulation.HorizonDays,
+                EstimatedReturnAmount = decimal.Round(simulation.EstimatedReturnAmount, 2),
+                EstimatedReturnPct = decimal.Round(simulation.EstimatedReturnPct, 4),
+                EstimatedFinalAmount = decimal.Round(simulation.EstimatedFinalAmount, 2),
+                Recommendation = simulation.Recommendation,
+                Assumption = simulation.Assumption
             };
         }
 
@@ -588,10 +580,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return asset;
         }
 
-        private async Task<UserAsset> EnsureUserAssetAsync(string userId, string assetId, CancellationToken ct)
+        private async Task<UserAsset> EnsureUserAssetAsync(string assetId, CancellationToken ct)
         {
             var userAsset = await _financeDbContext.UserAssets
-                .FirstOrDefaultAsync(x => x.UserId == userId && x.AssetId == assetId, ct);
+                .FirstOrDefaultAsync(x => x.UserId == _currentUserId && x.AssetId == assetId, ct);
 
             if (userAsset != null)
             {
@@ -600,7 +592,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var created = new UserAsset
             {
-                UserId = userId,
+                UserId = _currentUserId,
                 AssetId = assetId,
                 Quantity = 0m
             };
@@ -613,6 +605,82 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         private static string NormalizeSymbol(string? symbol)
         {
             return (symbol ?? string.Empty).Trim().ToUpperInvariant();
+        }
+
+        private void EnsureSymbolIsAllowed(string symbol)
+        {
+            var trainingSymbols = GetTrainingSymbols();
+            if (trainingSymbols.Contains(symbol))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException($"Le symbole {symbol} n'est pas disponible pour ce modele.");
+        }
+
+        private HashSet<string> GetTrainingSymbols()
+        {
+            var trainConfigPath = ResolveTrainConfigPath();
+            if (!File.Exists(trainConfigPath))
+            {
+                return new HashSet<string>(DefaultTrainingSymbols, StringComparer.OrdinalIgnoreCase);
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(File.ReadAllText(trainConfigPath));
+                if (!document.RootElement.TryGetProperty("tickers", out var tickersElement) ||
+                    tickersElement.ValueKind != JsonValueKind.Array)
+                {
+                    return new HashSet<string>(DefaultTrainingSymbols, StringComparer.OrdinalIgnoreCase);
+                }
+
+                var symbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var tickerElement in tickersElement.EnumerateArray())
+                {
+                    if (tickerElement.ValueKind != JsonValueKind.String)
+                    {
+                        continue;
+                    }
+
+                    var symbol = NormalizeSymbol(tickerElement.GetString());
+                    if (string.IsNullOrWhiteSpace(symbol))
+                    {
+                        continue;
+                    }
+
+                    symbols.Add(symbol);
+                }
+
+                return symbols.Count > 0
+                    ? symbols
+                    : new HashSet<string>(DefaultTrainingSymbols, StringComparer.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return new HashSet<string>(DefaultTrainingSymbols, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        private string ResolveTrainConfigPath()
+        {
+            var workingDirectory = ResolvePath(_pythonOptions.WorkingDirectory);
+            var modelDirectory = _pythonOptions.ModelDir;
+            var resolvedModelDirectory = Path.IsPathRooted(modelDirectory)
+                ? modelDirectory
+                : Path.Combine(workingDirectory, modelDirectory);
+
+            return Path.Combine(resolvedModelDirectory, "train_config.json");
+        }
+
+        private string ResolvePath(string pathValue)
+        {
+            if (Path.IsPathRooted(pathValue))
+            {
+                return pathValue;
+            }
+
+            return Path.GetFullPath(Path.Combine(_environment.ContentRootPath, pathValue));
         }
 
         private static TransactionTypeEnum ParseTransactionType(string? rawType)
@@ -663,32 +731,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             var safePattern = string.IsNullOrWhiteSpace(pattern) ? "UNKNOWN" : pattern.Trim();
             var safeReason = string.IsNullOrWhiteSpace(reason) ? "Aucune justification" : reason.Trim();
             return $"Pattern={safePattern};Reason={safeReason}";
-        }
-
-        private static (string Pattern, string Reason) ParseAnalysisReason(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return ("UNKNOWN", "Aucune justification");
-            }
-
-            var chunks = value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var pattern = "UNKNOWN";
-            var reason = value;
-
-            foreach (var chunk in chunks)
-            {
-                if (chunk.StartsWith("Pattern=", StringComparison.OrdinalIgnoreCase))
-                {
-                    pattern = chunk[8..].Trim();
-                }
-                else if (chunk.StartsWith("Reason=", StringComparison.OrdinalIgnoreCase))
-                {
-                    reason = chunk[7..].Trim();
-                }
-            }
-
-            return (pattern, reason);
         }
 
         private static DateTime ComputeNextMarketOpenUtc()

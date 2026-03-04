@@ -3,7 +3,6 @@ using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Common;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services.AuthServices;
-using BackPredictFinance.ViewModels.CommonViewModels;
 using BackPredictFinance.ViewModels.UserViewModels;
 using BackPredictFinance.ViewModels.UserViewModels.AuthViewModels;
 using BackPredictFinance.ViewModels.WebViewModels.PaginateViewModels;
@@ -14,30 +13,26 @@ namespace BackPredictFinance.Services.UserServices
     public interface IUserService
     {
         Task<TokenViewModel?> Register(UserViewModel model, CancellationToken ct = default);
-        Task<UserViewModel> UpsertProfilData(UserViewModel model, CancellationToken ct = default);
+        Task<UserViewModel> UpdateUser(UserViewModel model, CancellationToken ct = default);
         Task<UserViewModel> GetUserData(CancellationToken ct = default);
         Task DeleteUser(string userId, CancellationToken ct = default);
         Task<PagedResultViewModel<UserViewModel>> GetUsersPaged(PaginateSettingsViewModel model, CancellationToken ct = default);
         Task<UserViewModel> GetUserDetails(string userId, CancellationToken ct = default);
-        Task<object> GetProfileCompletionDetails(CancellationToken ct = default);
         Task<UserViewModel> CreateUserAdmin(AdminUserUpsertViewModel model, CancellationToken ct = default);
         Task<UserViewModel> UpdateUserAdmin(string userId, AdminUserUpsertViewModel model, CancellationToken ct = default);
     }
 
     public class UserService : BaseService, IUserService
     {
-        private readonly IPathService _pathService;
         private readonly IAccountService _accountService;
         private readonly IUserRoleDataService _userRoleDataService;
 
         public UserService(
             IServiceProvider serviceProvider,
-            IPathService pathService,
             IUserRoleDataService userRoleDataService,
             IAccountService accountService)
             : base(serviceProvider)
         {
-            _pathService = pathService;
             _userRoleDataService = userRoleDataService;
             _accountService = accountService;
         }
@@ -67,7 +62,7 @@ namespace BackPredictFinance.Services.UserServices
                 .Take(take)
                 .ToListAsync(ct);
 
-            var vmList = users.Select(x => x.ToViewModel()).ToList();
+            var vmList = _mapper.Map<List<UserViewModel>>(users);
             foreach (var userViewModel in vmList.Where(x => !string.IsNullOrWhiteSpace(x.Id)))
             {
                 userViewModel.Roles = await _userRoleDataService.SetUserRoleViewModel(userViewModel.Id!);
@@ -120,7 +115,7 @@ namespace BackPredictFinance.Services.UserServices
                 throw new CustomException("User not found");
             }
 
-            return user.ToViewModel();
+            return _mapper.Map<UserViewModel>(user);
         }
 
         public async Task<TokenViewModel?> Register(UserViewModel model, CancellationToken ct = default)
@@ -157,7 +152,7 @@ namespace BackPredictFinance.Services.UserServices
             return await _accountService.Login(loginVm);
         }
 
-        public async Task<UserViewModel> UpsertProfilData(UserViewModel model, CancellationToken ct = default)
+        public async Task<UserViewModel> UpdateUser(UserViewModel model, CancellationToken ct = default)
         {
             var principal = _httpContextAccessor?.HttpContext?.User;
             if (principal is null)
@@ -191,7 +186,7 @@ namespace BackPredictFinance.Services.UserServices
                 throw new InvalidOperationException(string.Join(" | ", result.Errors.Select(e => e.Description)));
             }
 
-            return user.ToViewModel();
+            return _mapper.Map<UserViewModel>(user);
         }
 
         public async Task<UserViewModel> GetUserDetails(string userId, CancellationToken ct = default)
@@ -210,7 +205,7 @@ namespace BackPredictFinance.Services.UserServices
                 throw new KeyNotFoundException($"User {userId} not found");
             }
 
-            var viewModel = user.ToViewModel();
+            var viewModel = _mapper.Map<UserViewModel>(user);
             viewModel.Roles = await _userRoleDataService.SetUserRoleViewModel(user.Id);
             return viewModel;
         }
@@ -338,29 +333,7 @@ namespace BackPredictFinance.Services.UserServices
             return UserRoleEnum.User.ToString();
         }
 
-        public async Task<object> GetProfileCompletionDetails(CancellationToken ct = default)
-        {
-            var profile = await GetUserData(ct);
-
-            var completedFields = 0;
-            var totalFields = 4;
-
-            if (!string.IsNullOrWhiteSpace(profile.FirstName)) completedFields++;
-            if (!string.IsNullOrWhiteSpace(profile.LastName)) completedFields++;
-            if (!string.IsNullOrWhiteSpace(profile.Email)) completedFields++;
-            if (!string.IsNullOrWhiteSpace(profile.PhoneNumber)) completedFields++;
-
-            var completionPercent = totalFields == 0
-                ? 0
-                : (int)Math.Round((completedFields / (double)totalFields) * 100);
-
-            return new ProfileCompletionViewModel
-            {
-                CompletionPercent = completionPercent,
-                CompletedFields = completedFields,
-                TotalFields = totalFields
-            };
-        }
+       
     }
 }
 

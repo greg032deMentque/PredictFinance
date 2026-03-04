@@ -33,6 +33,8 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .
 pip install -e .[dev]
+python -m finance_ia.cli.train --output-dir artifacts/double_top --tickers AAPL MSFT NVDA --start 2018-01-01 --end 2025-12-31
+python -m finance_ia.cli.evaluate --ticker AAPL --model-dir artifacts/double_top --start 2025-01-01 --end 2025-12-31
 ```
 
 ### 2) API
@@ -65,7 +67,7 @@ Le projet suit des principes compatibles SonarQube:
 - gestion explicite des erreurs,
 - noms explicites,
 - duplication reduite,
-- tests executes sur le module IA (`12 passed`) et compilation front/API validee.
+- tests executes sur le module IA (`13 passed`) et compilation front/API validee.
 
 ## Readme par bloc
 

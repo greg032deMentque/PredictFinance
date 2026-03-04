@@ -27,7 +27,7 @@ export class AuthService {
     this.storageService.RemoveToken();
     this.storageService.RemoveRefreshToken();
 
-    void lastValueFrom(this.http.get(environment.apiUrl + 'Account/Logout')).catch(() => undefined);
+    void lastValueFrom(this.http.post(environment.apiUrl + 'Account/Logout', {})).catch(() => undefined);
 
     void this.router.navigate([AppRoutes.Login]);
   }

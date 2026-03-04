@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using BackPredictFinance.Common.enums;
+
 namespace BackPredictFinance.Services.PythonServices.Models
 {
     public class PredictOut
@@ -22,5 +24,8 @@ namespace BackPredictFinance.Services.PythonServices.Models
         public decimal ActionConfidence { get; set; }
         public string ActionReason { get; set; } = "";
         public List<PatternPrediction> Patterns { get; set; } = new();
+        public ModelStatusEnum ModelStatus { get; set; } = ModelStatusEnum.NoGo;
+        public List<ModelCheckResult> ModelChecks { get; set; } = [];
+        public string ModelMessage { get; set; } = string.Empty;
     }
 }

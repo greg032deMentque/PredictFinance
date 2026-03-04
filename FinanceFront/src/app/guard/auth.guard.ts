@@ -17,7 +17,6 @@ export class AuthGuard implements CanActivate {
   canActivate(): boolean | UrlTree | Observable<boolean | UrlTree> {
     const token = this.storageService.GetToken();
     if (!token) {
-      this.authService.clearSession();
       return this.router.createUrlTree([AppRoutes.Login]);
     }
 
@@ -27,14 +26,12 @@ export class AuthGuard implements CanActivate {
 
     const refreshToken = this.storageService.GetRefreshToken();
     if (!refreshToken) {
-      this.authService.clearSession();
       return this.router.createUrlTree([AppRoutes.Login]);
     }
 
-    return this.authService.refreshToken(refreshToken).pipe(
+    return this.authService.refreshToken(token, refreshToken).pipe(
       map(() => true),
       catchError(() => {
-        this.authService.clearSession();
         return of(this.router.createUrlTree([AppRoutes.Login]));
       })
     );

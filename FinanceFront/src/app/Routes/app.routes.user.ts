@@ -1,9 +1,9 @@
 import { Routes } from '@angular/router';
 import { ClientDashboardComponent } from '../components/client/client-dashboard/client-dashboard';
 import { UserFinancePageComponent } from '../components/client/user-finance/user-finance-page/user-finance-page.component';
-import { ClientLayoutComponent } from '../components/layout/client-layout.component';
 import { AuthGuard, ClientGuard } from '../guard';
 import { AppRoutes } from './app.routes.constants';
+import { ClientLayoutComponent } from '../components/client/client-layout-component/client-layout-component';
 
 export const USER_ROUTES: Routes = [
   {

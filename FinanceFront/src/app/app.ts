@@ -5,7 +5,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { filter } from 'rxjs';
 import { AppArea, AuthStore, resolveAreaFromHost } from './core/auth.store';
-import { AppRoutes, UserPaths } from './Routes/app.routes.constants';
+import { AppAreas, AppRoutes, UserPaths } from './Routes/app.routes.constants';
 type ProfileLink = { label: string; icon: string; commands: readonly (string | number)[] };
 
 @Component({
@@ -37,14 +37,14 @@ export class App {
 
   readonly headerTitle = computed(() => {
     const area = this.auth.area();
-    if (area === 'admin') return 'Predict Finance – Administratio';
+    if (area === AppAreas.Admin) return 'Predict Finance – Administration';
     return 'Predict Finance';
   });
 
   constructor() {
     effect(() => {
       const area = this.auth.area();
-      if (area === 'admin') {
+      if (area === AppAreas.Admin) {
         this.title.setTitle('Predict Finance – Administration');
         return;
       }
@@ -73,7 +73,7 @@ export class App {
 
   readonly userSubtitle = computed(() => {
     const area = this.auth.area();
-    if (area === 'admin') return 'Gestionnaire FIDES';
+    if (area === AppAreas.Admin) return 'Gestionnaire FIDES';
     return "Espace syndic";
   });
 
@@ -90,7 +90,7 @@ export class App {
     const area = this.auth.area();
 
     const monCompte =
-      area === 'admin'
+      area === AppAreas.Admin
         ? null
         : { label: 'Mon compte', icon: 'bi-person', commands: ['/', area, UserPaths.Profile] as const };
 

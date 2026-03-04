@@ -46,3 +46,23 @@ def load_feature_columns(model_dir: Path) -> list[str]:
     if not isinstance(data, list) or not all(isinstance(item, str) for item in data):
         raise ValueError("Invalid feature_columns.json format")
     return data
+
+
+def load_metrics(model_dir: Path) -> dict[str, Any]:
+    path = Path(model_dir) / METRICS_FILE
+    if not path.exists():
+        raise FileNotFoundError(f"Metrics file not found: {path}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("Invalid metrics.json format")
+    return data
+
+
+def load_train_config(model_dir: Path) -> dict[str, Any]:
+    path = Path(model_dir) / TRAIN_CONFIG_FILE
+    if not path.exists():
+        raise FileNotFoundError(f"Train config file not found: {path}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("Invalid train_config.json format")
+    return data

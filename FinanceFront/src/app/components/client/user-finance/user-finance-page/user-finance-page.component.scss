@@ -1,9 +1,11 @@
+@import "../../../../../themes/variables.scss";
+
 :host {
   display: block;
 }
 
 .hero-card {
-  background: linear-gradient(120deg, #f6fbff 0%, #ebf4ff 100%);
-  border: 1px solid #d8e8ff;
+  background: linear-gradient(120deg, $finance-surface-soft 0%, $finance-role-bg 100%);
+  border: 1px solid $finance-border-soft;
   border-radius: 12px;
 }

@@ -59,6 +59,8 @@ type JwtPayload = {
   site?: string[] | string;
   is_superadmin?: string | boolean;
   roles?: string[] | string;
+  role?: string[] | string;
+  'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'?: string[] | string;
 };
 
 export function normalizeBool(v: unknown): boolean {
@@ -115,8 +117,14 @@ export class AuthStore {
     return t.length > 0 && rt.length > 0;
   });
 
-  readonly isTenantAdmin = computed(() => this.roles().includes('tenant_admin'));
-  readonly canAccessAdmin = computed(() => this.isSuperAdmin() || this.isTenantAdmin());
+  readonly isTenantAdmin = computed(() => this.roles().includes('tenant_admin') || this.roles().includes('admin'));
+  readonly canAccessAdmin = computed(
+    () =>
+      this.isSuperAdmin() ||
+      this.roles().includes('tenant_admin') ||
+      this.roles().includes('admin') ||
+      this.roles().includes('superadmin')
+  );
   readonly canSeeSiteTabs = computed(() => this.sites().length > 0);
 
   isAuthenticated(): boolean {
@@ -157,7 +165,9 @@ export class AuthStore {
       return;
     }
 
-    const roles = normalizeStringArray(decoded.roles);
+    const roles = normalizeStringArray(
+      decoded.roles ?? decoded.role ?? decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+    );
     const isSuperAdmin = normalizeBool(decoded.is_superadmin) || roles.includes('superadmin');
 
     const tenantId = (decoded.tenant_id ?? '').trim();
@@ -223,10 +233,6 @@ export class AuthStore {
     if (clearStorage) this.clearStorageScoped();
   }
 
-  private storageKey(base: string): string {
-    return `${base}:${window.location.hostname.toLowerCase()}`;
-  }
-
   private getTokenScoped(): string {
     const token = this.storage.GetToken?.();
     return token;
@@ -238,12 +244,10 @@ export class AuthStore {
   }
 
   private setTokenScoped(token: string): void {
-    const k = this.storageKey('token');
     this.storage.SetToken(token);
   }
 
   private setRefreshTokenScoped(refreshToken: string): void {
-    const k = this.storageKey('refreshToken');
     this.storage.SetRefreshToken(refreshToken);
   }
 

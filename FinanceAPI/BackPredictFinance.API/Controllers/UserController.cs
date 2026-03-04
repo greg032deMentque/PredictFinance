@@ -7,25 +7,23 @@ using Microsoft.AspNetCore.Mvc;
 namespace BackPredictFinance.API.Controllers
 {
     [Authorize(Policy = "Bearer")]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
-    public class UsersController : ControllerBase
+    public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
         private readonly IUserRoleDataService _userRoleDataService;
 
-        public UsersController(IUserService userService, IUserRoleDataService userRoleDataService)
+        public UserController(IUserService userService, IUserRoleDataService userRoleDataService)
         {
             _userService = userService;
             _userRoleDataService = userRoleDataService;
         }
 
-
-        [HttpGet("GetUsersList")]
+        [HttpPost("GetUsersList")]
         [Authorize(Roles = "Admin,SuperAdmin")]
-
         public async Task<IActionResult> GetUsers(
-          PaginateSettingsViewModel settings,
+            [FromBody] PaginateSettingsViewModel settings,
             CancellationToken ct = default)
         {
 
@@ -33,8 +31,8 @@ namespace BackPredictFinance.API.Controllers
             return Ok(users);
         }
 
-        [HttpGet("GetUserDatas")]
-        public async Task<ActionResult> GetUserDetails(string userId, CancellationToken ct = default)
+        [HttpGet("GetUserById")]
+        public async Task<ActionResult> GetUserById([FromQuery] string userId, CancellationToken ct = default)
         {
             var result = await _userService.GetUserDetails(userId, ct);
             return Ok(result);
@@ -50,10 +48,10 @@ namespace BackPredictFinance.API.Controllers
             return Ok(createdUser);
         }
 
-        [HttpPut("UpdateUserDatas")]
-        public async Task<ActionResult> UpdateUserDatas(UserViewModel userVM, CancellationToken ct = default)
+        [HttpPut("UpdateUser")]
+        public async Task<ActionResult> UpdateUser([FromBody] UserViewModel userVM, CancellationToken ct = default)
         {
-            var result = await _userService.UpsertProfilData(userVM, ct);
+            var result = await _userService.UpdateUser(userVM, ct);
 
             return Ok(result);
 
@@ -61,8 +59,7 @@ namespace BackPredictFinance.API.Controllers
 
         [HttpDelete("DeleteUser")]
         [Authorize(Roles = "Admin,SuperAdmin")]
-
-        public async Task<ActionResult> DeleteUser(string userId, CancellationToken ct = default)
+        public async Task<ActionResult> DeleteUser([FromQuery] string userId, CancellationToken ct = default)
         {
             await _userService.DeleteUser(userId, ct);
 

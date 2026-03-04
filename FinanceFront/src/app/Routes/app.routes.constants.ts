@@ -10,6 +10,7 @@ export const AppRoutes = {
   Users: 'users',
   Add: 'add',
   Edit: 'edit',
+  Menu : "menu"
 } as const;
 
 export const AdminPaths = {

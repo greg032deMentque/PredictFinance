@@ -38,6 +38,20 @@ class PatternConfig:
     min_pretrend_pct: float = 0.05
 
 
+def pattern_config_from_dict(payload: dict[str, Any] | None) -> PatternConfig:
+    if payload is None:
+        return PatternConfig()
+    return PatternConfig(
+        peak_window=int(payload.get("peak_window", 3)),
+        min_peak_distance=int(payload.get("min_peak_distance", 5)),
+        max_peak_distance=int(payload.get("max_peak_distance", 30)),
+        peak_tolerance_pct=float(payload.get("peak_tolerance_pct", 0.02)),
+        valley_drop_pct=float(payload.get("valley_drop_pct", 0.04)),
+        pretrend_lookback=int(payload.get("pretrend_lookback", 10)),
+        min_pretrend_pct=float(payload.get("min_pretrend_pct", 0.05)),
+    )
+
+
 @dataclass(slots=True)
 class TrainConfig:
     output_dir: Path = DEFAULT_OUTPUT_DIR
@@ -45,6 +59,7 @@ class TrainConfig:
     start: str = DEFAULT_START
     end: str = field(default_factory=lambda: date.today().isoformat())
     interval: str = DEFAULT_INTERVAL
+    val_size: float = 0.15
     test_size: float = 0.2
     random_state: int = 42
     classification_threshold: float = 0.5
@@ -67,6 +82,10 @@ class TrainConfig:
             raise ValueError("Tickers list is empty")
         if not (0.05 <= self.test_size <= 0.5):
             raise ValueError("test_size must be between 0.05 and 0.5")
+        if not (0.05 <= self.val_size <= 0.3):
+            raise ValueError("val_size must be between 0.05 and 0.3")
+        if (self.val_size + self.test_size) >= 0.7:
+            raise ValueError("val_size + test_size must remain below 0.7")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -75,6 +94,7 @@ class TrainConfig:
             "start": self.start,
             "end": self.end,
             "interval": self.interval,
+            "val_size": self.val_size,
             "test_size": self.test_size,
             "random_state": self.random_state,
             "classification_threshold": self.classification_threshold,
