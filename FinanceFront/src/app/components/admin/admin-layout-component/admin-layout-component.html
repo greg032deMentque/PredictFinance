@@ -1,9 +1,9 @@
-<div class="d-flex flex-column h-100" style="min-height: 0">
+<div class="admin-shell d-flex flex-column h-100" style="min-height: 0">
   <div class="container-fluid d-flex flex-column flex-grow-1 h-100" style="min-height: 0">
     <div class="row flex-grow-1 align-items-stretch h-100" style="min-height: 0">
-      <aside class="col-lg-3 col-xl-2 d-none d-lg-flex border-end p-0 h-100">
-        <div class="d-flex flex-column flex-grow-1 p-3 h-100" style="min-height: 0">
-          <div class="flex-grow-1 overflow-auto" style="min-height: 0">
+      <aside class="layout-sidebar col-lg-3 col-xl-2 d-none d-lg-flex border-end p-0 h-100">
+        <div class="d-flex flex-column flex-grow-1 p-3 h-100 pb-5" style="min-height: 0">
+          <div class="side-menu-scroll flex-grow-1" style="min-height: 0">
             <div id="sideMenu" class="d-flex flex-column gap-4">
               @for (block of menuBlocks; track block.label) {
                 <section>
@@ -19,7 +19,7 @@
                           [routerLinkActiveOptions]="{ exact: link.exact ?? true }"
                           role="button"
                         >
-                          <span class="me-1">•</span>
+                          <span class="me-1">�</span>
                           @if (link.icon) {
                             <i class="bi flex-shrink-0" [class]="link.icon"></i>
                           }
@@ -77,17 +77,14 @@
               (click)="logout()"
             >
               <i class="bi bi-box-arrow-right"></i>
-              <span>Déconnexion</span>
+              <span>Deconnexion</span>
             </button>
           </div>
         </div>
       </aside>
 
-      <main class="col-12 col-lg-9 col-xl-10 d-flex flex-column p-0 h-100" style="min-height: 0">
-        <div
-          class="flex-grow-1 py-3 pb-5 ps-2 overflow-auto"
-          style="min-height: 0; overflow-x: hidden !important"
-        >
+      <main class="layout-main col-12 col-lg-9 col-xl-10 d-flex flex-column p-0 h-100" style="min-height: 0">
+        <div class="content-scroll flex-grow-1 py-3 pb-5 ps-2" style="min-height: 0; overflow-x: hidden !important">
           <router-outlet></router-outlet>
         </div>
       </main>

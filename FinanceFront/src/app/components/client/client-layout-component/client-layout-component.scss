@@ -1,0 +1,28 @@
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.client-shell {
+  min-height: 0;
+}
+
+.layout-sidebar {
+  overflow: hidden;
+}
+
+.side-menu-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.layout-main {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.content-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
