@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+﻿import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -78,8 +78,8 @@ export class LoginComponent {
       .post<void>(environment.apiUrl + 'Account/ForgotPassword', payload)
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isForgotSubmitting.set(false)))
       .subscribe({
-        next: () => this.forgotSuccess.set('Si l’adresse existe, un email de réinitialisation a été envoyé.'),
-        error: () => this.forgotError.set("Impossible d’envoyer l’email pour le moment."),
+        next: () => this.forgotSuccess.set('Si lâ€™adresse existe, un email de rÃ©initialisation a Ã©tÃ© envoyÃ©.'),
+        error: () => this.forgotError.set("Impossible dâ€™envoyer lâ€™email pour le moment."),
       });
   }
 
@@ -109,7 +109,7 @@ export class LoginComponent {
           ]);
 
         },
-        error: () => this.toastr.error('Échec de la connexion.'),
+        error: () => this.toastr.error('Ã‰chec de la connexion.'),
       });
   }
 }

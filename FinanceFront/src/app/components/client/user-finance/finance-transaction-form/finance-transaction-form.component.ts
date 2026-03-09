@@ -1,7 +1,7 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ClientTransactionCreateRequest } from '../../../../Models/client-finance';
+import { ClientTransactionCreateRequest } from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
   selector: 'app-finance-transaction-form',
@@ -36,12 +36,12 @@ export class FinanceTransactionFormComponent {
 
     this.save.emit(
       new ClientTransactionCreateRequest({
-        symbol: this.selectedSymbol,
-        transactionType: payload.transactionType,
-        quantity: payload.quantity,
-        unitPrice: payload.unitPrice,
-        fees: payload.fees,
-        timestampUtc: new Date(payload.timestampUtc).toISOString()
+        Symbol: this.selectedSymbol,
+        TransactionType: payload.transactionType,
+        Quantity: payload.quantity,
+        UnitPrice: payload.unitPrice,
+        Fees: payload.fees,
+        TimestampUtc: new Date(payload.timestampUtc).toISOString()
       })
     );
   }

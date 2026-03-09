@@ -1,7 +1,7 @@
-/*
+﻿/*
  * date-month.utils.ts
- * Utilitaires de parsing/formatage des dates orientés "sélection de mois" (YYYY-MM)
- * Conçus pour être agnostiques et réutilisables dans des formulaires Angular.
+ * Utilitaires de parsing/formatage des dates orientÃ©s "sÃ©lection de mois" (YYYY-MM)
+ * ConÃ§us pour Ãªtre agnostiques et rÃ©utilisables dans des formulaires Angular.
  */
 
 import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms";
@@ -33,14 +33,14 @@ export function pad2(n: number): string { return n.toString().padStart(2, "0"); 
 export const MONTH_INPUT_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
 
 /**
- * Normalise une valeur en chaîne d'input mois ("YYYY-MM").
+ * Normalise une valeur en chaÃ®ne d'input mois ("YYYY-MM").
  * Accepte: Date | "YYYY-MM" | "YYYY-MM-DD" | "dd/MM/yyyy".
  */
 export function toInputMonth(value?: string | Date | null): string | null {
   if (!value) return null;
 
   if (typeof value === "string") {
-    if (MONTH_INPUT_PATTERN.test(value)) return value; // déjà YYYY-MM
+    if (MONTH_INPUT_PATTERN.test(value)) return value; // dÃ©jÃ  YYYY-MM
     const d =
       parseDateInput(value) ??
       parseDateFr(value) ??
@@ -67,7 +67,7 @@ export function parseMonthInput(s?: string | null): { y: number; m: number } | n
     return { y, m: mo };
 }
 
-/** Clé d'ordonnancement pour comparer des mois */
+/** ClÃ© d'ordonnancement pour comparer des mois */
 export function monthKey(y: number, m: number): number {
     return y * 12 + (m - 1);
 }
@@ -97,7 +97,7 @@ export function monthRangeValidator(opts?: { startKey?: string; endKey?: string;
     return (group: AbstractControl): ValidationErrors | null => {
         const start = group.get(startKey)?.value as string | null | undefined;
         const end = group.get(endKey)?.value as string | null | undefined;
-        if (!start || !end) return null; // la règle "required" reste sur les contrôles
+        if (!start || !end) return null; // la rÃ¨gle "required" reste sur les contrÃ´les
         const s = parseMonthInput(start);
         const e = parseMonthInput(end);
         if (!s || !e) return { invalidRange: true };

@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -109,8 +109,8 @@ export class AdminUsersListComponent {
       )
       .subscribe({
         next: (response) => {
-          this.users.set(response.Datas ?? []);
-          this.total.set(response.Count ?? 0);
+          this.users.set(response.Items ?? []);
+          this.total.set(response.Total ?? 0);
         },
         error: () => {
           this.users.set([]);
@@ -125,8 +125,8 @@ export class AdminUsersListComponent {
     if (!normalizedId || this.loading()) return;
 
     void Swal.fire({
-      title: 'Etes-vous sûr ?',
-      text: "L'utilisateur sera definitivement supprimé.",
+      title: 'Etes-vous sÃ»r ?',
+      text: "L'utilisateur sera definitivement supprimÃ©.",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Oui',
@@ -145,7 +145,7 @@ export class AdminUsersListComponent {
         )
         .subscribe({
           next: async () => {
-            await Swal.fire('Supprimé', "L'utilisateur a bien été supprimé.", 'success');
+            await Swal.fire('SupprimÃ©', "L'utilisateur a bien Ã©tÃ© supprimÃ©.", 'success');
 
             const isLastItemOnPage = this.users().length === 1 && this.pageIndex() > 0;
             if (isLastItemOnPage) {

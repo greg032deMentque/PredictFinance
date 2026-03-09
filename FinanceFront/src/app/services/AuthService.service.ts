@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+﻿import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, lastValueFrom, Observable, of, Subscription, throwError, timer } from 'rxjs';
@@ -43,7 +43,7 @@ export class AuthService {
     }
   }
 
-  /** Décode l'expiration (en secondes) du token */
+  /** DÃ©code l'expiration (en secondes) du token */
   getTokenExpiry(token: string): number | null {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
@@ -53,7 +53,7 @@ export class AuthService {
     }
   }
 
-  /** Lance un timer pour rafraîchir le token 5 minutes avant l'expiration */
+  /** Lance un timer pour rafraÃ®chir le token 5 minutes avant l'expiration */
   scheduleTokenRefresh(token: string, refreshToken: string) {
     const exp = this.getTokenExpiry(token);
     if (!exp) {
@@ -80,7 +80,7 @@ export class AuthService {
         this.scheduleTokenRefresh(res.Token, res.RefreshToken);
       },
       error: (err) => {
-        console.error('[Scheduler] Échec du refresh automatique', err);
+        console.error('[Scheduler] Ã‰chec du refresh automatique', err);
       },
     });
   }

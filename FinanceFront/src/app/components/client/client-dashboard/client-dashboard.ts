@@ -1,8 +1,8 @@
-import { CommonModule, CurrencyPipe, DatePipe, PercentPipe } from '@angular/common';
+﻿import { CommonModule, CurrencyPipe, DatePipe, PercentPipe } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { ClientAnalysisResult, ClientDashboardOverview } from '../../../Models/client-finance';
+import { ClientAnalysisResult, ClientDashboardOverview } from '../../../Models/client-finance-models/client-finance-models';
 import { UserPaths } from '../../../Routes/app.routes.constants';
 import { ClientFinanceService } from '../../../services/client-finance.service';
 
@@ -44,7 +44,7 @@ export class ClientDashboardComponent implements OnInit {
   }
 
   get dayProfitLossClass(): string {
-    return this.overview.dayProfitLoss >= 0 ? 'text-success' : 'text-danger';
+    return this.overview.DayProfitLoss >= 0 ? 'text-success' : 'text-danger';
   }
 
   getBadgeClass(recommendation: string): string {

@@ -1,4 +1,4 @@
-export class PatternProbability {
+﻿export class PatternProbability {
   pattern = '';
   probability = 0;
 

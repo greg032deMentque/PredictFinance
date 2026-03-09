@@ -1,4 +1,4 @@
-export type DateLike = string | Date | null | undefined;
+﻿export type DateLike = string | Date | null | undefined;
 
 export function toYMD(dateLike: string | Date): string {
   const d = new Date(dateLike);

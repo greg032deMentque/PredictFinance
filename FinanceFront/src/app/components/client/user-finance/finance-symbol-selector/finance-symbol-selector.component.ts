@@ -1,8 +1,8 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
-import { MarketAssetOption } from '../../../../Models/client-finance';
+import { MarketAssetOption } from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
   selector: 'app-finance-symbol-selector',
@@ -23,7 +23,7 @@ export class FinanceSymbolSelectorComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['selectedAsset']) {
-      this.selectedSymbol = this.selectedAsset?.symbol ?? null;
+      this.selectedSymbol = this.selectedAsset?.Symbol ?? null;
     }
   }
 
@@ -37,7 +37,7 @@ export class FinanceSymbolSelectorComponent implements OnChanges {
       return;
     }
 
-    const asset = this.options.find((item) => item.symbol === symbol);
+    const asset = this.options.find((item) => item.Symbol === symbol);
     if (!asset) return;
 
     this.assetSelected.emit(asset);

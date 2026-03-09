@@ -2,32 +2,30 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map, of } from 'rxjs';
 import { environment } from '../../environments/environment';
-import {
-  ClientAnalysisLaunchRequest,
-  ClientAnalysisResult,
-  ClientDashboardOverview,
-  ClientLiveQuote,
-  ClientSimulationRequest,
-  ClientSimulationResult,
-  ClientTransactionCreateRequest,
-  ClientTransactionItem,
-  ClientWatchlistItem,
-  MarketAssetOption
-} from '../Models/client-finance';
+import { ClientAnalysisLaunchRequest } from '../Models/client-finance-models/client-analysis-launch-request.model';
+import { ClientAnalysisResult } from '../Models/client-finance-models/client-analysis-result.model';
+import { ClientDashboardOverview } from '../Models/client-finance-models/client-dashboard-overview.model';
+import { ClientLiveQuote } from '../Models/client-finance-models/client-live-quote.model';
+import { ClientSimulationRequest } from '../Models/client-finance-models/client-simulation-request.model';
+import { ClientSimulationResult } from '../Models/client-finance-models/client-simulation-result.model';
+import { ClientTransactionCreateRequest } from '../Models/client-finance-models/client-transaction-create-request.model';
+import { ClientTransactionItem } from '../Models/client-finance-models/client-transaction-item.model';
+import { ClientWatchlistItem } from '../Models/client-finance-models/client-watchlist-item.model';
+import { AssetSearchItem } from '../Models/client-finance-models/asset-search-item';
+
 
 @Injectable({ providedIn: 'root' })
 export class ClientFinanceService {
-  private readonly baseUrl = `${environment.apiUrl}ClientFinance`;
 
   constructor(private readonly http: HttpClient) {}
 
   getDashboardOverview(): Observable<ClientDashboardOverview> {
     return this.http
-      .get<Record<string, unknown>>(`${this.baseUrl}/dashboard`)
+      .get<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/dashboard`)
       .pipe(map((payload) => this.mapOverview(payload)));
   }
 
-  searchAssets(query: string): Observable<MarketAssetOption[]> {
+  searchAssets(query: string): Observable<AssetSearchItem[]> {
     const normalizedQuery = query.trim();
     if (normalizedQuery.length < 2) {
       return of([]);
@@ -36,19 +34,19 @@ export class ClientFinanceService {
     const params = new HttpParams().set('query', normalizedQuery);
 
     return this.http
-      .get<unknown[]>(`${this.baseUrl}/assets/search`, { params })
+      .get<AssetSearchItem[]>(`${environment.apiUrl}ClientFinance/assets/search`, { params })
       .pipe(map((items) => items.map((item) => this.mapAsset(item))));
   }
 
   getWatchlist(): Observable<ClientWatchlistItem[]> {
     return this.http
-      .get<unknown[]>(`${this.baseUrl}/watchlist`)
+      .get<unknown[]>(`${environment.apiUrl}ClientFinance/watchlist`)
       .pipe(map((items) => items.map((item) => this.mapWatchlistItem(this.toRecord(item)))));
   }
 
   addToWatchlist(symbol: string, companyName: string, market: string): Observable<ClientWatchlistItem> {
     return this.http
-      .post<Record<string, unknown>>(`${this.baseUrl}/watchlist`, {
+      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/watchlist`, {
         Symbol: symbol,
         CompanyName: companyName,
         Market: market
@@ -57,18 +55,18 @@ export class ClientFinanceService {
   }
 
   removeFromWatchlist(symbol: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/watchlist/${encodeURIComponent(symbol)}`);
+    return this.http.delete<void>(`${environment.apiUrl}ClientFinance/watchlist/${encodeURIComponent(symbol)}`);
   }
 
   getLiveQuote(symbol: string): Observable<ClientLiveQuote> {
     return this.http
-      .get<Record<string, unknown>>(`${this.baseUrl}/quote/${encodeURIComponent(symbol)}`)
+      .get<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/quote/${encodeURIComponent(symbol)}`)
       .pipe(map((payload) => this.mapQuote(payload)));
   }
 
   registerTransaction(request: ClientTransactionCreateRequest): Observable<ClientTransactionItem> {
     return this.http
-      .post<Record<string, unknown>>(`${this.baseUrl}/transactions`, {
+      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/transactions`, {
         Symbol: request.symbol,
         TransactionType: request.transactionType,
         Quantity: request.quantity,
@@ -83,17 +81,17 @@ export class ClientFinanceService {
     const params = new HttpParams().set('take', take);
 
     return this.http
-      .get<unknown[]>(`${this.baseUrl}/transactions`, { params })
+      .get<unknown[]>(`${environment.apiUrl}ClientFinance/transactions`, { params })
       .pipe(map((items) => items.map((item) => this.mapTransaction(this.toRecord(item)))));
   }
 
   deleteTransaction(transactionId: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/transactions/${encodeURIComponent(transactionId)}`);
+    return this.http.delete<void>(`${environment.apiUrl}ClientFinance/transactions/${encodeURIComponent(transactionId)}`);
   }
 
   runAnalysis(request: ClientAnalysisLaunchRequest): Observable<ClientAnalysisResult> {
     return this.http
-      .post<Record<string, unknown>>(`${this.baseUrl}/analysis/run`, { Symbol: request.symbol })
+      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/analysis/run`, { Symbol: request.symbol })
       .pipe(map((payload) => this.mapAnalysis(payload)));
   }
 
@@ -101,13 +99,13 @@ export class ClientFinanceService {
     const params = new HttpParams().set('take', limit);
 
     return this.http
-      .get<unknown[]>(`${this.baseUrl}/analysis/recent`, { params })
+      .get<unknown[]>(`${environment.apiUrl}ClientFinance/analysis/recent`, { params })
       .pipe(map((items) => items.map((item) => this.mapAnalysis(this.toRecord(item)))));
   }
 
   runSimulation(request: ClientSimulationRequest): Observable<ClientSimulationResult> {
     return this.http
-      .post<Record<string, unknown>>(`${this.baseUrl}/simulation/run`, {
+      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/simulation/run`, {
         Symbol: request.symbol,
         Pattern: request.pattern,
         InvestmentAmount: request.investmentAmount,

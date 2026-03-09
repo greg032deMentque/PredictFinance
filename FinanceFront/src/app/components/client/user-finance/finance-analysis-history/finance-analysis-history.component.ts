@@ -1,6 +1,6 @@
-import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
+﻿import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { ClientAnalysisResult } from '../../../../Models/client-finance';
+import { ClientAnalysisResult } from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
   selector: 'app-finance-analysis-history',

@@ -15,21 +15,21 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of history; track item.id) {
+          @for (item of history; track item.Id) {
             <tr>
               <td>
-                <div class="fw-semibold">{{ item.symbol }}</div>
-                <small class="text-muted">{{ item.companyName }}</small>
+                <div class="fw-semibold">{{ item.Symbol }}</div>
+                <small class="text-muted">{{ item.CompanyName }}</small>
               </td>
-              <td>{{ item.pattern }}</td>
-              <td>{{ item.confidence | percent: '1.0-0' }}</td>
+              <td>{{ item.Pattern }}</td>
+              <td>{{ item.Confidence | percent: '1.0-0' }}</td>
               <td>
-                <span class="badge" [class]="getBadgeClass(item.recommendation)">
-                  {{ item.recommendation }}
+                <span class="badge" [class]="getBadgeClass(item.Recommendation)">
+                  {{ item.Recommendation }}
                 </span>
               </td>
-              <td>{{ item.riskLevel }}</td>
-              <td>{{ item.predictedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ item.RiskLevel }}</td>
+              <td>{{ item.PredictedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
             </tr>
           } @empty {
             <tr>

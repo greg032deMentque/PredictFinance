@@ -1,6 +1,6 @@
-import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
+﻿import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { ClientAnalysisResult } from '../../../../Models/client-finance';
+import { ClientAnalysisResult } from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
   selector: 'app-finance-analysis-result',
@@ -18,7 +18,7 @@ export class FinanceAnalysisResultComponent {
       return 'text-bg-secondary';
     }
 
-    const normalized = this.result.recommendation.trim().toLowerCase();
+    const normalized = this.result.Recommendation.trim().toLowerCase();
 
     if (normalized === 'buy' || normalized === 'acheter') {
       return 'text-bg-success';

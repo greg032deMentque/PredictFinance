@@ -1,1 +1,1 @@
-export type SortDir = 'asc' | 'desc';
+﻿export type SortDir = 'asc' | 'desc';

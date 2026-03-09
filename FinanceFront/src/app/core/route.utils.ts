@@ -1,4 +1,4 @@
-import { ActivatedRoute } from '@angular/router';
+﻿import { ActivatedRoute } from '@angular/router';
 
 export function getRouteParamDeep(route: ActivatedRoute, key: string): string | null {
   for (let r: ActivatedRoute | null = route; r; r = r.parent) {

@@ -1,4 +1,4 @@
-import { AbstractControl, FormArray, FormGroup, ValidationErrors } from "@angular/forms";
+﻿import { AbstractControl, FormArray, FormGroup, ValidationErrors } from "@angular/forms";
 
 export function nonNegativeValidator(control: AbstractControl): ValidationErrors | null {
   const v = control.value;
@@ -6,11 +6,11 @@ export function nonNegativeValidator(control: AbstractControl): ValidationErrors
 }
 
 /**
- * Récupère récursivement la liste détaillée des champs invalides d’un `FormGroup` ou `FormArray`,
+ * RÃ©cupÃ¨re rÃ©cursivement la liste dÃ©taillÃ©e des champs invalides dâ€™un `FormGroup` ou `FormArray`,
  * avec leur chemin complet (`path`) et leurs erreurs de validation.
  *
- * ⚙️ Gère les sous-groupes et tableaux imbriqués (`address.street`, `phones[0].number`, etc.).
- * ✅ Inclut également les erreurs portées par les conteneurs eux-mêmes (validators de groupe).
+ * âš™ï¸ GÃ¨re les sous-groupes et tableaux imbriquÃ©s (`address.street`, `phones[0].number`, etc.).
+ * âœ… Inclut Ã©galement les erreurs portÃ©es par les conteneurs eux-mÃªmes (validators de groupe).
  *
  * ---
  * @example
@@ -35,17 +35,17 @@ export function nonNegativeValidator(control: AbstractControl): ValidationErrors
  * }
  *
  * // Exemple de sortie console :
- * // ┌─────────┬───────────────────────┬────────────────────────────┐
- * // │ (index) │ path                  │ errors                     │
- * // ├─────────┼───────────────────────┼────────────────────────────┤
- * // │    0    │ 'username'            │ { required: true }         │
- * // │    1    │ 'address.street'      │ { required: true }         │
- * // │    2    │ 'phones[0].number'    │ { minlength: { ... } }     │
- * // └─────────┴───────────────────────┴────────────────────────────┘
+ * // â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+ * // â”‚ (index) â”‚ path                  â”‚ errors                     â”‚
+ * // â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+ * // â”‚    0    â”‚ 'username'            â”‚ { required: true }         â”‚
+ * // â”‚    1    â”‚ 'address.street'      â”‚ { required: true }         â”‚
+ * // â”‚    2    â”‚ 'phones[0].number'    â”‚ { minlength: { ... } }     â”‚
+ * // â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
  *
- * @param form        Le `FormGroup` ou `FormArray` à inspecter.
- * @param parentPath  (optionnel) Chemin du parent pour la récursion interne.
- * @returns Un tableau d’objets `{ path, errors }` listant tous les contrôles invalides.
+ * @param form        Le `FormGroup` ou `FormArray` Ã  inspecter.
+ * @param parentPath  (optionnel) Chemin du parent pour la rÃ©cursion interne.
+ * @returns Un tableau dâ€™objets `{ path, errors }` listant tous les contrÃ´les invalides.
  */
 export function getInvalidControlsDetailed(
   form: FormGroup | FormArray,
@@ -58,7 +58,7 @@ export function getInvalidControlsDetailed(
       const path = parentPath ? `${parentPath}.${key}` : key;
 
       if (control instanceof FormGroup || control instanceof FormArray) {
-        // Erreurs portées par le conteneur lui-même (validators de groupe)
+        // Erreurs portÃ©es par le conteneur lui-mÃªme (validators de groupe)
         if (control.invalid && control.errors) {
           out.push({ path, errors: control.errors });
         }

@@ -16,25 +16,25 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of watchlist; track item.userAssetId) {
+          @for (item of watchlist; track item.UserAssetId) {
             <tr>
               <td>
-                <div class="fw-semibold">{{ item.symbol }}</div>
-                <small class="text-muted">{{ item.companyName }}</small>
+                <div class="fw-semibold">{{ item.Symbol }}</div>
+                <small class="text-muted">{{ item.CompanyName }}</small>
               </td>
-              <td>{{ item.lastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
-              <td [class.text-success]="item.dayVariationPct >= 0" [class.text-danger]="item.dayVariationPct < 0">
-                {{ item.dayVariationPct | number: '1.2-2' }}%
+              <td>{{ item.LastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td [class.text-success]="item.DayVariationPct >= 0" [class.text-danger]="item.DayVariationPct < 0">
+                {{ item.DayVariationPct | number: '1.2-2' }}%
               </td>
-              <td>{{ item.heldQuantity | number: '1.2-4' }}</td>
-              <td>{{ item.averageBuyPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
-              <td>{{ item.outstandingAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td>{{ item.HeldQuantity | number: '1.2-4' }}</td>
+              <td>{{ item.AverageBuyPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+              <td>{{ item.OutstandingAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
               <td>
                 <div class="d-flex gap-2 justify-content-end">
-                  <button class="btn btn-sm btn-outline-primary" type="button" (click)="onSelectSymbol(item.symbol)">
+                  <button class="btn btn-sm btn-outline-primary" type="button" (click)="onSelectSymbol(item.Symbol)">
                     Cours live
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" type="button" (click)="onRemoveSymbol(item.symbol)">
+                  <button class="btn btn-sm btn-outline-danger" type="button" (click)="onRemoveSymbol(item.Symbol)">
                     Retirer
                   </button>
                 </div>
@@ -52,13 +52,13 @@
     <div class="quote-box mt-3" *ngIf="quote as liveQuote">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <div class="fw-semibold">{{ liveQuote.symbol }} - Cours live</div>
-          <small class="text-muted">Mise a jour {{ liveQuote.asOfUtc | date: 'dd/MM HH:mm:ss' }}</small>
+          <div class="fw-semibold">{{ liveQuote.Symbol }} - Cours live</div>
+          <small class="text-muted">Mise a jour {{ liveQuote.AsOfUtc | date: 'dd/MM HH:mm:ss' }}</small>
         </div>
         <div class="text-end">
-          <div class="h5 mb-0">{{ liveQuote.lastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</div>
-          <small [class.text-success]="liveQuote.dayVariationPct >= 0" [class.text-danger]="liveQuote.dayVariationPct < 0">
-            {{ liveQuote.dayVariationPct | number: '1.2-2' }}%
+          <div class="h5 mb-0">{{ liveQuote.LastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</div>
+          <small [class.text-success]="liveQuote.DayVariationPct >= 0" [class.text-danger]="liveQuote.DayVariationPct < 0">
+            {{ liveQuote.DayVariationPct | number: '1.2-2' }}%
           </small>
         </div>
       </div>

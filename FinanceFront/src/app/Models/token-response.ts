@@ -1,4 +1,4 @@
-export class TokenResponse {
+﻿export class TokenResponse {
   Token = "";
   RefreshToken = "";
   FirstName = "";

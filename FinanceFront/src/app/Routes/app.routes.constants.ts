@@ -1,4 +1,4 @@
-export const buildRoute = (...segments: string[]) => segments.filter(Boolean).join('/');
+﻿export const buildRoute = (...segments: string[]) => segments.filter(Boolean).join('/');
 
 export const AppRoutes = {
   Login: 'login',

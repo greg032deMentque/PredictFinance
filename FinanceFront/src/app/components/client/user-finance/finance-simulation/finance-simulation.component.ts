@@ -1,7 +1,7 @@
-import { CommonModule, CurrencyPipe, PercentPipe } from '@angular/common';
+﻿import { CommonModule, CurrencyPipe, PercentPipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ClientSimulationRequest, ClientSimulationResult } from '../../../../Models/client-finance';
+import { ClientSimulationRequest, ClientSimulationResult } from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
   selector: 'app-finance-simulation',
@@ -36,10 +36,10 @@ export class FinanceSimulationComponent {
 
     this.launch.emit(
       new ClientSimulationRequest({
-        symbol: this.selectedSymbol,
-        pattern: payload.pattern,
-        investmentAmount: payload.investmentAmount,
-        horizonDays: payload.horizonDays
+        Symbol: this.selectedSymbol,
+        Pattern: payload.pattern,
+        InvestmentAmount: payload.investmentAmount,
+        HorizonDays: payload.horizonDays
       })
     );
   }

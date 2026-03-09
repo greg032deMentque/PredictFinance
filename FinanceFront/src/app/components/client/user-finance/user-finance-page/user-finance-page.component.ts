@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, Subscription, debounceTime, distinctUntilChanged, finalize, interval, switchMap } from 'rxjs';
@@ -13,7 +13,7 @@ import {
   ClientTransactionItem,
   ClientWatchlistItem,
   MarketAssetOption
-} from '../../../../Models/client-finance';
+} from '../../../../Models/client-finance-models/client-finance-models';
 import { ClientFinanceService } from '../../../../services/client-finance.service';
 import { ToastService } from '../../../../services/toastr.service';
 import { FinanceAnalysisHistoryComponent } from '../finance-analysis-history/finance-analysis-history.component';

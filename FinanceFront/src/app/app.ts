@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+﻿import { Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AllModule } from './module/allModule.module';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -37,7 +37,7 @@ export class App {
 
   readonly headerTitle = computed(() => {
     const area = this.auth.area();
-    if (area === AppAreas.Admin) return 'Predict Finance – Administration';
+    if (area === AppAreas.Admin) return 'Predict Finance â€“ Administration';
     return 'Predict Finance';
   });
 
@@ -45,7 +45,7 @@ export class App {
     effect(() => {
       const area = this.auth.area();
       if (area === AppAreas.Admin) {
-        this.title.setTitle('Predict Finance – Administration');
+        this.title.setTitle('Predict Finance â€“ Administration');
         return;
       }
       else {

@@ -1,6 +1,6 @@
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+﻿import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { ClientLiveQuote, ClientWatchlistItem } from '../../../../Models/client-finance';
+import { ClientLiveQuote, ClientWatchlistItem } from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
   selector: 'app-finance-watchlist',

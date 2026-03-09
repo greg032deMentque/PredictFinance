@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { JwtHelperService } from '@auth0/angular-jwt';
 import { StorageService } from '../services/storage.service';
 import { AppAreas } from '../Routes/app.routes.constants';
@@ -6,16 +6,16 @@ import { AppAreas } from '../Routes/app.routes.constants';
 /**
  * Site courant (contexte applicatif global).
  *
- * Représente la "zone" active de l’application :
- * - déterminée par le sous-domaine / host
- * - utilisée par les guards
- * - utilisée pour choisir le layout (AdminLayout / SiteLayout)
- * - utilisée pour afficher le bon menu principal
+ * ReprÃ©sente la "zone" active de lâ€™application :
+ * - dÃ©terminÃ©e par le sous-domaine / host
+ * - utilisÃ©e par les guards
+ * - utilisÃ©e pour choisir le layout (AdminLayout / SiteLayout)
+ * - utilisÃ©e pour afficher le bon menu principal
  *
  * Exemple :
- *  - admin.monsite.fr      → 'admin'
- *  - ecole.monsite.fr      → 'ecole'
- *  - asso.monsite.fr       → 'asso'
+ *  - admin.monsite.fr      â†’ 'admin'
+ *  - ecole.monsite.fr      â†’ 'ecole'
+ *  - asso.monsite.fr       â†’ 'asso'
  */
 export type AppArea = (typeof AppAreas)[keyof typeof AppAreas];
 
@@ -23,19 +23,19 @@ export type AppArea = (typeof AppAreas)[keyof typeof AppAreas];
 
 
 /**
- * RÉSUMÉ DES RESPONSABILITÉS
+ * RÃ‰SUMÃ‰ DES RESPONSABILITÃ‰S
  *
- * | Concept           | Exemple              | Responsabilité principale                         |
+ * | Concept           | Exemple              | ResponsabilitÃ© principale                         |
  * |-------------------|----------------------|--------------------------------------------------|
  * | AppArea           | 'admin'              | Contexte global (layout, guard, menu principal) |
- * | Mode              | 'adminLegalPerson'   | Comportement métier / choix endpoint API        |
- * | AdminEntityKind   | 'schools'            | Construction des routes admin d’une entité      |
+ * | Mode              | 'adminLegalPerson'   | Comportement mÃ©tier / choix endpoint API        |
+ * | AdminEntityKind   | 'schools'            | Construction des routes admin dâ€™une entitÃ©      |
  *
- * Ces trois concepts sont indépendants et complémentaires :
+ * Ces trois concepts sont indÃ©pendants et complÃ©mentaires :
  *
- * - AppArea → "Où suis-je dans l’application ?"
- * - Mode → "Comment ce composant doit-il fonctionner ?"
- * - AdminEntityKind → "Quelle entité admin est manipulée ?"
+ * - AppArea â†’ "OÃ¹ suis-je dans lâ€™application ?"
+ * - Mode â†’ "Comment ce composant doit-il fonctionner ?"
+ * - AdminEntityKind â†’ "Quelle entitÃ© admin est manipulÃ©e ?"
  */
 
 

@@ -14,6 +14,7 @@ using BackPredictFinance.Services.ClientFinanceServices;
 using BackPredictFinance.Services.PythonServices;
 using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.Services.UserServices;
+using BackPredictFinance.ViewModels.UserViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -125,7 +126,9 @@ ProgramServiceDeclarator.ServicesDeclarator(builder.Services);
 
 var mapperConfiguration = new MapperConfiguration(cfg =>
 {
-    cfg.AddMaps(AppDomain.CurrentDomain.GetAssemblies());
+    // Explicitly load profiles from the ViewModels assembly to avoid missing maps
+    // when relying on currently loaded AppDomain assemblies.
+    cfg.AddMaps(typeof(UserViewModelProfile).Assembly);
 }, NullLoggerFactory.Instance);
 
 builder.Services.AddSingleton<IMapper>(mapperConfiguration.CreateMapper());

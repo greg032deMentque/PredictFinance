@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -48,7 +48,7 @@ export class AdminDashboardComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (response) => {
-          this.totalUsers = response.Count ?? 0;
+          this.totalUsers = response.Total ?? 0;
           this.activeUsersMock = Math.round(this.totalUsers * this.activeRateMock);
         },
         error: () => {

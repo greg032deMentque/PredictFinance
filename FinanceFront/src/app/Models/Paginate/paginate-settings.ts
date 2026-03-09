@@ -1,4 +1,4 @@
-export class PaginateSettings {
+﻿export class PaginateSettings {
     SortDirection = false;
     SortActive = ""
     PageSize = 5;
