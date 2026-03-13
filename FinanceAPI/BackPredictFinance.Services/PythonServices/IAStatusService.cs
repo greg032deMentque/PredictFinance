@@ -16,15 +16,18 @@ namespace BackPredictFinance.Services.PythonServices
     public sealed class IAStatusService : IIAStatusService
     {
         private readonly PythonCliOptions _options;
+        private readonly IPatternCatalogService _patternCatalogService;
         private readonly IHostEnvironment _environment;
         private readonly IPythonApiService _pythonApiService;
 
         public IAStatusService(
             IOptions<PythonCliOptions> options,
+            IPatternCatalogService patternCatalogService,
             IHostEnvironment environment,
             IPythonApiService pythonApiService)
         {
             _options = options.Value;
+            _patternCatalogService = patternCatalogService;
             _environment = environment;
             _pythonApiService = pythonApiService;
         }
@@ -47,7 +50,8 @@ namespace BackPredictFinance.Services.PythonServices
 
             var pythonPath = ResolvePath(_options.PythonExe);
             var workingDirectoryPath = ResolvePath(_options.WorkingDirectory);
-            var modelDirectoryPath = ResolveModelDirectoryPath(workingDirectoryPath);
+            var defaultPattern = _patternCatalogService.Resolve();
+            var modelDirectoryPath = ResolveModelDirectoryPath(workingDirectoryPath, defaultPattern.ModelDir);
             var modelFilePath = Path.Combine(modelDirectoryPath, "model.joblib");
             var metricsFilePath = Path.Combine(modelDirectoryPath, "metrics.json");
 
@@ -160,14 +164,14 @@ namespace BackPredictFinance.Services.PythonServices
             return Path.GetFullPath(Path.Combine(_environment.ContentRootPath, configuredPath));
         }
 
-        private string ResolveModelDirectoryPath(string resolvedWorkingDirectory)
+        private static string ResolveModelDirectoryPath(string resolvedWorkingDirectory, string modelDir)
         {
-            if (Path.IsPathRooted(_options.ModelDir))
+            if (Path.IsPathRooted(modelDir))
             {
-                return _options.ModelDir;
+                return modelDir;
             }
 
-            return Path.GetFullPath(Path.Combine(resolvedWorkingDirectory, _options.ModelDir));
+            return Path.GetFullPath(Path.Combine(resolvedWorkingDirectory, modelDir));
         }
 
         private static ModelMetricsSummary LoadMetricsSummary(string metricsFilePath, List<string> notes)

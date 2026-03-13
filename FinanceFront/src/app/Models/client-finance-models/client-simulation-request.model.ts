@@ -1,6 +1,8 @@
-﻿export class ClientSimulationRequest {
+import { CLIENT_DEFAULT_PATTERN, type ClientSupportedPattern } from './client-patterns.constants';
+
+export class ClientSimulationRequest {
   Symbol = '';
-  Pattern = 'DOUBLE_TOP';
+  Pattern: ClientSupportedPattern = CLIENT_DEFAULT_PATTERN;
   InvestmentAmount = 0;
   HorizonDays = 30;
 

@@ -11,7 +11,7 @@ import { ClientSimulationResult } from '../Models/client-finance-models/client-s
 import { ClientTransactionCreateRequest } from '../Models/client-finance-models/client-transaction-create-request.model';
 import { ClientTransactionItem } from '../Models/client-finance-models/client-transaction-item.model';
 import { ClientWatchlistItem } from '../Models/client-finance-models/client-watchlist-item.model';
-import { AssetSearchItem } from '../Models/client-finance-models/asset-search-item';
+import { MarketAssetOption } from '../Models/client-finance-models/market-asset-option.model';
 
 
 @Injectable({ providedIn: 'root' })
@@ -25,7 +25,7 @@ export class ClientFinanceService {
       .pipe(map((payload) => this.mapOverview(payload)));
   }
 
-  searchAssets(query: string): Observable<AssetSearchItem[]> {
+  searchAssets(query: string): Observable<MarketAssetOption[]> {
     const normalizedQuery = query.trim();
     if (normalizedQuery.length < 2) {
       return of([]);
@@ -34,7 +34,7 @@ export class ClientFinanceService {
     const params = new HttpParams().set('query', normalizedQuery);
 
     return this.http
-      .get<AssetSearchItem[]>(`${environment.apiUrl}ClientFinance/assets/search`, { params })
+      .get<unknown[]>(`${environment.apiUrl}ClientFinance/assets/search`, { params })
       .pipe(map((items) => items.map((item) => this.mapAsset(item))));
   }
 
@@ -67,12 +67,12 @@ export class ClientFinanceService {
   registerTransaction(request: ClientTransactionCreateRequest): Observable<ClientTransactionItem> {
     return this.http
       .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/transactions`, {
-        Symbol: request.symbol,
-        TransactionType: request.transactionType,
-        Quantity: request.quantity,
-        UnitPrice: request.unitPrice,
-        Fees: request.fees,
-        TimestampUtc: request.timestampUtc
+        Symbol: request.Symbol,
+        TransactionType: request.TransactionType,
+        Quantity: request.Quantity,
+        UnitPrice: request.UnitPrice,
+        Fees: request.Fees,
+        TimestampUtc: request.TimestampUtc
       })
       .pipe(map((payload) => this.mapTransaction(payload)));
   }
@@ -91,7 +91,7 @@ export class ClientFinanceService {
 
   runAnalysis(request: ClientAnalysisLaunchRequest): Observable<ClientAnalysisResult> {
     return this.http
-      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/analysis/run`, { Symbol: request.symbol })
+      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/analysis/run`, { Symbol: request.Symbol })
       .pipe(map((payload) => this.mapAnalysis(payload)));
   }
 
@@ -106,25 +106,25 @@ export class ClientFinanceService {
   runSimulation(request: ClientSimulationRequest): Observable<ClientSimulationResult> {
     return this.http
       .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/simulation/run`, {
-        Symbol: request.symbol,
-        Pattern: request.pattern,
-        InvestmentAmount: request.investmentAmount,
-        HorizonDays: request.horizonDays
+        Symbol: request.Symbol,
+        Pattern: request.Pattern,
+        InvestmentAmount: request.InvestmentAmount,
+        HorizonDays: request.HorizonDays
       })
       .pipe(map((payload) => this.mapSimulation(payload)));
   }
 
   private mapOverview(payload: Record<string, unknown>): ClientDashboardOverview {
     return new ClientDashboardOverview({
-      totalPortfolioValue: this.readNumber(payload, ['totalPortfolioValue', 'TotalPortfolioValue']) ?? 0,
-      dayProfitLoss: this.readNumber(payload, ['dayProfitLoss', 'DayProfitLoss']) ?? 0,
-      openPositions: this.readNumber(payload, ['openPositions', 'OpenPositions']) ?? 0,
-      analysesThisWeek: this.readNumber(payload, ['analysesThisWeek', 'AnalysesThisWeek']) ?? 0,
-      watchlistCount: this.readNumber(payload, ['watchlistCount', 'WatchlistCount']) ?? 0,
-      recommendationWinRate: this.readNumber(payload, ['recommendationWinRate', 'RecommendationWinRate']) ?? 0,
-      nextMarketOpenAt: this.readString(payload, ['nextMarketOpenAt', 'NextMarketOpenAt']) ?? '',
-      totalInvested: this.readNumber(payload, ['totalInvested', 'TotalInvested']) ?? 0,
-      totalOutstanding: this.readNumber(payload, ['totalOutstanding', 'TotalOutstanding']) ?? 0
+      TotalPortfolioValue: this.readNumber(payload, ['totalPortfolioValue', 'TotalPortfolioValue']) ?? 0,
+      DayProfitLoss: this.readNumber(payload, ['dayProfitLoss', 'DayProfitLoss']) ?? 0,
+      OpenPositions: this.readNumber(payload, ['openPositions', 'OpenPositions']) ?? 0,
+      AnalysesThisWeek: this.readNumber(payload, ['analysesThisWeek', 'AnalysesThisWeek']) ?? 0,
+      WatchlistCount: this.readNumber(payload, ['watchlistCount', 'WatchlistCount']) ?? 0,
+      RecommendationWinRate: this.readNumber(payload, ['recommendationWinRate', 'RecommendationWinRate']) ?? 0,
+      NextMarketOpenAt: this.readString(payload, ['nextMarketOpenAt', 'NextMarketOpenAt']) ?? '',
+      TotalInvested: this.readNumber(payload, ['totalInvested', 'TotalInvested']) ?? 0,
+      TotalOutstanding: this.readNumber(payload, ['totalOutstanding', 'TotalOutstanding']) ?? 0
     });
   }
 
@@ -132,80 +132,114 @@ export class ClientFinanceService {
     const payload = this.toRecord(source);
 
     return new MarketAssetOption({
-      symbol: this.readString(payload, ['symbol', 'Symbol']) ?? '',
-      companyName: this.readString(payload, ['companyName', 'CompanyName']) ?? '',
-      market: this.readString(payload, ['market', 'Market']) ?? '',
-      currency: this.readString(payload, ['currency', 'Currency']) ?? 'USD',
-      lastPrice: this.readNumber(payload, ['lastPrice', 'LastPrice']) ?? 0,
-      dayVariationPct: this.readNumber(payload, ['dayVariationPct', 'DayVariationPct']) ?? 0
+      Symbol: this.readString(payload, ['symbol', 'Symbol']) ?? '',
+      CompanyName: this.readString(payload, ['companyName', 'CompanyName']) ?? '',
+      Market: this.readString(payload, ['market', 'Market']) ?? '',
+      Currency: this.readString(payload, ['currency', 'Currency']) ?? 'USD',
+      LastPrice: this.readNumber(payload, ['lastPrice', 'LastPrice']) ?? 0,
+      DayVariationPct: this.readNumber(payload, ['dayVariationPct', 'DayVariationPct']) ?? 0
     });
   }
 
   private mapWatchlistItem(source: Record<string, unknown>): ClientWatchlistItem {
     return new ClientWatchlistItem({
-      userAssetId: this.readString(source, ['userAssetId', 'UserAssetId']) ?? '',
-      symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
-      companyName: this.readString(source, ['companyName', 'CompanyName']) ?? '',
-      market: this.readString(source, ['market', 'Market']) ?? '',
-      lastPrice: this.readNumber(source, ['lastPrice', 'LastPrice']) ?? 0,
-      dayVariationPct: this.readNumber(source, ['dayVariationPct', 'DayVariationPct']) ?? 0,
-      heldQuantity: this.readNumber(source, ['heldQuantity', 'HeldQuantity']) ?? 0,
-      averageBuyPrice: this.readNumber(source, ['averageBuyPrice', 'AverageBuyPrice']) ?? 0,
-      investedAmount: this.readNumber(source, ['investedAmount', 'InvestedAmount']) ?? 0,
-      outstandingAmount: this.readNumber(source, ['outstandingAmount', 'OutstandingAmount']) ?? 0
+      UserAssetId: this.readString(source, ['userAssetId', 'UserAssetId']) ?? '',
+      Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      CompanyName: this.readString(source, ['companyName', 'CompanyName']) ?? '',
+      Market: this.readString(source, ['market', 'Market']) ?? '',
+      LastPrice: this.readNumber(source, ['lastPrice', 'LastPrice']) ?? 0,
+      DayVariationPct: this.readNumber(source, ['dayVariationPct', 'DayVariationPct']) ?? 0,
+      HeldQuantity: this.readNumber(source, ['heldQuantity', 'HeldQuantity']) ?? 0,
+      AverageBuyPrice: this.readNumber(source, ['averageBuyPrice', 'AverageBuyPrice']) ?? 0,
+      InvestedAmount: this.readNumber(source, ['investedAmount', 'InvestedAmount']) ?? 0,
+      OutstandingAmount: this.readNumber(source, ['outstandingAmount', 'OutstandingAmount']) ?? 0
     });
   }
 
   private mapQuote(source: Record<string, unknown>): ClientLiveQuote {
     return new ClientLiveQuote({
-      symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
-      lastPrice: this.readNumber(source, ['lastPrice', 'LastPrice']) ?? 0,
-      dayVariationPct: this.readNumber(source, ['dayVariationPct', 'DayVariationPct']) ?? 0,
-      asOfUtc: this.readString(source, ['asOfUtc', 'AsOfUtc']) ?? ''
+      Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      LastPrice: this.readNumber(source, ['lastPrice', 'LastPrice']) ?? 0,
+      DayVariationPct: this.readNumber(source, ['dayVariationPct', 'DayVariationPct']) ?? 0,
+      AsOfUtc: this.readString(source, ['asOfUtc', 'AsOfUtc']) ?? ''
     });
   }
 
   private mapTransaction(source: Record<string, unknown>): ClientTransactionItem {
     return new ClientTransactionItem({
-      id: this.readString(source, ['id', 'Id']) ?? '',
-      symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
-      companyName: this.readString(source, ['companyName', 'CompanyName']) ?? '',
-      transactionType: this.readString(source, ['transactionType', 'TransactionType']) ?? '',
-      quantity: this.readNumber(source, ['quantity', 'Quantity']) ?? 0,
-      unitPrice: this.readNumber(source, ['unitPrice', 'UnitPrice']) ?? 0,
-      fees: this.readNumber(source, ['fees', 'Fees']) ?? 0,
-      grossAmount: this.readNumber(source, ['grossAmount', 'GrossAmount']) ?? 0,
-      netAmount: this.readNumber(source, ['netAmount', 'NetAmount']) ?? 0,
-      timestampUtc: this.readString(source, ['timestampUtc', 'TimestampUtc']) ?? ''
+      Id: this.readString(source, ['id', 'Id']) ?? '',
+      Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      CompanyName: this.readString(source, ['companyName', 'CompanyName']) ?? '',
+      TransactionType: this.readString(source, ['transactionType', 'TransactionType']) ?? '',
+      Quantity: this.readNumber(source, ['quantity', 'Quantity']) ?? 0,
+      UnitPrice: this.readNumber(source, ['unitPrice', 'UnitPrice']) ?? 0,
+      Fees: this.readNumber(source, ['fees', 'Fees']) ?? 0,
+      GrossAmount: this.readNumber(source, ['grossAmount', 'GrossAmount']) ?? 0,
+      NetAmount: this.readNumber(source, ['netAmount', 'NetAmount']) ?? 0,
+      TimestampUtc: this.readString(source, ['timestampUtc', 'TimestampUtc']) ?? ''
     });
   }
 
   private mapAnalysis(source: Record<string, unknown>): ClientAnalysisResult {
     return new ClientAnalysisResult({
-      id: this.readString(source, ['id', 'Id']) ?? '',
-      symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
-      companyName: this.readString(source, ['companyName', 'CompanyName']) ?? '',
-      pattern: this.readString(source, ['pattern', 'Pattern']) ?? '',
-      confidence: this.readNumber(source, ['confidence', 'Confidence']) ?? 0,
-      recommendation: this.readString(source, ['recommendation', 'Recommendation']) ?? '',
-      reason: this.readString(source, ['reason', 'Reason']) ?? '',
-      riskLevel: this.readString(source, ['riskLevel', 'RiskLevel']) ?? '',
-      horizonDays: this.readNumber(source, ['horizonDays', 'HorizonDays']) ?? 0,
-      predictedAt: this.readString(source, ['predictedAt', 'PredictedAt']) ?? ''
+      Id: this.readString(source, ['id', 'Id']) ?? '',
+      Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      CompanyName: this.readString(source, ['companyName', 'CompanyName']) ?? '',
+      Pattern: this.readString(source, ['pattern', 'Pattern']) ?? '',
+      Phase: this.readString(source, ['phase', 'Phase']) ?? '',
+      Confidence: this.readNumber(source, ['confidence', 'Confidence']) ?? 0,
+      Recommendation: this.readString(source, ['recommendation', 'Recommendation']) ?? '',
+      Reason: this.readString(source, ['reason', 'Reason']) ?? '',
+      RiskLevel: this.readString(source, ['riskLevel', 'RiskLevel']) ?? '',
+      HorizonDays: this.readNumber(source, ['horizonDays', 'HorizonDays']) ?? 0,
+      PredictedAt: this.readString(source, ['predictedAt', 'PredictedAt']) ?? '',
+      IsActionable: this.readBoolean(source, ['isActionable', 'IsActionable']) ?? false,
+      ModelStatus: this.readString(source, ['modelStatus', 'ModelStatus']) ?? '',
+      ModelMessage: this.readString(source, ['modelMessage', 'ModelMessage']) ?? '',
+      CurrentPrice: this.readNumber(source, ['currentPrice', 'CurrentPrice']) ?? 0,
+      TargetPrice: this.readNumber(source, ['targetPrice', 'TargetPrice']),
+      InvalidationPrice: this.readNumber(source, ['invalidationPrice', 'InvalidationPrice'])
     });
   }
 
   private mapSimulation(source: Record<string, unknown>): ClientSimulationResult {
     return new ClientSimulationResult({
-      symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
-      investmentAmount: this.readNumber(source, ['investmentAmount', 'InvestmentAmount']) ?? 0,
-      horizonDays: this.readNumber(source, ['horizonDays', 'HorizonDays']) ?? 0,
-      estimatedReturnAmount: this.readNumber(source, ['estimatedReturnAmount', 'EstimatedReturnAmount']) ?? 0,
-      estimatedReturnPct: this.readNumber(source, ['estimatedReturnPct', 'EstimatedReturnPct']) ?? 0,
-      estimatedFinalAmount: this.readNumber(source, ['estimatedFinalAmount', 'EstimatedFinalAmount']) ?? 0,
-      recommendation: this.readString(source, ['recommendation', 'Recommendation']) ?? '',
-      assumption: this.readString(source, ['assumption', 'Assumption']) ?? ''
+      Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      Phase: this.readString(source, ['phase', 'Phase']) ?? '',
+      InvestmentAmount: this.readNumber(source, ['investmentAmount', 'InvestmentAmount']) ?? 0,
+      HorizonDays: this.readNumber(source, ['horizonDays', 'HorizonDays']) ?? 0,
+      EstimatedReturnAmount: this.readNumber(source, ['estimatedReturnAmount', 'EstimatedReturnAmount']) ?? 0,
+      EstimatedReturnPct: this.readNumber(source, ['estimatedReturnPct', 'EstimatedReturnPct']) ?? 0,
+      EstimatedFinalAmount: this.readNumber(source, ['estimatedFinalAmount', 'EstimatedFinalAmount']) ?? 0,
+      Recommendation: this.readString(source, ['recommendation', 'Recommendation']) ?? '',
+      Assumption: this.readString(source, ['assumption', 'Assumption']) ?? '',
+      CurrentPrice: this.readNumber(source, ['currentPrice', 'CurrentPrice']) ?? 0,
+      TargetPrice: this.readNumber(source, ['targetPrice', 'TargetPrice']),
+      InvalidationPrice: this.readNumber(source, ['invalidationPrice', 'InvalidationPrice']),
+      IsActionable: this.readBoolean(source, ['isActionable', 'IsActionable']) ?? false
     });
+  }
+
+  private readBoolean(source: Record<string, unknown>, keys: string[]): boolean | null {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'boolean') {
+        return value;
+      }
+
+      if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'true') {
+          return true;
+        }
+
+        if (normalized === 'false') {
+          return false;
+        }
+      }
+    }
+
+    return null;
   }
 
   private readString(source: Record<string, unknown>, keys: string[]): string | null {

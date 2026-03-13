@@ -84,7 +84,7 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
 
   onAssetSelected(asset: MarketAssetOption): void {
     this.selectedAsset = asset;
-    this.selectedSymbol = asset.symbol;
+    this.selectedSymbol = asset.Symbol;
     this.searchResults = [];
   }
 
@@ -97,18 +97,18 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
     this.watchlistLoading = true;
 
     this.clientFinanceService
-      .addToWatchlist(this.selectedAsset.symbol, this.selectedAsset.companyName, this.selectedAsset.market)
+      .addToWatchlist(this.selectedAsset.Symbol, this.selectedAsset.CompanyName, this.selectedAsset.Market)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => (this.watchlistLoading = false))
       )
       .subscribe({
         next: (item) => {
-          if (!this.watchlist.some((x) => x.userAssetId === item.userAssetId)) {
+          if (!this.watchlist.some((x) => x.UserAssetId === item.UserAssetId)) {
             this.watchlist = [item, ...this.watchlist];
           }
 
-          this.selectedSymbol = item.symbol;
+          this.selectedSymbol = item.Symbol;
           this.toastService.success('Valeur ajoutee a la watchlist.');
           this.loadOverview();
         },
@@ -143,7 +143,7 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          this.watchlist = this.watchlist.filter((item) => item.symbol !== symbol);
+          this.watchlist = this.watchlist.filter((item) => item.Symbol !== symbol);
           if (this.selectedSymbol === symbol) {
             this.selectedSymbol = '';
             this.selectedQuote = null;
@@ -173,7 +173,7 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
           this.toastService.success('Transaction enregistree.');
           this.loadWatchlist();
           this.loadOverview();
-          this.fetchQuote(request.symbol);
+          this.fetchQuote(request.Symbol);
         },
         error: () => {
           this.toastService.error('Echec de l enregistrement de la transaction.');
@@ -200,7 +200,7 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          this.transactions = this.transactions.filter((item) => item.id !== transactionId);
+          this.transactions = this.transactions.filter((item) => item.Id !== transactionId);
           this.toastService.success('Transaction supprimee.');
           this.loadWatchlist();
           this.loadOverview();
@@ -223,7 +223,7 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
     this.analysisLoading = true;
 
     this.clientFinanceService
-      .runAnalysis(new ClientAnalysisLaunchRequest({ symbol: this.selectedSymbol }))
+      .runAnalysis(new ClientAnalysisLaunchRequest({ Symbol: this.selectedSymbol }))
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => (this.analysisLoading = false))

@@ -1,14 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace BackPredictFinance.Services.PythonServices.Models
 {
-    public class PatternPrediction
+    public sealed class PatternPrediction
     {
-        public string Pattern { get; set; } = "";
+        public string Pattern { get; set; } = string.Empty;
+        public string Phase { get; set; } = string.Empty;
         public decimal Probability { get; set; }
+        public decimal Confidence { get; set; }
+        public decimal CurrentPrice { get; set; }
+        public decimal? NecklinePrice { get; set; }
+        public decimal? TargetPrice { get; set; }
+        public decimal? InvalidationPrice { get; set; }
+        public DateTime? FirstPeakAtUtc { get; set; }
+        public DateTime? SecondPeakAtUtc { get; set; }
+        public bool IsPrimary { get; set; }
     }
 }

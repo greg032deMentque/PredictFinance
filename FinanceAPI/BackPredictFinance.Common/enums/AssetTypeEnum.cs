@@ -1,8 +1,9 @@
-﻿namespace BackPredictFinance.Common.enums
+namespace BackPredictFinance.Common.enums
 {
     public enum AssetTypeEnum
     {
-        Stock,
-        Crypto
+        Stock = 0,
+        Etf = 1,
+        Crypto = 2
     }
 }

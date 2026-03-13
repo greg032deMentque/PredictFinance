@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 
 namespace BackPredictFinance.Datas.Context
@@ -20,7 +21,7 @@ namespace BackPredictFinance.Datas.Context
 
             if (_context != null)
             {
-                CurrentUserId = _context.User.FindFirst(ClaimTypes.Sid)?.Value;
+                CurrentUserId = ResolveCurrentUserId(_context.User);
                 if (!string.IsNullOrWhiteSpace(CurrentUserId))
                 {
                     CurrentUser = Users.AsNoTracking().FirstOrDefault(u => u.Id == CurrentUserId);
@@ -51,6 +52,13 @@ namespace BackPredictFinance.Datas.Context
         public DbSet<Recommendation> Recommendations { get; set; }
         public DbSet<PriceHistory> PriceHistories { get; set; }
         public DbSet<AssetTransaction> AssetTransactions { get; set; }
+        public DbSet<AssetQuoteSnapshot> AssetQuoteSnapshots { get; set; }
+        public DbSet<AssetCandleSnapshot> AssetCandleSnapshots { get; set; }
+        public DbSet<AnalysisBatch> AnalysisBatches { get; set; }
+        public DbSet<AnalysisRun> AnalysisRuns { get; set; }
+        public DbSet<PatternAssessment> PatternAssessments { get; set; }
+        public DbSet<DecisionSignal> DecisionSignals { get; set; }
+        public DbSet<ModelSnapshot> ModelSnapshots { get; set; }
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -97,6 +105,12 @@ namespace BackPredictFinance.Datas.Context
                         break;
                 }
             }
+        }
+
+        private static string? ResolveCurrentUserId(ClaimsPrincipal? user)
+        {
+            return user?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                ?? user?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         }
 
         /*

@@ -17,7 +17,7 @@
             {{
               overviewLoading
                 ? "..."
-                : (overview.totalPortfolioValue
+                : (overview.TotalPortfolioValue
                   | currency: "EUR" : "symbol" : "1.0-0" : "fr-FR")
             }}
           </div>
@@ -32,7 +32,7 @@
             {{
               overviewLoading
                 ? "..."
-                : (overview.totalInvested
+                : (overview.TotalInvested
                   | currency: "EUR" : "symbol" : "1.0-0" : "fr-FR")
             }}
           </div>
@@ -47,7 +47,7 @@
             {{
               overviewLoading
                 ? "..."
-                : (overview.totalOutstanding
+                : (overview.TotalOutstanding
                   | currency: "EUR" : "symbol" : "1.0-0" : "fr-FR")
             }}
           </div>
@@ -60,13 +60,13 @@
           <p class="text-muted mb-1">P/L jour</p>
           <div
             class="h4 mb-0"
-            [class.text-success]="overview.dayProfitLoss >= 0"
-            [class.text-danger]="overview.dayProfitLoss < 0"
+            [class.text-success]="overview.DayProfitLoss >= 0"
+            [class.text-danger]="overview.DayProfitLoss < 0"
           >
             {{
               overviewLoading
                 ? "..."
-                : (overview.dayProfitLoss
+                : (overview.DayProfitLoss
                   | currency: "EUR" : "symbol" : "1.0-0" : "fr-FR")
             }}
           </div>
@@ -170,28 +170,28 @@
             </tr>
           </thead>
           <tbody>
-            @for (item of transactions; track item.id) {
+            @for (item of transactions; track item.Id) {
               <tr>
-                <td>{{ item.symbol }}</td>
+                <td>{{ item.Symbol }}</td>
                 <td>
                   <span
                     class="badge"
-                    [class.text-bg-success]="item.transactionType === 'Buy'"
-                    [class.text-bg-danger]="item.transactionType === 'Sell'"
+                    [class.text-bg-success]="item.TransactionType === 'Buy'"
+                    [class.text-bg-danger]="item.TransactionType === 'Sell'"
                   >
-                    {{ item.transactionType }}
+                    {{ item.TransactionType }}
                   </span>
                 </td>
-                <td>{{ item.quantity | number: "1.2-4" }}</td>
-                <td>{{ item.unitPrice | number: "1.2-4" }}</td>
-                <td>{{ item.fees | number: "1.2-2" }}</td>
-                <td>{{ item.netAmount | number: "1.2-2" }}</td>
-                <td>{{ item.timestampUtc | date: "dd/MM/yyyy HH:mm" }}</td>
+                <td>{{ item.Quantity | number: "1.2-4" }}</td>
+                <td>{{ item.UnitPrice | number: "1.2-4" }}</td>
+                <td>{{ item.Fees | number: "1.2-2" }}</td>
+                <td>{{ item.NetAmount | number: "1.2-2" }}</td>
+                <td>{{ item.TimestampUtc | date: "dd/MM/yyyy HH:mm" }}</td>
                 <td class="text-end">
                   <button
                     class="btn btn-sm btn-outline-danger"
                     type="button"
-                    (click)="deleteTransaction(item.id)"
+                    (click)="deleteTransaction(item.Id)"
                   >
                     Supprimer
                   </button>

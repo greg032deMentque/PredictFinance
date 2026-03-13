@@ -9,6 +9,9 @@
         <div>
           <div class="h5 mb-1">{{ result.Symbol }} - {{ result.CompanyName }}</div>
           <div class="text-muted">Pattern detecte: {{ result.Pattern }}</div>
+          @if (result.Phase) {
+            <div class="text-muted">Phase actuelle: {{ result.Phase }}</div>
+          }
         </div>
         <span class="badge" [class]="recommendationClass">{{ result.Recommendation }}</span>
       </div>
@@ -31,6 +34,39 @@
           <strong>{{ result.PredictedAt | date: 'dd/MM HH:mm' }}</strong>
         </div>
       </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3">
+          <small class="text-muted d-block">Signal exploitable</small>
+          <strong>{{ result.IsActionable ? 'Oui' : 'Non' }}</strong>
+        </div>
+        <div class="col-6 col-lg-3">
+          <small class="text-muted d-block">Cours actuel</small>
+          <strong>{{ result.CurrentPrice | currency: 'USD' }}</strong>
+        </div>
+        @if (result.TargetPrice !== null) {
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Cible</small>
+            <strong>{{ result.TargetPrice | currency: 'USD' }}</strong>
+          </div>
+        }
+        @if (result.InvalidationPrice !== null) {
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Invalidation</small>
+            <strong>{{ result.InvalidationPrice | currency: 'USD' }}</strong>
+          </div>
+        }
+      </div>
+
+      @if (result.ModelStatus || result.ModelMessage) {
+        <div class="alert alert-light border mb-3">
+          <div class="fw-semibold mb-1">Statut modele</div>
+          <div>{{ result.ModelStatus || 'n/a' }}</div>
+          @if (result.ModelMessage) {
+            <small class="text-muted d-block mt-1">{{ result.ModelMessage }}</small>
+          }
+        </div>
+      }
 
       <div class="reason-box">
         <div class="fw-semibold mb-1">Action proposee</div>

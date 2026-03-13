@@ -69,6 +69,13 @@ Champs `PythonCli` utiles pour le quality gate:
 - `MinRocAuc`
 - `MinPositives`
 
+Champs `PythonCli` utiles pour le catalogue minimal de patterns:
+
+- `DefaultPattern`
+- `Patterns:DOUBLE_TOP:Enabled`
+- `Patterns:DOUBLE_TOP:ModelDir`
+- `Patterns:DOUBLE_TOP:ModelVersion`
+
 ## Contrat IA (enum + classes)
 
 Le contrat de reponse de prediction expose:
@@ -86,6 +93,11 @@ Classes cle:
 - `PythonSimulationRequest`, `PythonSimulationPayload` (transport simulation API -> IA -> API)
 - `ModelQualityGate`, `ModelCheckResult` (quality gate metier)
 - `PredictOut`, `SimulationOut` (reponses finales API)
+
+Consommation front attendue:
+
+- le front Angular doit passer par `ClientFinance/analysis/run` via `ClientFinanceService`
+- le vieux chemin `Trading/predict` n'est plus le point d'entree officiel du parcours front
 
 Controller / service de supervision IA:
 

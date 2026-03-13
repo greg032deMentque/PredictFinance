@@ -285,6 +285,7 @@ bin/            # pour Unix venv
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
 
 # Base de test SQLite
 test.db
@@ -309,3 +310,4 @@ docker-compose.override.yml
 # IDEs
 .vscode/
 .idea/
+.dotnet/

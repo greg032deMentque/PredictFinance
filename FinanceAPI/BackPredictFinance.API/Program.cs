@@ -189,6 +189,7 @@ else
 app.UseHttpsRedirection();
 app.UseCors("default");
 app.UseGlobalExceptionHandler();
+app.UseMiddleware<RateLimitingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -22,6 +22,105 @@ namespace BackPredictFinance.Datas.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AnalysisBatch", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<int>("ItemCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RequestedPattern")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "RequestedAtUtc");
+
+                    b.ToTable("AnalysisBatches");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AnalysisRun", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AnalysisBatchId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AssetId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("RawPayload")
+                        .IsRequired()
+                        .HasMaxLength(32000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RequestedPattern")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisBatchId");
+
+                    b.HasIndex("AssetId");
+
+                    b.HasIndex("UserId", "StartedAtUtc");
+
+                    b.ToTable("AnalysisRuns");
+                });
+
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.Analytic", b =>
                 {
                     b.Property<string>("Id")
@@ -67,11 +166,45 @@ namespace BackPredictFinance.Datas.Migrations
                     b.Property<int>("AssetType")
                         .HasColumnType("int");
 
+                    b.Property<string>("Category")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<string>("Exchange")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("LastProfileSyncUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderSymbol")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Sector")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
                     b.Property<string>("Symbol")
                         .IsRequired()
@@ -87,6 +220,100 @@ namespace BackPredictFinance.Datas.Migrations
                         .IsUnique();
 
                     b.ToTable("Assets");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetCandleSnapshot", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AssetId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("Close")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("High")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<decimal>("Low")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<decimal>("Open")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("TimestampUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Volume")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetId", "Interval", "TimestampUtc")
+                        .IsUnique();
+
+                    b.ToTable("AssetCandleSnapshots");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetQuoteSnapshot", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("AsOfUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AssetId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DayVariationPct")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("decimal(9,4)");
+
+                    b.Property<decimal>("LastPrice")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetId", "AsOfUtc");
+
+                    b.ToTable("AssetQuoteSnapshots");
                 });
 
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetTransaction", b =>
@@ -134,6 +361,165 @@ namespace BackPredictFinance.Datas.Migrations
 
                             t.HasCheckConstraint("CK_AssetTransactions_UnitPrice_Positive", "[UnitPrice] > 0");
                         });
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.DecisionSignal", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AnalysisRunId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("Confidence")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("HorizonDays")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActionable")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisRunId")
+                        .IsUnique();
+
+                    b.ToTable("DecisionSignals");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.ModelSnapshot", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AnalysisRunId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("F1")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<string>("ModelMessage")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("ModelStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModelVersion")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("PositiveSamples")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Precision")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("RocAuc")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("SelectedThreshold")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisRunId")
+                        .IsUnique();
+
+                    b.ToTable("ModelSnapshots");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.PatternAssessment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AnalysisRunId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("Confidence")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("CurrentPrice")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<DateTime?>("FirstPeakAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("InvalidationPrice")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("NecklinePrice")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<int>("Pattern")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Phase")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("Probability")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<DateTime?>("SecondPeakAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("TargetPrice")
+                        .HasPrecision(18, 8)
+                        .HasColumnType("decimal(18,8)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalysisRunId", "IsPrimary");
+
+                    b.ToTable("PatternAssessments");
                 });
 
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.PriceHistory", b =>
@@ -521,6 +907,65 @@ namespace BackPredictFinance.Datas.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AnalysisBatch", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AnalysisRun", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.AnalysisBatch", "AnalysisBatch")
+                        .WithMany("Runs")
+                        .HasForeignKey("AnalysisBatchId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("BackPredictFinance.Datas.Entities.Asset", "Asset")
+                        .WithMany("AnalysisRuns")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BackPredictFinance.Datas.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnalysisBatch");
+
+                    b.Navigation("Asset");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetCandleSnapshot", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.Asset", "Asset")
+                        .WithMany("CandleSnapshots")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Asset");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetQuoteSnapshot", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.Asset", "Asset")
+                        .WithMany("QuoteSnapshots")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Asset");
+                });
+
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetTransaction", b =>
                 {
                     b.HasOne("BackPredictFinance.Datas.Entities.UserAsset", "UserAsset")
@@ -530,6 +975,39 @@ namespace BackPredictFinance.Datas.Migrations
                         .IsRequired();
 
                     b.Navigation("UserAsset");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.DecisionSignal", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.AnalysisRun", "AnalysisRun")
+                        .WithOne("DecisionSignal")
+                        .HasForeignKey("BackPredictFinance.Datas.Entities.DecisionSignal", "AnalysisRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnalysisRun");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.ModelSnapshot", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.AnalysisRun", "AnalysisRun")
+                        .WithOne("ModelSnapshot")
+                        .HasForeignKey("BackPredictFinance.Datas.Entities.ModelSnapshot", "AnalysisRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnalysisRun");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.PatternAssessment", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.AnalysisRun", "AnalysisRun")
+                        .WithMany("PatternAssessments")
+                        .HasForeignKey("AnalysisRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnalysisRun");
                 });
 
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.PriceHistory", b =>
@@ -633,9 +1111,29 @@ namespace BackPredictFinance.Datas.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AnalysisBatch", b =>
+                {
+                    b.Navigation("Runs");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AnalysisRun", b =>
+                {
+                    b.Navigation("DecisionSignal");
+
+                    b.Navigation("ModelSnapshot");
+
+                    b.Navigation("PatternAssessments");
+                });
+
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.Asset", b =>
                 {
+                    b.Navigation("AnalysisRuns");
+
+                    b.Navigation("CandleSnapshots");
+
                     b.Navigation("PriceHistories");
+
+                    b.Navigation("QuoteSnapshots");
 
                     b.Navigation("UserAssets");
                 });

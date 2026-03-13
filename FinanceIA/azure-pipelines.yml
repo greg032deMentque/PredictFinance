@@ -6,14 +6,35 @@ trigger:
 variables:
   SRC_DIR: 'FinanceIA'
   DEPLOY_PATH: '/var/www/predictFinance/FinanceIA'
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: '3.12'
   SERVER_USER: $(server.username)
   SERVER_HOST: $(server.ip)
-  SERVER_PWD:  $(server.pwd)
+  SERVER_PWD: $(server.pwd)
 
 stages:
+  - stage: Quality
+    displayName: 'Quality Gate'
+    jobs:
+      - job: Tests
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(PYTHON_VERSION)'
+
+          - script: |
+              python -m venv .venv
+              source .venv/bin/activate
+              pip install --upgrade pip
+              pip install -r requirements.txt
+              pytest tests -q -p no:cacheprovider
+            workingDirectory: '$(Build.SourcesDirectory)/$(SRC_DIR)'
+            displayName: 'Run IA tests'
+
   - stage: Build
-    displayName: '🛠️ Build & Package'
+    displayName: 'Build & Package'
+    dependsOn: Quality
     jobs:
       - job: Package
         pool:
@@ -24,12 +45,13 @@ stages:
               versionSpec: '$(PYTHON_VERSION)'
 
           - script: |
-              python -m venv venv
-              source venv/bin/activate
+              python -m venv .venv
+              source .venv/bin/activate
               pip install --upgrade pip
               pip install -r requirements.txt
+              rm -rf .venv
             workingDirectory: '$(Build.SourcesDirectory)/$(SRC_DIR)'
-            displayName: 'Install dependencies'
+            displayName: 'Validate dependencies'
 
           - task: ArchiveFiles@2
             inputs:
@@ -42,7 +64,7 @@ stages:
             artifact: 'app_package'
 
   - stage: Deploy
-    displayName: '🚀 Deploy & Run'
+    displayName: 'Deploy & Run'
     dependsOn: Build
     jobs:
       - job: DeployJob
@@ -69,33 +91,38 @@ stages:
               set -e
               cd $(DEPLOY_PATH)
 
-              # Décompression et nettoyage
+              # Decompression and cleanup
               tar -xzf app.tar.gz
               rm app.tar.gz
 
-              # Création venv si absent
+              # Create venv if missing
               if [ ! -d "venv" ]; then
-                  python$(PYTHON_VERSION) -m venv venv
+                  if command -v python$(PYTHON_VERSION) >/dev/null 2>&1; then
+                      PYTHON_BIN="python$(PYTHON_VERSION)"
+                  else
+                      PYTHON_BIN="python3"
+                  fi
+                  $PYTHON_BIN -m venv venv
               fi
 
-              # Activation venv et maj pip
+              # Activate venv and upgrade pip
               source venv/bin/activate
               pip install --upgrade pip
 
-              # Installation uniquement si requirements.txt changé
+              # Reinstall dependencies only when requirements changed
               if ! cmp -s requirements.txt venv/.requirements_cache.txt; then
                   pip install -r requirements.txt
                   cp requirements.txt venv/.requirements_cache.txt
               else
-                  echo "✅ Requirements inchangés, pas de réinstallation"
+                  echo "Requirements unchanged, skipping reinstall"
               fi
 
-              # Redémarrage du service
+              # Restart service
               sudo systemctl daemon-reload
               sudo systemctl restart analyze_double_top.service
 
-              # Sauvegarde de l’état
+              # Save service status for diagnostics
               sudo systemctl status analyze_double_top.service \
                 | sudo tee $(DEPLOY_PATH)/pipeline/pipeline_double_top/service_status.txt
               EOF
-            displayName: 'Deploy with cached venv & restart service'
+            displayName: 'Deploy with cached venv and restart service'

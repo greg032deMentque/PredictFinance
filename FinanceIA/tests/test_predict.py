@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 from finance_ia.config import FEATURE_COLUMNS
 from finance_ia.model.predict import PredictResult, predict_ticker
@@ -14,7 +15,7 @@ class DummyModel:
         return np.column_stack([1.0 - score, score])
 
 
-def test_predict_ticker_returns_json_contract(monkeypatch, sample_ohlcv) -> None:
+def test_predict_ticker_returns_runtime_contract(monkeypatch, sample_ohlcv) -> None:
     columns = FEATURE_COLUMNS[:4]
 
     monkeypatch.setattr("finance_ia.model.predict.load_model", lambda _model_dir: DummyModel())
@@ -26,7 +27,12 @@ def test_predict_ticker_returns_json_contract(monkeypatch, sample_ohlcv) -> None
 
     payload = result.to_dict()
     assert payload["ticker"] == "AAPL"
+    assert payload["pattern"] == "DOUBLE_TOP"
+    assert payload["phase"]
     assert payload["n_windows"] > 0
     assert 0.0 <= payload["mean_prob"] <= 1.0
     assert 0.0 <= payload["max_prob"] <= 1.0
     assert 0.0 <= payload["last_prob"] <= 1.0
+    assert isinstance(payload["pattern_assessments"], list)
+    assert "decision_signal" in payload
+    assert "actionable" in payload["decision_signal"]

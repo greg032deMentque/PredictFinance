@@ -41,6 +41,7 @@ Console.WriteLine($"services.AddScoped<{service}>();");
             services.AddScoped<IUserAssetService, UserAssetService>();
             services.AddScoped<IUserRoleDataService, UserRoleDataService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IPatternCatalogService, PatternCatalogService>();
             services.AddScoped<IPythonApiService, PythonApiService>();
             services.AddScoped<IIAStatusService, IAStatusService>();
             services.AddScoped<IAssetService, AssetService>();

@@ -43,7 +43,7 @@ export class AdminAnalyseFinance implements OnInit {
 
   onSymbolChanged(symbol: string | null): void {
     this.selectedSymbol = symbol;
-    this.selectedAsset = this.analyzableAssets.find((item) => item.symbol === symbol) ?? null;
+    this.selectedAsset = this.analyzableAssets.find((item) => item.Symbol === symbol) ?? null;
   }
 
   runAnalysis(): void {
@@ -55,7 +55,7 @@ export class AdminAnalyseFinance implements OnInit {
     this.analysisLoading = true;
 
     this.clientFinanceService
-      .runAnalysis(new ClientAnalysisLaunchRequest({ symbol: this.selectedSymbol }))
+      .runAnalysis(new ClientAnalysisLaunchRequest({ Symbol: this.selectedSymbol }))
       .pipe(finalize(() => (this.analysisLoading = false)))
       .subscribe({
         next: (result) => {
@@ -86,7 +86,7 @@ export class AdminAnalyseFinance implements OnInit {
         next: (assets) => {
           this.analyzableAssets = assets;
 
-          if (this.selectedSymbol && !assets.some((item) => item.symbol === this.selectedSymbol)) {
+          if (this.selectedSymbol && !assets.some((item) => item.Symbol === this.selectedSymbol)) {
             this.selectedSymbol = null;
             this.selectedAsset = null;
             this.analysisResult = null;
@@ -103,14 +103,14 @@ export class AdminAnalyseFinance implements OnInit {
     const uniqueBySymbol = new Map<string, MarketAssetOption>();
 
     for (const item of items) {
-      const symbol = item.symbol.trim().toUpperCase();
+      const symbol = item.Symbol.trim().toUpperCase();
       if (!symbol || uniqueBySymbol.has(symbol)) {
         continue;
       }
 
-      uniqueBySymbol.set(symbol, new MarketAssetOption({ ...item, symbol }));
+      uniqueBySymbol.set(symbol, new MarketAssetOption({ ...item, Symbol: symbol }));
     }
 
-    return Array.from(uniqueBySymbol.values()).sort((left, right) => left.symbol.localeCompare(right.symbol));
+    return Array.from(uniqueBySymbol.values()).sort((left, right) => left.Symbol.localeCompare(right.Symbol));
   }
 }

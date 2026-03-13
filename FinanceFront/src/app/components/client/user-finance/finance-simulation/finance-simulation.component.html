@@ -2,9 +2,11 @@
   <div class="card-body">
     <h2 class="h6 text-uppercase text-muted mb-3">Simulation d'investissement</h2>
 
-    <div class="alert alert-warning py-2" *ngIf="selectedSymbol.length === 0">
-      Selectionne une valeur pour lancer la simulation.
-    </div>
+    @if (selectedSymbol.length === 0) {
+      <div class="alert alert-warning py-2">
+        Selectionne une valeur pour lancer la simulation.
+      </div>
+    }
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="d-flex flex-column gap-2">
       <div>
@@ -36,13 +38,24 @@
       </button>
     </form>
 
-    <div class="result-box mt-3" *ngIf="result as simulationResult">
-      <div class="fw-semibold mb-2">Resultat</div>
-      <div>Rendement estime: <strong>{{ simulationResult.estimatedReturnAmount | currency: 'USD' }}</strong></div>
-      <div>Rendement %: <strong>{{ simulationResult.estimatedReturnPct | percent: '1.1-2' }}</strong></div>
-      <div>Montant final estime: <strong>{{ simulationResult.estimatedFinalAmount | currency: 'USD' }}</strong></div>
-      <div>Action recommandee: <strong>{{ simulationResult.recommendation || 'hold' }}</strong></div>
-      <small class="text-muted d-block mt-2">{{ simulationResult.assumption }}</small>
-    </div>
+    @if (result; as simulationResult) {
+      <div class="result-box mt-3">
+        <div class="fw-semibold mb-2">Resultat</div>
+        <div>Rendement estime: <strong>{{ simulationResult.EstimatedReturnAmount | currency: 'USD' }}</strong></div>
+        <div>Rendement %: <strong>{{ simulationResult.EstimatedReturnPct | percent: '1.1-2' }}</strong></div>
+        <div>Montant final estime: <strong>{{ simulationResult.EstimatedFinalAmount | currency: 'USD' }}</strong></div>
+        <div>Action recommandee: <strong>{{ simulationResult.Recommendation || 'hold' }}</strong></div>
+        <div>Phase detectee: <strong>{{ simulationResult.Phase || 'n/a' }}</strong></div>
+        <div>Cours actuel: <strong>{{ simulationResult.CurrentPrice | currency: 'USD' }}</strong></div>
+        @if (simulationResult.TargetPrice !== null) {
+          <div>Cible technique: <strong>{{ simulationResult.TargetPrice | currency: 'USD' }}</strong></div>
+        }
+        @if (simulationResult.InvalidationPrice !== null) {
+          <div>Niveau d'invalidation: <strong>{{ simulationResult.InvalidationPrice | currency: 'USD' }}</strong></div>
+        }
+        <div>Signal exploitable: <strong>{{ simulationResult.IsActionable ? 'oui' : 'non' }}</strong></div>
+        <small class="text-muted d-block mt-2">{{ simulationResult.Assumption }}</small>
+      </div>
+    }
   </div>
 </div>

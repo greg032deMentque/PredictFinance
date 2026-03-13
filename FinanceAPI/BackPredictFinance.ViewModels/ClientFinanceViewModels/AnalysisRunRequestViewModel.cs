@@ -8,5 +8,6 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
     public class AnalysisRunRequestViewModel
     {
         public string Symbol { get; set; } = string.Empty;
+        public string RequestedPattern { get; set; } = string.Empty;
     }
 }

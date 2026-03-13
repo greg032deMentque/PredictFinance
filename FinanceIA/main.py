@@ -12,12 +12,13 @@ from finance_ia.cli.predict import main as predict_main
 from finance_ia.cli.evaluate import main as evaluate_main
 from finance_ia.cli.simulate import main as simulate_main
 from finance_ia.cli.train import main as train_main
+from finance_ia.runtime.api import run as serve_main
 
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
-        print("Usage: python main.py [train|predict|evaluate|simulate] <args>")
+        print("Usage: python main.py [train|predict|evaluate|simulate|serve] <args>")
         return 1
 
     command = args[0].lower()
@@ -29,9 +30,11 @@ def main(argv: list[str] | None = None) -> int:
         return evaluate_main(args[1:])
     if command == "simulate":
         return simulate_main(args[1:])
+    if command == "serve":
+        return serve_main(args[1:])
 
     print(f"Unknown command: {command}")
-    print("Usage: python main.py [train|predict|evaluate|simulate] <args>")
+    print("Usage: python main.py [train|predict|evaluate|simulate|serve] <args>")
     return 1
 
 

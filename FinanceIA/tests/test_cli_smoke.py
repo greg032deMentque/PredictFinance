@@ -7,6 +7,7 @@ from finance_ia.cli import evaluate as evaluate_cli
 from finance_ia.cli import predict as predict_cli
 from finance_ia.cli import simulate as simulate_cli
 from finance_ia.cli import train as train_cli
+from finance_ia.patterns.base import DecisionSignal, PatternAssessment
 from finance_ia.model.predict import PredictResult
 from finance_ia.model.simulate import SimulationResult
 from finance_ia.model.train import TrainResult
@@ -59,11 +60,30 @@ def test_predict_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
         "predict_ticker",
         lambda **_kwargs: PredictResult(
             ticker="AAPL",
+            pattern="DOUBLE_TOP",
+            phase="second_peak_candidate",
             as_of="2025-12-31",
+            current_price=123.4,
             mean_prob=0.42,
             max_prob=0.81,
             last_prob=0.33,
             n_windows=120,
+            assessments=[
+                PatternAssessment(
+                    pattern="DOUBLE_TOP",
+                    phase="second_peak_candidate",
+                    probability=0.33,
+                    confidence=0.33,
+                    current_price=123.4,
+                )
+            ],
+            decision_signal=DecisionSignal(
+                action="hold",
+                actionable=False,
+                confidence=0.33,
+                reason="Waiting for neckline break.",
+                horizon_days=10,
+            ),
         ),
     )
 
@@ -74,6 +94,7 @@ def test_predict_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
     payload = json.loads(stdout)
     assert payload["ticker"] == "AAPL"
     assert payload["n_windows"] == 120
+    assert payload["phase"] == "second_peak_candidate"
 
 
 def test_evaluate_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
@@ -133,19 +154,24 @@ def test_simulate_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
         lambda **_kwargs: SimulationResult(
             ticker="AAPL",
             pattern="DOUBLE_TOP",
+            phase="neckline_break_confirmed",
             as_of="2025-12-31",
             investment_amount=1000.0,
             horizon_days=30,
-            estimated_return_pct=0.012,
-            estimated_return_amount=12.0,
-            estimated_final_amount=1012.0,
-            recommendation="buy",
+            estimated_return_pct=-0.12,
+            estimated_return_amount=-120.0,
+            estimated_final_amount=880.0,
+            recommendation="sell",
             confidence=0.9,
-            assumption="Simulation based on IA confidence and simplified market profile.",
+            assumption="Simulation uses detected pattern structure, target price and invalidation level.",
             last_prob=0.1,
             mean_prob=0.2,
             max_prob=0.3,
             n_windows=100,
+            current_price=100.0,
+            target_price=88.0,
+            invalidation_price=103.0,
+            actionable=True,
         ),
     )
 
@@ -166,5 +192,5 @@ def test_simulate_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
     stdout = capsys.readouterr().out
     payload = json.loads(stdout)
     assert payload["ticker"] == "AAPL"
-    assert payload["recommendation"] == "buy"
-    assert payload["estimated_final_amount"] == 1012.0
+    assert payload["recommendation"] == "sell"
+    assert payload["estimated_final_amount"] == 880.0

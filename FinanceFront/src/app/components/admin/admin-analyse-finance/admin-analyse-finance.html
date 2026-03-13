@@ -24,8 +24,8 @@
       <ng-select
         class="finance-select"
         [items]="analyzableAssets"
-        bindLabel="symbol"
-        bindValue="symbol"
+        bindLabel="Symbol"
+        bindValue="Symbol"
         [searchable]="true"
         [clearable]="true"
         [loading]="assetsLoading"
@@ -39,13 +39,13 @@
         <ng-template ng-option-tmp let-item="item">
           <div class="d-flex justify-content-between align-items-center gap-2">
             <div class="text-truncate">
-              <div class="fw-semibold">{{ item.symbol }} - {{ item.companyName }}</div>
-              <small class="text-muted">{{ item.market }} - {{ item.currency }}</small>
+              <div class="fw-semibold">{{ item.Symbol }} - {{ item.CompanyName }}</div>
+              <small class="text-muted">{{ item.Market }} - {{ item.Currency }}</small>
             </div>
             <div class="text-end">
-              <div>{{ item.lastPrice | number: "1.2-2" }}</div>
-              <small [class.text-success]="item.dayVariationPct >= 0" [class.text-danger]="item.dayVariationPct < 0">
-                {{ item.dayVariationPct | number: "1.2-2" }}%
+              <div>{{ item.LastPrice | number: "1.2-2" }}</div>
+              <small [class.text-success]="item.DayVariationPct >= 0" [class.text-danger]="item.DayVariationPct < 0">
+                {{ item.DayVariationPct | number: "1.2-2" }}%
               </small>
             </div>
           </div>
@@ -53,8 +53,8 @@
       </ng-select>
 
       <div class="selection-note" *ngIf="selectedAsset as asset">
-        <div class="fw-semibold">{{ asset.symbol }} - {{ asset.companyName }}</div>
-        <small class="text-muted">{{ asset.market }} - {{ asset.currency }}</small>
+        <div class="fw-semibold">{{ asset.Symbol }} - {{ asset.CompanyName }}</div>
+        <small class="text-muted">{{ asset.Market }} - {{ asset.Currency }}</small>
       </div>
 
       <div class="d-flex justify-content-end">

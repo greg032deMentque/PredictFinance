@@ -1,31 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace BackPredictFinance.Common.enums
 {
-    /// <summary>
-    /// Liste des patterns techniques que votre IA reconnaît
-    /// </summary>
     public enum TradingPatternEnum
     {
-        HeadAndShoulders,
-        DoubleTop,
-        DoubleBottom,
-        CupAndHandle,
-        Triangle,
-        // … ajoutez vos autres patterns
+        HeadAndShoulders = 0,
+        DoubleTop = 1,
+        DoubleBottom = 2,
+        CupAndHandle = 3,
+        Triangle = 4
     }
 
-    /// <summary>
-    /// Action recommandée par l’IA
-    /// </summary>
     public enum RecommendationActionEnum
     {
-        Buy,
-        Sell,
-        Hold
+        Buy = 0,
+        Sell = 1,
+        Hold = 2,
+        NonActionable = 3
     }
 }

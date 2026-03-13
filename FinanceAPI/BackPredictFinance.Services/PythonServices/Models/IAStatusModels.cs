@@ -49,6 +49,7 @@ namespace BackPredictFinance.Services.PythonServices.Models
         public decimal? Precision { get; set; }
         public decimal? F1 { get; set; }
         public decimal? RocAuc { get; set; }
+        public int? PositiveSamples { get; set; }
         public decimal? SelectedThreshold { get; set; }
     }
 
