@@ -49,20 +49,24 @@
       </table>
     </div>
 
-    <div class="quote-box mt-3" *ngIf="quote as liveQuote">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <div class="fw-semibold">{{ liveQuote.Symbol }} - Cours live</div>
-          <small class="text-muted">Mise a jour {{ liveQuote.AsOfUtc | date: 'dd/MM HH:mm:ss' }}</small>
+    @if (quote; as liveQuote) {
+      <div class="finance-soft-panel mt-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-semibold">{{ liveQuote.Symbol }} - Cours live</div>
+            <small class="text-muted">Mise a jour {{ liveQuote.AsOfUtc | date: 'dd/MM HH:mm:ss' }}</small>
+          </div>
+          <div class="text-end">
+            <div class="h5 mb-0">{{ liveQuote.LastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</div>
+            <small [class.text-success]="liveQuote.DayVariationPct >= 0" [class.text-danger]="liveQuote.DayVariationPct < 0">
+              {{ liveQuote.DayVariationPct | number: '1.2-2' }}%
+            </small>
+          </div>
         </div>
-        <div class="text-end">
-          <div class="h5 mb-0">{{ liveQuote.LastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</div>
-          <small [class.text-success]="liveQuote.DayVariationPct >= 0" [class.text-danger]="liveQuote.DayVariationPct < 0">
-            {{ liveQuote.DayVariationPct | number: '1.2-2' }}%
-          </small>
-        </div>
+        @if (quoteLoading) {
+          <div class="small text-muted mt-2">Rafraichissement en cours...</div>
+        }
       </div>
-      <div class="small text-muted mt-2" *ngIf="quoteLoading">Rafraichissement en cours...</div>
-    </div>
+    }
   </div>
 </div>

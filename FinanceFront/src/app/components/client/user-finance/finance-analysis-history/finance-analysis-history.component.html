@@ -8,8 +8,10 @@
           <tr>
             <th>Valeur</th>
             <th>Pattern</th>
+            <th>Phase</th>
             <th>Confiance</th>
-            <th>Recommendation</th>
+            <th>Recommandation</th>
+            <th>Signal</th>
             <th>Risque</th>
             <th>Date</th>
           </tr>
@@ -22,18 +24,20 @@
                 <small class="text-muted">{{ item.CompanyName }}</small>
               </td>
               <td>{{ item.Pattern }}</td>
+              <td>{{ item.Phase || '-' }}</td>
               <td>{{ item.Confidence | percent: '1.0-0' }}</td>
               <td>
                 <span class="badge" [class]="getBadgeClass(item.Recommendation)">
-                  {{ item.Recommendation }}
+                  {{ getRecommendationLabel(item.Recommendation) }}
                 </span>
               </td>
+              <td>{{ item.IsActionable ? 'Exploitable' : 'A surveiller' }}</td>
               <td>{{ item.RiskLevel }}</td>
               <td>{{ item.PredictedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="6" class="text-center text-muted py-4">Aucune analyse precedente.</td>
+              <td colspan="8" class="text-center text-muted py-4">Aucune analyse precedente.</td>
             </tr>
           }
         </tbody>

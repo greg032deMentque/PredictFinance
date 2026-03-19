@@ -3,7 +3,7 @@
     <h2 class="h6 text-uppercase text-muted mb-3">1. Selection de la valeur</h2>
 
     <ng-select
-      class="finance-select"
+      class="finance-select d-block"
       [items]="options"
       bindLabel="Symbol"
       bindValue="Symbol"
@@ -38,9 +38,11 @@
       </ng-template>
     </ng-select>
 
-    <div class="selected-box mt-3" *ngIf="selectedAsset as asset">
-      <div class="fw-semibold">Valeur selectionnee: {{ asset.Symbol }}</div>
-      <div class="text-muted small">{{ asset.CompanyName }} ({{ asset.Market }})</div>
-    </div>
+    @if (selectedAsset; as asset) {
+      <div class="finance-soft-panel mt-3">
+        <div class="fw-semibold">Valeur selectionnee: {{ asset.Symbol }}</div>
+        <div class="text-muted small">{{ asset.CompanyName }} ({{ asset.Market }})</div>
+      </div>
+    }
   </div>
 </div>

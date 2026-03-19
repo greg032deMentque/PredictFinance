@@ -34,27 +34,87 @@
       </div>
 
       <button class="btn btn-outline-primary mt-2" [disabled]="loading" type="submit">
-        {{ loading ? 'Simulation...' : 'Simuler' }}
+        {{ loading ? 'Simulation en cours...' : 'Simuler' }}
       </button>
     </form>
 
     @if (result; as simulationResult) {
-      <div class="result-box mt-3">
-        <div class="fw-semibold mb-2">Resultat</div>
-        <div>Rendement estime: <strong>{{ simulationResult.EstimatedReturnAmount | currency: 'USD' }}</strong></div>
-        <div>Rendement %: <strong>{{ simulationResult.EstimatedReturnPct | percent: '1.1-2' }}</strong></div>
-        <div>Montant final estime: <strong>{{ simulationResult.EstimatedFinalAmount | currency: 'USD' }}</strong></div>
-        <div>Action recommandee: <strong>{{ simulationResult.Recommendation || 'hold' }}</strong></div>
-        <div>Phase detectee: <strong>{{ simulationResult.Phase || 'n/a' }}</strong></div>
-        <div>Cours actuel: <strong>{{ simulationResult.CurrentPrice | currency: 'USD' }}</strong></div>
-        @if (simulationResult.TargetPrice !== null) {
-          <div>Cible technique: <strong>{{ simulationResult.TargetPrice | currency: 'USD' }}</strong></div>
-        }
-        @if (simulationResult.InvalidationPrice !== null) {
-          <div>Niveau d'invalidation: <strong>{{ simulationResult.InvalidationPrice | currency: 'USD' }}</strong></div>
-        }
-        <div>Signal exploitable: <strong>{{ simulationResult.IsActionable ? 'oui' : 'non' }}</strong></div>
-        <small class="text-muted d-block mt-2">{{ simulationResult.Assumption }}</small>
+      <div class="finance-soft-panel mt-3">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <div class="fw-semibold">Projection sur {{ simulationResult.Symbol }}</div>
+            <small class="text-muted d-block">
+              Horizon de {{ simulationResult.HorizonDays }} jours
+              @if (simulationResult.Phase) {
+                · Phase detectee: {{ simulationResult.Phase }}
+              }
+            </small>
+          </div>
+          <span class="badge" [class]="recommendationClass">{{ recommendationLabel }}</span>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
+              <small class="text-muted d-block">Rendement estime</small>
+              <strong [class]="performanceToneClass">
+                {{ simulationResult.EstimatedReturnAmount | currency: 'USD' }}
+              </strong>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
+              <small class="text-muted d-block">Rendement en %</small>
+              <strong [class]="performanceToneClass">
+                {{ simulationResult.EstimatedReturnPct | percent: '1.1-2' }}
+              </strong>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
+              <small class="text-muted d-block">Montant final estime</small>
+              <strong>{{ simulationResult.EstimatedFinalAmount | currency: 'USD' }}</strong>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
+              <small class="text-muted d-block">Signal</small>
+              <strong>{{ simulationResult.IsActionable ? 'Exploitable' : 'A surveiller' }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-12 col-md-4">
+            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
+              <small class="text-muted d-block">Cours actuel</small>
+              <strong>{{ simulationResult.CurrentPrice | currency: 'USD' }}</strong>
+            </div>
+          </div>
+          @if (simulationResult.TargetPrice !== null) {
+            <div class="col-12 col-md-4">
+              <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
+                <small class="text-muted d-block">Cible technique</small>
+                <strong>{{ simulationResult.TargetPrice | currency: 'USD' }}</strong>
+              </div>
+            </div>
+          }
+          @if (simulationResult.InvalidationPrice !== null) {
+            <div class="col-12 col-md-4">
+              <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
+                <small class="text-muted d-block">Niveau d'invalidation</small>
+                <strong>{{ simulationResult.InvalidationPrice | currency: 'USD' }}</strong>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="border-top pt-3">
+          <p class="mb-2">{{ actionableSummary }}</p>
+          <small class="text-muted d-block">
+            {{ simulationResult.Assumption || "Projection fournie a titre indicatif a partir du pattern detecte." }}
+          </small>
+        </div>
       </div>
     }
   </div>

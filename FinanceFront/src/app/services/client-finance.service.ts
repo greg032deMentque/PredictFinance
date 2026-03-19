@@ -27,7 +27,7 @@ export class ClientFinanceService {
 
   searchAssets(query: string): Observable<MarketAssetOption[]> {
     const normalizedQuery = query.trim();
-    if (normalizedQuery.length < 2) {
+    if (normalizedQuery.length < 1) {
       return of([]);
     }
 
@@ -91,7 +91,10 @@ export class ClientFinanceService {
 
   runAnalysis(request: ClientAnalysisLaunchRequest): Observable<ClientAnalysisResult> {
     return this.http
-      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/analysis/run`, { Symbol: request.Symbol })
+      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/analysis/run`, {
+        Symbol: request.Symbol,
+        RequestedPattern: request.RequestedPattern
+      })
       .pipe(map((payload) => this.mapAnalysis(payload)));
   }
 

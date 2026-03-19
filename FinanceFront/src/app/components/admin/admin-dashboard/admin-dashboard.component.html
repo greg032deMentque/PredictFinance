@@ -1,5 +1,5 @@
 <section class="d-flex flex-column gap-3">
-  <div class="hero-card p-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <div class="finance-hero-card p-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
       <p class="text-uppercase text-muted mb-1">Administration</p>
       <h1 class="h4 mb-0">Dashboard utilisateurs</h1>
@@ -13,7 +13,7 @@
 
   <div class="row g-3">
     <div class="col-12 col-md-6">
-      <div class="card border-0 shadow-sm stat-card h-100">
+      <div class="card border finance-border-soft shadow-sm h-100">
         <div class="card-body">
           <p class="text-muted mb-1">Nombre total utilisateurs</p>
           <div class="display-6 fw-semibold">{{ loading ? '...' : totalUsers }}</div>
@@ -22,7 +22,7 @@
     </div>
 
     <div class="col-12 col-md-6">
-      <div class="card border-0 shadow-sm stat-card h-100">
+      <div class="card border finance-border-soft shadow-sm h-100">
         <div class="card-body">
           <p class="text-muted mb-1">Utilisateurs actifs</p>
           <div class="display-6 fw-semibold">{{ loading ? '...' : activeUsersMock }}</div>

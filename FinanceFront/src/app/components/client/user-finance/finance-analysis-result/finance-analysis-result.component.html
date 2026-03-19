@@ -3,7 +3,7 @@
     <h2 class="h6 text-uppercase text-muted mb-3">3. Resultat IA</h2>
 
     @if (loading) {
-      <div class="text-muted">Analyse en cours...</div>
+      <div class="text-muted">Analyse en cours. Cela peut prendre quelques instants.</div>
     } @else if (result) {
       <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
         <div>
@@ -13,7 +13,7 @@
             <div class="text-muted">Phase actuelle: {{ result.Phase }}</div>
           }
         </div>
-        <span class="badge" [class]="recommendationClass">{{ result.Recommendation }}</span>
+        <span class="badge" [class]="recommendationClass">{{ recommendationLabel }}</span>
       </div>
 
       <div class="row g-3 mb-3">
@@ -63,17 +63,24 @@
           <div class="fw-semibold mb-1">Statut modele</div>
           <div>{{ result.ModelStatus || 'n/a' }}</div>
           @if (result.ModelMessage) {
-            <small class="text-muted d-block mt-1">{{ result.ModelMessage }}</small>
+          <small class="text-muted d-block mt-1">{{ result.ModelMessage }}</small>
           }
         </div>
       }
 
-      <div class="reason-box">
-        <div class="fw-semibold mb-1">Action proposee</div>
-        <p class="mb-0">{{ result.Reason }}</p>
+      <div class="finance-soft-panel">
+        <div class="fw-semibold mb-1">Lecture de l'analyse</div>
+        <p class="mb-2">{{ formattedReason }}</p>
+        <p class="mb-0 text-body-secondary">
+          @if (result.IsActionable) {
+            Le signal est exploitable pour le moment. L'action suggeree est <strong>{{ recommendationLabel }}</strong>.
+          } @else {
+            Le signal reste informatif pour le moment. Il vaut mieux attendre une confirmation avant d'agir.
+          }
+        </p>
       </div>
     } @else {
-      <div class="text-muted">Aucune analyse lancee pour le moment.</div>
+      <div class="text-muted">Aucune analyse lancee pour le moment. Selectionne une valeur puis lance l'analyse IA.</div>
     }
   </div>
 </div>

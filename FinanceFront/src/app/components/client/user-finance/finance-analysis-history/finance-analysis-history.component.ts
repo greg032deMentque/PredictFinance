@@ -25,4 +25,22 @@ export class FinanceAnalysisHistoryComponent {
 
     return 'text-bg-secondary';
   }
+
+  getRecommendationLabel(recommendation: string): string {
+    const normalized = recommendation.trim().toLowerCase();
+
+    if (normalized === 'buy' || normalized === 'acheter') {
+      return 'Acheter';
+    }
+
+    if (normalized === 'sell' || normalized === 'vendre') {
+      return 'Vendre';
+    }
+
+    if (normalized === 'hold' || normalized === 'conserver') {
+      return 'Conserver';
+    }
+
+    return recommendation.trim() || 'Information';
+  }
 }

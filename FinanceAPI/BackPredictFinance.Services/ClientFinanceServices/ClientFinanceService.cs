@@ -661,13 +661,18 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return new SimulationResultViewModel
             {
                 Symbol = symbol,
+                Phase = simulation.Phase,
                 InvestmentAmount = decimal.Round(simulation.InvestmentAmount, 2),
                 HorizonDays = simulation.HorizonDays,
                 EstimatedReturnAmount = decimal.Round(simulation.EstimatedReturnAmount, 2),
                 EstimatedReturnPct = decimal.Round(simulation.EstimatedReturnPct, 4),
                 EstimatedFinalAmount = decimal.Round(simulation.EstimatedFinalAmount, 2),
                 Recommendation = simulation.Recommendation,
-                Assumption = simulation.Assumption
+                Assumption = simulation.Assumption,
+                CurrentPrice = simulation.CurrentPrice,
+                TargetPrice = simulation.TargetPrice,
+                InvalidationPrice = simulation.InvalidationPrice,
+                IsActionable = simulation.IsActionable
             };
         }
 

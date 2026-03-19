@@ -3,6 +3,12 @@
 Ce document est la reference de contexte projet pour les futures sessions Codex.
 Il doit etre lu avant toute modification structurante.
 
+Documents complementaires:
+
+- `PRODUCT_ARCHITECTURE.md`: pont entre architecture technique reelle et domaines produit
+- `IDEAS.md`: catalogue priorise des idees produit et des blocs d'evolution
+- `AI_AGENT_WORKFLOW.md`: methode de travail attendue pour les agents IA
+
 ## 1. Vue d'ensemble
 
 PredictFinance est un projet d'analyse de valeurs financieres pilote par patterns boursiers.
@@ -97,7 +103,7 @@ Limites connues:
 Incoherences connues:
 
 - le code EF et le snapshot sont maintenant realignes, mais les environnements n'ont pas encore forcement applique la migration correspondante
-- le payload riche Python est maintenant mieux exploite sur `analysis/run`, mais pas encore de facon uniforme sur tous les flux
+- le payload riche Python est maintenant mieux exploite sur les flux client d'analyse et de simulation, mais pas encore de facon uniforme sur tous les parcours
 - le front a maintenant `ClientFinanceService` comme point d'entree officiel unique pour l'analyse; le vieux chemin `PredictionService` a ete retire
 - certains templates Angular utilisent encore des formes legacy alors que le projet est en Angular 21, meme si le flux finance client cible a deja ete remis en syntaxe moderne
 
@@ -392,7 +398,6 @@ Points a stabiliser:
 
 - contrats API vers Angular
 - contrats API vers Python
-- passage du `requestedPattern` de bout en bout sur tous les flux, pas seulement `predict`
 - suppression du fallback legacy quand `AnalysisRun` sera garanti par les migrations
 - extension du catalogue de patterns a plusieurs entrees actives sans casser les flux actuels
 
@@ -561,6 +566,9 @@ Derniere mise a jour structurante documentee:
 - remplacement des hardcodes locaux `DOUBLE_TOP` dans le flux de simulation client par un constant shared temporaire et alignement des modeles front avec les champs enrichis deja renvoyes par l'API
 - impact: l'UI client affiche maintenant phase, niveaux techniques, statut modele et signal exploitable sans reintroduire de logique metier critique cote Angular
 - rapprochement de la cible multi-pattern: oui, partiel, car le front depend encore d'une liste locale de patterns supportes tant que le catalogue n'est pas expose par l'API
+- envoi explicite de `RequestedPattern` depuis le front d'analyse, meilleure lisibilite de l'historique client et messages plus clairs pour l'analyse/simulation en francais
+- impact: les parcours client/admin d'analyse sont mieux alignes avec le contrat backend existant et la restitution front devient plus lisible sans changer le perimetre mono-pattern
+- rapprochement de la cible multi-pattern: oui, leger, car le contrat d'analyse est plus coherent cote front et les champs deja exposes sont mieux exploites
 - branchement effectif du `RateLimitingMiddleware` dans le pipeline `Program.cs`
 - impact: les endpoints API sont maintenant proteges par un premier garde-fou anti-abus, sans modifier les contrats applicatifs
 - rapprochement de la cible multi-pattern: indirect, car cela durcit l'exposition des futurs endpoints de simulation/analyse avant d'ajouter plus de charge metier

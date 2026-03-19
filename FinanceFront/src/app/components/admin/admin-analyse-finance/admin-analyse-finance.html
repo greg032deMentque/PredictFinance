@@ -1,5 +1,5 @@
 <section class="d-flex flex-column gap-3">
-  <div class="hero-card p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+  <div class="finance-hero-card p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
     <div>
       <p class="text-uppercase text-muted mb-1">Administration</p>
       <h1 class="h4 mb-1">Analyse IA des valeurs</h1>
@@ -52,10 +52,12 @@
         </ng-template>
       </ng-select>
 
-      <div class="selection-note" *ngIf="selectedAsset as asset">
-        <div class="fw-semibold">{{ asset.Symbol }} - {{ asset.CompanyName }}</div>
-        <small class="text-muted">{{ asset.Market }} - {{ asset.Currency }}</small>
-      </div>
+      @if (selectedAsset; as asset) {
+        <div class="finance-soft-panel px-3">
+          <div class="fw-semibold">{{ asset.Symbol }} - {{ asset.CompanyName }}</div>
+          <small class="text-muted">{{ asset.Market }} - {{ asset.Currency }}</small>
+        </div>
+      }
 
       <div class="d-flex justify-content-end">
         <button class="btn btn-primary" type="button" (click)="runAnalysis()" [disabled]="analysisLoading || !selectedSymbol">

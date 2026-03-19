@@ -32,6 +32,66 @@ export class FinanceSimulationComponent {
     horizonDays: this.fb.nonNullable.control(30, [Validators.required, Validators.min(1), Validators.max(365)])
   });
 
+  get recommendationLabel(): string {
+    const normalized = this.result?.Recommendation?.trim().toLowerCase() ?? '';
+
+    if (normalized === 'buy' || normalized === 'acheter') {
+      return 'Acheter';
+    }
+
+    if (normalized === 'sell' || normalized === 'vendre') {
+      return 'Vendre';
+    }
+
+    if (normalized === 'hold' || normalized === 'conserver') {
+      return 'Conserver';
+    }
+
+    return this.result?.Recommendation?.trim() || 'Conserver';
+  }
+
+  get recommendationClass(): string {
+    const normalized = this.result?.Recommendation?.trim().toLowerCase() ?? '';
+
+    if (normalized === 'buy' || normalized === 'acheter') {
+      return 'text-bg-success';
+    }
+
+    if (normalized === 'sell' || normalized === 'vendre') {
+      return 'text-bg-danger';
+    }
+
+    return 'text-bg-secondary';
+  }
+
+  get actionableSummary(): string {
+    if (!this.result) {
+      return '';
+    }
+
+    if (this.result.IsActionable) {
+      return `Le signal parait exploitable pour le moment. La posture suggeree est ${this.recommendationLabel.toLowerCase()}.`;
+    }
+
+    return "Le signal reste indicatif pour l'instant. Il vaut mieux attendre une confirmation supplementaire avant d'agir.";
+  }
+
+  get performanceToneClass(): string {
+    if (!this.result) {
+      return '';
+    }
+
+    if (this.result.EstimatedReturnAmount > 0) {
+      return 'text-success';
+    }
+
+    if (this.result.EstimatedReturnAmount < 0) {
+      return 'text-danger';
+    }
+
+    return 'text-body';
+  }
+
   submit(): void {
     if (this.form.invalid || this.loading || this.selectedSymbol.trim().length === 0) {
       this.form.markAllAsTouched();
