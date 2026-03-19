@@ -96,7 +96,6 @@ export class LoginComponent {
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isSubmitting.set(false)))
       .subscribe({
         next: (obj) => {
-          console.log(obj)
           this.storageService.SetToken(obj.Token);
           this.storageService.SetRefreshToken(obj.RefreshToken);
 

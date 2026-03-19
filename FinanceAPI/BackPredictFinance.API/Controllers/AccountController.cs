@@ -82,9 +82,9 @@ namespace BackPredictFinance.API.Controllers
 
         [AllowAnonymous]
         [HttpPost("Logout")]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> Logout([FromBody] TokenViewModel? model)
         {
-            await _accountService.Logout();
+            await _accountService.Logout(model);
             return Ok();
         }
 

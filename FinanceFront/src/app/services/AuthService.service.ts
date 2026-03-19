@@ -2,11 +2,10 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, lastValueFrom, Observable, of, Subscription, throwError, timer } from 'rxjs';
-import { catchError, filter, finalize, switchMap, take, tap } from 'rxjs/operators';
+import { catchError, filter, finalize, map, switchMap, take, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { TokenResponse } from '../Models/token-response';
-import { AdminPaths, AppRoutes, UserPaths } from '../Routes/app.routes.constants';
-import { AuthStore } from '../core/auth.store';
+import { AppRoutes } from '../Routes/app.routes.constants';
 import { StorageService } from './storage.service';
 
 
@@ -23,11 +22,18 @@ export class AuthService {
   ) { }
 
   logout() {
+    const token = this.storageService.GetToken();
+    const refreshToken = this.storageService.GetRefreshToken();
+
     this.clearRefreshScheduler();
+
+    void lastValueFrom(this.http.post(environment.apiUrl + 'Account/Logout', {
+      Token: token,
+      RefreshToken: refreshToken
+    })).catch(() => undefined);
+
     this.storageService.RemoveToken();
     this.storageService.RemoveRefreshToken();
-
-    void lastValueFrom(this.http.post(environment.apiUrl + 'Account/Logout', {})).catch(() => undefined);
 
     void this.router.navigate([AppRoutes.Login]);
   }
@@ -121,6 +127,27 @@ export class AuthService {
       finalize(() => {
         this.refreshTokenInProgress = false;
       })
+    );
+  }
+
+  ensureValidAccessToken(): Observable<string | null> {
+    const token = this.storageService.GetToken();
+    if (!token) {
+      return of(null);
+    }
+
+    if (!this.isTokenExpired(token)) {
+      return of(token);
+    }
+
+    const refreshToken = this.storageService.GetRefreshToken();
+    if (!refreshToken) {
+      return of(null);
+    }
+
+    return this.refreshToken(token, refreshToken).pipe(
+      map((response) => (response.Token ?? '').trim() || null),
+      catchError(() => of(null))
     );
   }
 

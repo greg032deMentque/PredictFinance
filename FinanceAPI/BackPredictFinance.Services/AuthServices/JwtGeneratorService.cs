@@ -21,6 +21,7 @@ namespace BackPredictFinance.Services.AuthServices
 
         Task<RefreshTokenResult> GenerateUserRefreshToken(User user, string? deviceId = null, CancellationToken ct = default);
         Task<(string accessToken, RefreshTokenResult refresh)> RotateRefresh(string presentedRefresh, string? deviceId = null, CancellationToken ct = default);
+        Task RevokeRefreshAsync(string presentedRefresh, CancellationToken ct = default);
     }
 
     public class JwtGeneratorService : BaseService, IJwtGeneratorService
@@ -125,6 +126,30 @@ namespace BackPredictFinance.Services.AuthServices
             var access = await GenerateJwtToken(user);
             return (access, newRefresh);
 
+        }
+
+        public async Task RevokeRefreshAsync(string presentedRefresh, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(presentedRefresh))
+            {
+                return;
+            }
+
+            var rec = await _financeDbContext.RefreshTokens
+                .SingleOrDefaultAsync(r => r.TokenHash == HashRefresh(presentedRefresh), ct);
+
+            if (rec is null)
+            {
+                return;
+            }
+
+            if (rec.RevokedAtUtc == null)
+            {
+                rec.RevokedAtUtc = DateTime.UtcNow;
+            }
+
+            await RevokeChainAsync(rec, ct);
+            await _financeDbContext.SaveChangesAsync(ct);
         }
 
         private async Task RevokeChainAsync(RefreshToken head, CancellationToken ct)

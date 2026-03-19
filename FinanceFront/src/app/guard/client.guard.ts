@@ -1,27 +1,28 @@
-﻿import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AdminPaths, AppRoutes } from '../Routes/app.routes.constants';
 import { AuthService } from '../services/AuthService.service';
-import { StorageService } from '../services/storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class ClientGuard implements CanActivate {
   constructor(
-    private readonly storageService: StorageService,
     private readonly authService: AuthService,
     private readonly router: Router
   ) {}
 
-  canActivate(): boolean | UrlTree {
-    const token = this.storageService.GetToken();
-    if (!token || this.authService.isTokenExpired(token)) {
-      return this.router.createUrlTree([AppRoutes.Login]);
-    }
+  canActivate(): Observable<boolean | UrlTree> {
+    return this.authService.ensureValidAccessToken().pipe(
+      map((token) => {
+        if (!token) {
+          return this.router.createUrlTree([AppRoutes.Login]);
+        }
 
-    if (this.authService.isAdmin(token)) {
-      return this.router.createUrlTree([AdminPaths.Dashboard]);
-    }
-
-    return true;
+        return this.authService.isAdmin(token)
+          ? this.router.createUrlTree([AdminPaths.Dashboard])
+          : true;
+      })
+    );
   }
 }

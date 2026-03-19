@@ -79,6 +79,7 @@ Ce qui fonctionne aujourd'hui:
 - lancement d'analyse cote admin
 - pipeline Python operationnel sur `DOUBLE_TOP`
 - le flux d'analyse backend accepte maintenant un `RequestedPattern` optionnel et le propage jusqu'a la CLI Python `predict`
+- les guards front honorent maintenant le refresh token avant redirection quand le token d'acces a expire
 - build API OK, typecheck Angular OK, tests Python OK
 
 Pattern reellement exploite:
@@ -176,6 +177,7 @@ Front -> API aujourd'hui:
 - si `requestedPattern` est absent, le backend retombe sur `DOUBLE_TOP`
 - si `requestedPattern` est fourni, seul `DOUBLE_TOP` est accepte a ce stade
 - simulation client actuelle: `POST /api/ClientFinance/simulation/run`
+- logout transmet maintenant le `refreshToken` courant afin de permettre sa revocation serveur
 
 API -> Python aujourd'hui:
 
@@ -572,6 +574,12 @@ Derniere mise a jour structurante documentee:
 - branchement effectif du `RateLimitingMiddleware` dans le pipeline `Program.cs`
 - impact: les endpoints API sont maintenant proteges par un premier garde-fou anti-abus, sans modifier les contrats applicatifs
 - rapprochement de la cible multi-pattern: indirect, car cela durcit l'exposition des futurs endpoints de simulation/analyse avant d'ajouter plus de charge metier
+- revocation serveur du refresh token lors du logout et suppression du log front exposant les tokens
+- impact: une deconnexion invalide maintenant la chaine de refresh associee au token presente, ce qui reduit le risque de reutilisation apres logout
+- rapprochement de la cible multi-pattern: indirect, car cela durcit le socle auth sans changer les flux metier
+- unification du comportement des guards front autour d'un controle centralise `ensureValidAccessToken`
+- impact: la navigation client/admin reutilise maintenant le meme mecanisme de refresh avant de forcer un retour vers login, ce qui reduit les deconnexions inutiles
+- rapprochement de la cible multi-pattern: indirect, car cela fiabilise l'acces au produit sans toucher aux contrats patterns
 
 Regle de maintenance:
 

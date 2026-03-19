@@ -18,7 +18,7 @@ namespace BackPredictFinance.Services.AuthServices
         Task UnlockUser(string userId);
         Task<IdentityResult> ResetPassword(ResetPasswordRequestViewModel model);
         Task RegisterDevice(string mobileId, string userId);
-        Task Logout();
+        Task Logout(TokenViewModel? request);
         Task ForgotPassword(string email);
         Task ChangePassword(ChangePasswordViewModel resetPassword);
     }
@@ -191,9 +191,21 @@ namespace BackPredictFinance.Services.AuthServices
             return Task.CompletedTask;
         }
 
-        public Task Logout()
+        public async Task Logout(TokenViewModel? request)
         {
-            return _signInManager.SignOutAsync();
+            if (request is not null && !string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                try
+                {
+                    await _jwtGeneratorService.RevokeRefreshAsync(request.RefreshToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"logout: refresh token revocation failed - {ex.Message}");
+                }
+            }
+
+            await _signInManager.SignOutAsync();
         }
 
         public async Task ForgotPassword(string email)
