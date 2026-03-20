@@ -5,7 +5,7 @@ namespace BackPredictFinance.ViewModels.UserViewModels
 
     public class UserRoleViewModel
     {
-        public string RoleId { get; set; }
+        public string RoleId { get; set; } = string.Empty;
 
         /// <summary>
         /// Valeur enum associée, pour un code plus sûr.
@@ -15,7 +15,7 @@ namespace BackPredictFinance.ViewModels.UserViewModels
         /// <summary>
         /// Pour mettre le nom du role en français ou en anglais
         /// </summary>
-        public string RoleName { get; set; }
+        public string RoleName { get; set; } = string.Empty;
 
     }
 

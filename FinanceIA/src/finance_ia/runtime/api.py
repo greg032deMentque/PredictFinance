@@ -24,8 +24,6 @@ class PredictRequest(BaseModel):
 class SimulateRequest(PredictRequest):
     investment_amount: float = Field(gt=0)
     horizon_days: int = Field(ge=1, le=365)
-    sell_threshold: float = 0.65
-    buy_threshold: float = 0.20
 
 
 @app.get("/health")
@@ -56,8 +54,6 @@ def simulate(request: SimulateRequest) -> dict[str, object]:
         pattern=request.pattern,
         investment_amount=request.investment_amount,
         horizon_days=request.horizon_days,
-        sell_threshold=request.sell_threshold,
-        buy_threshold=request.buy_threshold,
     )
     return result.to_dict()
 

@@ -46,8 +46,8 @@ namespace BackPredictFinance.Datas.Common
         /// <param name="includes">[Optional] Tables to include.</param>
         /// <returns>The elements by pagination.</returns>
         public static async Task<List<TEntity>> GetByPaginationAsync<TEntity>(this DbSet<TEntity> _dbSet, int start, int take, string sortName, bool sortDir,
-            Expression<Func<TEntity, bool>> predicate = null,
-            Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>> include = null, List<Guid>? countryIds = null) where TEntity : class
+            Expression<Func<TEntity, bool>>? predicate = null,
+            Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, List<Guid>? countryIds = null) where TEntity : class
         {
             var query = _dbSet.AsQueryable();
 
@@ -78,8 +78,8 @@ namespace BackPredictFinance.Datas.Common
             return await itmDalList.ToListAsync();
         }
 
-        public static async Task<int> GetTotalCountAsync<TEntity>(this DbSet<TEntity> _dbSet, Expression<Func<TEntity, bool>> predicate = null,
-           Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>> include = null, List<Guid>? countryIds = null) where TEntity : class
+        public static async Task<int> GetTotalCountAsync<TEntity>(this DbSet<TEntity> _dbSet, Expression<Func<TEntity, bool>>? predicate = null,
+           Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>>? include = null, List<Guid>? countryIds = null) where TEntity : class
         {
             var query = _dbSet.AsQueryable();
 

@@ -81,7 +81,7 @@ namespace BackPredictFinance.Services.AuthServices
 
             if (requiresAdmin)
             {
-                _logger.LogInformation("[ADMIN_AUTH] Admin login success: {Email} ({Id})", user.Email, user.Id);
+                _logger.LogInformation("[ADMIN_AUTH] Admin login success: {Email} ({Id})", user.Email ?? string.Empty, user.Id);
             }
 
             return await IssueTokensAsync(user, mobileId: null);
@@ -153,7 +153,7 @@ namespace BackPredictFinance.Services.AuthServices
 
             await _userManager.SetLockoutEndDateAsync(user, null);
             await _userManager.ResetAccessFailedCountAsync(user);
-            _logger.LogInformation("[ADMIN] Compte debloque pour l'utilisateur : {Email}", user.Email);
+            _logger.LogInformation("[ADMIN] Compte debloque pour l'utilisateur : {Email}", user.Email ?? string.Empty);
         }
 
         public async Task<IdentityResult> ResetPassword(ResetPasswordRequestViewModel model)

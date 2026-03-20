@@ -17,8 +17,6 @@ class SimulationResult:
     estimated_return_pct: float
     estimated_return_amount: float
     estimated_final_amount: float
-    recommendation: str
-    confidence: float
     assumption: str
     last_prob: float
     mean_prob: float
@@ -27,11 +25,10 @@ class SimulationResult:
     current_price: float
     target_price: float | None
     invalidation_price: float | None
-    actionable: bool
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "schema_version": "2.0",
+            "schema_version": "3.0",
             "ticker": self.ticker,
             "pattern": self.pattern,
             "phase": self.phase,
@@ -41,8 +38,6 @@ class SimulationResult:
             "estimated_return_pct": self.estimated_return_pct,
             "estimated_return_amount": self.estimated_return_amount,
             "estimated_final_amount": self.estimated_final_amount,
-            "recommendation": self.recommendation,
-            "confidence": self.confidence,
             "assumption": self.assumption,
             "last_prob": self.last_prob,
             "mean_prob": self.mean_prob,
@@ -51,7 +46,6 @@ class SimulationResult:
             "current_price": self.current_price,
             "target_price": self.target_price,
             "invalidation_price": self.invalidation_price,
-            "actionable": self.actionable,
         }
 
 
@@ -66,10 +60,8 @@ def _estimate_return_pct(
     *,
     current_price: float,
     target_price: float | None,
-    recommendation: str,
-    actionable: bool,
 ) -> float:
-    if not actionable or recommendation != "sell" or current_price <= 0 or target_price is None:
+    if current_price <= 0 or target_price is None:
         return 0.0
 
     return float((target_price / current_price) - 1.0)
@@ -83,11 +75,7 @@ def simulate_ticker(
     pattern: str = "DOUBLE_TOP",
     investment_amount: float,
     horizon_days: int,
-    sell_threshold: float = 0.65,
-    buy_threshold: float = 0.20,
 ) -> SimulationResult:
-    del sell_threshold, buy_threshold
-
     if investment_amount <= 0:
         raise ValueError("investment_amount must be strictly positive")
 
@@ -99,8 +87,6 @@ def simulate_ticker(
     estimated_return_pct = _estimate_return_pct(
         current_price=assessment.current_price,
         target_price=assessment.target_price,
-        recommendation=prediction.decision_signal.action,
-        actionable=prediction.decision_signal.actionable,
     )
     estimated_return_amount = float(investment_amount) * estimated_return_pct
     estimated_final_amount = float(investment_amount) + estimated_return_amount
@@ -115,9 +101,7 @@ def simulate_ticker(
         estimated_return_pct=float(estimated_return_pct),
         estimated_return_amount=float(round(estimated_return_amount, 2)),
         estimated_final_amount=float(round(estimated_final_amount, 2)),
-        recommendation=prediction.decision_signal.action,
-        confidence=float(prediction.decision_signal.confidence),
-        assumption="Simulation uses detected pattern structure, target price and invalidation level.",
+        assumption="Simulation projects a neutral scenario if the detected pattern continues toward its target.",
         last_prob=float(prediction.last_prob),
         mean_prob=float(prediction.mean_prob),
         max_prob=float(prediction.max_prob),
@@ -125,5 +109,4 @@ def simulate_ticker(
         current_price=float(assessment.current_price),
         target_price=assessment.target_price,
         invalidation_price=assessment.invalidation_price,
-        actionable=prediction.decision_signal.actionable,
     )

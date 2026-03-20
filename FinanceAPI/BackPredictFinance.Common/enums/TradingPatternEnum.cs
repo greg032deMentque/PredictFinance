@@ -16,4 +16,12 @@ namespace BackPredictFinance.Common.enums
         Hold = 2,
         NonActionable = 3
     }
+
+    public enum RiskLevelEnum
+    {
+        Information = 0,
+        Low = 1,
+        Moderate = 2,
+        High = 3
+    }
 }

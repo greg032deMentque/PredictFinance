@@ -16,13 +16,6 @@ def test_simulate_ticker_uses_pattern_target(monkeypatch) -> None:
         target_price = 88.0
         invalidation_price = 103.0
 
-    class FakeDecision:
-        action = "sell"
-        actionable = True
-        confidence = 0.8
-        reason = "Break confirmed"
-        horizon_days = 20
-
     class FakePrediction:
         ticker = "AAPL"
         pattern = "DOUBLE_TOP"
@@ -34,7 +27,6 @@ def test_simulate_ticker_uses_pattern_target(monkeypatch) -> None:
         last_prob = 0.72
         n_windows = 80
         assessments = [FakeAssessment()]
-        decision_signal = FakeDecision()
 
     monkeypatch.setattr("finance_ia.model.simulate.predict_ticker", lambda **_kwargs: FakePrediction())
 
@@ -48,6 +40,6 @@ def test_simulate_ticker_uses_pattern_target(monkeypatch) -> None:
     assert result.ticker == "AAPL"
     assert result.pattern == "DOUBLE_TOP"
     assert result.phase == "neckline_break_confirmed"
-    assert result.recommendation == "sell"
+    assert result.assumption.startswith("Simulation projects a neutral scenario")
     assert result.estimated_return_pct == -0.12
     assert result.estimated_final_amount == 880.0

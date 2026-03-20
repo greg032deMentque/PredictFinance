@@ -6,7 +6,7 @@ from pathlib import Path
 from finance_ia.data.yahoo import fetch_ohlcv
 from finance_ia.features.indicators import add_indicators
 from finance_ia.io.artifacts import load_feature_columns, load_model
-from finance_ia.patterns import DecisionSignal, PatternAssessment, get_runtime_analyzer
+from finance_ia.patterns import PatternAssessment, get_runtime_analyzer
 
 
 @dataclass(slots=True)
@@ -21,11 +21,10 @@ class PredictResult:
     last_prob: float
     n_windows: int
     assessments: list[PatternAssessment]
-    decision_signal: DecisionSignal
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "schema_version": "2.0",
+            "schema_version": "3.0",
             "pattern": self.pattern,
             "phase": self.phase,
             "ticker": self.ticker,
@@ -36,7 +35,6 @@ class PredictResult:
             "last_prob": self.last_prob,
             "n_windows": self.n_windows,
             "pattern_assessments": [assessment.to_dict() for assessment in self.assessments],
-            "decision_signal": self.decision_signal.to_dict(),
         }
 
 
@@ -64,7 +62,6 @@ def predict_ticker(
     probabilities = model.predict_proba(inference_frame[feature_columns])[:, 1]
     analyzer = get_runtime_analyzer(pattern)
     assessment = analyzer.build_assessment(raw, float(probabilities[-1]))
-    decision_signal = analyzer.build_decision(assessment)
 
     return PredictResult(
         ticker=ticker.strip().upper(),
@@ -77,5 +74,4 @@ def predict_ticker(
         last_prob=float(probabilities[-1]),
         n_windows=int(len(probabilities)),
         assessments=[assessment],
-        decision_signal=decision_signal,
     )

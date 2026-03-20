@@ -7,11 +7,11 @@ from finance_ia.cli import evaluate as evaluate_cli
 from finance_ia.cli import predict as predict_cli
 from finance_ia.cli import simulate as simulate_cli
 from finance_ia.cli import train as train_cli
-from finance_ia.patterns.base import DecisionSignal, PatternAssessment
 from finance_ia.model.predict import PredictResult
 from finance_ia.model.simulate import SimulationResult
 from finance_ia.model.train import TrainResult
 from finance_ia.model.validate import ValidationResult
+from finance_ia.patterns.base import PatternAssessment
 
 
 def test_train_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
@@ -77,13 +77,6 @@ def test_predict_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
                     current_price=123.4,
                 )
             ],
-            decision_signal=DecisionSignal(
-                action="hold",
-                actionable=False,
-                confidence=0.33,
-                reason="Waiting for neckline break.",
-                horizon_days=10,
-            ),
         ),
     )
 
@@ -161,9 +154,7 @@ def test_simulate_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
             estimated_return_pct=-0.12,
             estimated_return_amount=-120.0,
             estimated_final_amount=880.0,
-            recommendation="sell",
-            confidence=0.9,
-            assumption="Simulation uses detected pattern structure, target price and invalidation level.",
+            assumption="Simulation projects a neutral scenario if the detected pattern continues toward its target.",
             last_prob=0.1,
             mean_prob=0.2,
             max_prob=0.3,
@@ -171,7 +162,6 @@ def test_simulate_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
             current_price=100.0,
             target_price=88.0,
             invalidation_price=103.0,
-            actionable=True,
         ),
     )
 
@@ -192,5 +182,5 @@ def test_simulate_cli_smoke(monkeypatch, capsys, tmp_path) -> None:
     stdout = capsys.readouterr().out
     payload = json.loads(stdout)
     assert payload["ticker"] == "AAPL"
-    assert payload["recommendation"] == "sell"
+    assert "recommendation" not in payload
     assert payload["estimated_final_amount"] == 880.0

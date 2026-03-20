@@ -47,6 +47,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
         private readonly ITickerService _tickerService;
         private readonly IPythonApiService _pythonApiService;
+        private readonly ITradingRecommendationService _tradingRecommendationService;
         private readonly IPatternCatalogService _patternCatalogService;
         private readonly PythonCliOptions _pythonOptions;
         private readonly IHostEnvironment _environment;
@@ -56,6 +57,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             IServiceProvider serviceProvider,
             ITickerService tickerService,
             IPythonApiService pythonApiService,
+            ITradingRecommendationService tradingRecommendationService,
             IPatternCatalogService patternCatalogService,
             IOptions<PythonCliOptions> pythonOptions,
             IHostEnvironment environment)
@@ -63,6 +65,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             _tickerService = tickerService;
             _pythonApiService = pythonApiService;
+            _tradingRecommendationService = tradingRecommendationService;
             _patternCatalogService = patternCatalogService;
             _pythonOptions = pythonOptions.Value;
             _environment = environment;
@@ -216,7 +219,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 userAsset = new UserAsset
                 {
-                    UserId = _currentUserId,
+                    UserId = GetRequiredCurrentUserId(),
                     AssetId = asset.Id,
                     Quantity = 0m
                 };
@@ -324,7 +327,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 userAsset = new UserAsset
                 {
-                    UserId = _currentUserId,
+                    UserId = GetRequiredCurrentUserId(),
                     AssetId = asset.Id,
                     Quantity = 0m
                 };
@@ -468,24 +471,22 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var completedAtUtc = DateTime.UtcNow;
             var userAsset = await EnsureUserAssetAsync(asset.Id, ct);
+            var recommendation = _tradingRecommendationService.EvaluateAnalysis(prediction);
             var analysisRun = await TryPersistAnalysisRunAsync(asset, requestedPattern, prediction, startedAtUtc, completedAtUtc, ct);
 
-            var action = ParseRecommendationAction(prediction.SuggestedAction);
-            var reason = BuildAnalysisReason(prediction.Pattern, prediction.ActionReason);
-
-            var recommendation = new Recommendation
+            var legacyRecommendation = new Recommendation
             {
                 UserAssetId = userAsset.Id,
-                Action = action,
-                Confidence = prediction.ActionConfidence,
+                Action = recommendation.Action,
+                Confidence = recommendation.Confidence,
                 RecommendedAtUtc = prediction.PredictedAt,
-                Reason = reason
+                Reason = recommendation.Reason
             };
 
-            await _financeDbContext.Set<Recommendation>().AddAsync(recommendation, ct);
+            await _financeDbContext.Set<Recommendation>().AddAsync(legacyRecommendation, ct);
             await _financeDbContext.SaveChangesAsync(ct);
 
-            return MapAnalysisResult(analysisRun?.Id ?? recommendation.Id, asset, prediction, reason);
+            return MapAnalysisResult(analysisRun?.Id ?? legacyRecommendation.Id, asset, prediction, recommendation);
         }
 
         public async Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(int take, CancellationToken ct = default)
@@ -516,7 +517,20 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .Take(size)
                 .ToListAsync(ct);
 
-            return _mapper.Map<List<AnalysisResultViewModel>>(recommendations);
+            return recommendations.Select(recommendation => new AnalysisResultViewModel
+            {
+                Id = recommendation.Id,
+                Symbol = recommendation.UserAsset.Asset.Symbol,
+                CompanyName = recommendation.UserAsset.Asset.Name ?? recommendation.UserAsset.Asset.Symbol,
+                Pattern = TradingPatternEnum.DoubleTop,
+                Probability = recommendation.Confidence,
+                RecommendationAction = recommendation.Action,
+                RecommendationReason = recommendation.Reason ?? "Aucune justification",
+                RiskLevel = RiskLevelEnum.Information,
+                PredictedAt = recommendation.RecommendedAtUtc,
+                IsActionable = recommendation.Action != RecommendationActionEnum.Hold && recommendation.Action != RecommendationActionEnum.NonActionable,
+                ModelStatus = ModelStatusEnum.NoGo
+            }).ToList();
         }
 
         private async Task<AnalysisRun?> TryPersistAnalysisRunAsync(
@@ -534,7 +548,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var analysisRun = new AnalysisRun
             {
-                UserId = _currentUserId,
+                UserId = GetRequiredCurrentUserId(),
                 AssetId = asset.Id,
                 RequestedPattern = ParseTradingPattern(requestedPattern),
                 Status = "Completed",
@@ -542,16 +556,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 CompletedAtUtc = completedAtUtc,
                 RawPayload = JsonSerializer.Serialize(prediction),
                 PatternAssessments = BuildPatternAssessments(prediction),
-                DecisionSignal = new DecisionSignal
-                {
-                    Action = ParseRecommendationAction(prediction.SuggestedAction),
-                    IsActionable = prediction.IsActionable,
-                    Confidence = prediction.ActionConfidence,
-                    HorizonDays = prediction.HorizonDays,
-                    Reason = string.IsNullOrWhiteSpace(prediction.ActionReason)
-                        ? "Aucune justification"
-                        : prediction.ActionReason.Trim()
-                },
+                DecisionSignal = BuildDecisionSignal(prediction),
                 ModelSnapshot = new ModelSnapshot
                 {
                     ModelStatus = prediction.ModelStatus,
@@ -595,7 +600,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var analysisRun = new AnalysisRun
             {
-                UserId = _currentUserId,
+                UserId = GetRequiredCurrentUserId(),
                 AssetId = asset.Id,
                 RequestedPattern = ParseTradingPattern(requestedPattern),
                 Status = "Failed",
@@ -619,7 +624,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 return prediction.Patterns
                     .Select(pattern => new PatternAssessment
                     {
-                        Pattern = ParseTradingPattern(pattern.Pattern),
+                        Pattern = pattern.Pattern,
                         Phase = string.IsNullOrWhiteSpace(pattern.Phase) ? prediction.Phase : pattern.Phase.Trim(),
                         Probability = pattern.Probability,
                         Confidence = pattern.Confidence,
@@ -638,10 +643,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             [
                 new PatternAssessment
                 {
-                    Pattern = ParseTradingPattern(prediction.Pattern),
+                    Pattern = prediction.Pattern,
                     Phase = prediction.Phase,
                     Probability = prediction.LastProbability,
-                    Confidence = prediction.ActionConfidence,
+                    Confidence = prediction.LastProbability,
                     CurrentPrice = prediction.CurrentPrice,
                     NecklinePrice = prediction.NecklinePrice,
                     TargetPrice = prediction.TargetPrice,
@@ -717,26 +722,29 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                     ModelDir = _patternCatalogService.Resolve(normalizedPattern).ModelDir,
                     Period = _pythonOptions.Period,
                     InvestmentAmount = request.InvestmentAmount,
-                    HorizonDays = horizonDays,
-                    SellThreshold = _pythonOptions.SellThreshold,
-                    BuyThreshold = _pythonOptions.BuyThreshold
+                    HorizonDays = horizonDays
                 });
+            var recommendation = _tradingRecommendationService.EvaluateSimulation(simulation);
 
             return new SimulationResultViewModel
             {
                 Symbol = symbol,
+                Pattern = simulation.Pattern,
                 Phase = simulation.Phase,
                 InvestmentAmount = decimal.Round(simulation.InvestmentAmount, 2),
                 HorizonDays = simulation.HorizonDays,
                 EstimatedReturnAmount = decimal.Round(simulation.EstimatedReturnAmount, 2),
                 EstimatedReturnPct = decimal.Round(simulation.EstimatedReturnPct, 4),
                 EstimatedFinalAmount = decimal.Round(simulation.EstimatedFinalAmount, 2),
-                Recommendation = simulation.Recommendation,
                 Assumption = simulation.Assumption,
                 CurrentPrice = simulation.CurrentPrice,
+                Probability = simulation.LastProbability,
+                RecommendationAction = recommendation.Action,
+                RecommendationReason = recommendation.Reason,
+                RiskLevel = recommendation.RiskLevel,
+                IsActionable = recommendation.IsActionable,
                 TargetPrice = simulation.TargetPrice,
-                InvalidationPrice = simulation.InvalidationPrice,
-                IsActionable = simulation.IsActionable
+                InvalidationPrice = simulation.InvalidationPrice
             };
         }
 
@@ -820,7 +828,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var created = new UserAsset
             {
-                UserId = _currentUserId,
+                UserId = GetRequiredCurrentUserId(),
                 AssetId = assetId,
                 Quantity = 0m
             };
@@ -833,6 +841,16 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         private static string NormalizeSymbol(string? symbol)
         {
             return (symbol ?? string.Empty).Trim().ToUpperInvariant();
+        }
+
+        private string GetRequiredCurrentUserId()
+        {
+            if (!string.IsNullOrWhiteSpace(_currentUserId))
+            {
+                return _currentUserId;
+            }
+
+            throw new InvalidOperationException("Aucun utilisateur courant n'est disponible.");
         }
 
         private void EnsureSymbolIsAllowed(string symbol)
@@ -922,22 +940,11 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             throw new ArgumentException("Le type de transaction doit etre Buy ou Sell.", nameof(rawType));
         }
 
-        private static RecommendationActionEnum ParseRecommendationAction(string? action)
-        {
-            var normalized = (action ?? string.Empty).Trim();
-            if (Enum.TryParse<RecommendationActionEnum>(normalized, true, out var parsed))
-            {
-                return parsed;
-            }
-
-            return RecommendationActionEnum.Hold;
-        }
-
         private static AnalysisResultViewModel MapAnalysisResult(
             string id,
             Asset asset,
             PredictOut prediction,
-            string reason)
+            TradingRecommendationResult recommendation)
         {
             return new AnalysisResultViewModel
             {
@@ -946,26 +953,20 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 CompanyName = asset.Name ?? asset.Symbol,
                 Pattern = prediction.Pattern,
                 Phase = prediction.Phase,
-                Confidence = prediction.ActionConfidence,
-                Recommendation = prediction.SuggestedAction,
-                Reason = reason,
-                RiskLevel = InferRiskLevel(prediction.ActionConfidence, prediction.IsActionable),
-                HorizonDays = prediction.HorizonDays,
+                Probability = prediction.LastProbability,
+                RecommendationAction = recommendation.Action,
+                RecommendationReason = recommendation.Reason,
+                RiskLevel = recommendation.RiskLevel,
+                RecommendationHorizonDays = recommendation.HorizonDays,
                 PredictedAt = prediction.PredictedAt,
-                IsActionable = prediction.IsActionable,
-                ModelStatus = prediction.ModelStatus.ToString(),
+                IsActionable = recommendation.IsActionable,
+                ModelStatus = prediction.ModelStatus,
                 ModelMessage = prediction.ModelMessage,
                 CurrentPrice = prediction.CurrentPrice,
+                NecklinePrice = prediction.NecklinePrice,
                 TargetPrice = prediction.TargetPrice,
                 InvalidationPrice = prediction.InvalidationPrice
             };
-        }
-
-        private static string BuildAnalysisReason(string pattern, string? reason)
-        {
-            var safePattern = string.IsNullOrWhiteSpace(pattern) ? "UNKNOWN" : pattern.Trim();
-            var safeReason = string.IsNullOrWhiteSpace(reason) ? "Aucune justification" : reason.Trim();
-            return $"Pattern={safePattern};Reason={safeReason}";
         }
 
         private static string NormalizeRequestedAnalysisPattern(string? requestedPattern)
@@ -1016,32 +1017,28 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return next;
         }
 
-        private static string InferRiskLevel(decimal confidence, bool actionable)
-        {
-            if (!actionable)
-            {
-                return "Information";
-            }
-
-            if (confidence >= 0.75m)
-            {
-                return "Faible";
-            }
-
-            if (confidence >= 0.45m)
-            {
-                return "Modere";
-            }
-
-            return "Eleve";
-        }
-
         private static string GuessMarket(string symbol)
         {
             return symbol switch
             {
                 "AAPL" or "MSFT" or "NVDA" or "AMZN" or "GOOGL" or "META" => "NASDAQ",
                 _ => "NYSE"
+            };
+        }
+
+        private DecisionSignal BuildDecisionSignal(PredictOut prediction)
+        {
+            var recommendation = _tradingRecommendationService.EvaluateAnalysis(prediction);
+
+            return new DecisionSignal
+            {
+                Action = recommendation.Action,
+                IsActionable = recommendation.IsActionable,
+                Confidence = recommendation.Confidence,
+                HorizonDays = recommendation.HorizonDays,
+                Reason = string.IsNullOrWhiteSpace(recommendation.Reason)
+                    ? "Aucune justification"
+                    : recommendation.Reason.Trim()
             };
         }
     }

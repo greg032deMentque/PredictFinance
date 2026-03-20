@@ -189,8 +189,13 @@ namespace BackPredictFinance.Services.AuthServices
                 salt = SHA256.HashData(Encoding.UTF8.GetBytes(_userJwt.Secret));
             }
 
-            using var pbkdf2 = new Rfc2898DeriveBytes(Encoding.UTF8.GetBytes(presented), salt, 100_000, HashAlgorithmName.SHA256);
-            return Convert.ToBase64String(pbkdf2.GetBytes(32));
+            var derivedBytes = Rfc2898DeriveBytes.Pbkdf2(
+                Encoding.UTF8.GetBytes(presented),
+                salt,
+                100_000,
+                HashAlgorithmName.SHA256,
+                32);
+            return Convert.ToBase64String(derivedBytes);
         }
 
     }

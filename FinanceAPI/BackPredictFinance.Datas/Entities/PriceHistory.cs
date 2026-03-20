@@ -1,34 +1,33 @@
-using System.ComponentModel.DataAnnotations;
+ï»¿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BackPredictFinance.Datas.Entities
 {
     /// <summary>
-    /// Historique des valeurs d'un actif à chaque appel d'API
+    /// Historique des valeurs d'un actif Ã  chaque appel d'API
     /// </summary>
     public class PriceHistory : AuditableEntityBase
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        public string AssetId { get; set; }
+        public string AssetId { get; set; } = string.Empty;
         public Asset Asset { get; set; } = null!;
 
         /// <summary>
-        /// Horodatage de la requête API
+        /// Horodatage de la requÃªte API
         /// </summary>
         public DateTime RetrievedAtUtc { get; set; }
 
         /// <summary>
-        /// Prix unitaire retourné par l'API
+        /// Prix unitaire retournÃ© par l'API
         /// </summary>
         [Column(TypeName = "decimal(18,8)")]
         public decimal Price { get; set; }
 
         /// <summary>
-        /// Volume associé (optionnel)
+        /// Volume associÃ© (optionnel)
         /// </summary>
         [Column(TypeName = "decimal(18,4)")]
         public decimal? Volume { get; set; }
     }
 }
-

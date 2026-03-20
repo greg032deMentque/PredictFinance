@@ -34,5 +34,5 @@ def test_predict_ticker_returns_runtime_contract(monkeypatch, sample_ohlcv) -> N
     assert 0.0 <= payload["max_prob"] <= 1.0
     assert 0.0 <= payload["last_prob"] <= 1.0
     assert isinstance(payload["pattern_assessments"], list)
-    assert "decision_signal" in payload
-    assert "actionable" in payload["decision_signal"]
+    assert payload["schema_version"] == "3.0"
+    assert "decision_signal" not in payload

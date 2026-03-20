@@ -1,4 +1,4 @@
-@import "./variables.scss";
+@use "./variables" as *;
 
 .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label, .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label--float-above {
     font-size: 16px!important;

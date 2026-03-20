@@ -51,6 +51,36 @@
 
   <div class="card border-0 shadow-sm">
     <div class="card-body">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+        <div>
+          <p class="text-uppercase text-muted small mb-1">Analyse IA recente</p>
+          <h2 class="h5 mb-2">
+            {{ latestInsight?.Symbol || 'Aucune analyse recente' }}
+          </h2>
+          <p class="mb-0 text-body-secondary">
+            {{ latestInsightSummary }}
+          </p>
+        </div>
+
+        @if (latestInsight) {
+          <div class="d-flex flex-column align-items-lg-end gap-2">
+            <span class="badge" [class]="getBadgeClass(latestInsight.RecommendationAction)">
+              {{ formatRecommendation(latestInsight.RecommendationAction) }}
+            </span>
+            <div class="text-lg-end">
+              <div class="fw-semibold">{{ latestInsight.Probability | percent: '1.0-0' }}</div>
+              <small class="text-muted">{{ latestInsight.PredictedAt | date: 'dd/MM/yyyy HH:mm' }}</small>
+            </div>
+          </div>
+        } @else {
+          <a class="btn btn-outline-primary" [routerLink]="['/', userPaths.Finance]">Lancer une analyse</a>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="h6 text-uppercase text-muted mb-0">Dernieres analyses</h2>
         <a class="btn btn-sm btn-outline-primary" [routerLink]="['/', userPaths.Finance]">Voir tout</a>
@@ -62,8 +92,8 @@
             <tr>
               <th>Valeur</th>
               <th>Pattern</th>
-              <th>Confiance</th>
-              <th>Action</th>
+              <th>Probabilite</th>
+              <th>Conseil</th>
               <th>Date</th>
             </tr>
           </thead>
@@ -74,11 +104,11 @@
                   <div class="fw-semibold">{{ analysis.Symbol }}</div>
                   <small class="text-muted">{{ analysis.CompanyName }}</small>
                 </td>
-                <td>{{ analysis.Pattern }}</td>
-                <td>{{ analysis.Confidence | percent: '1.0-0' }}</td>
+                <td>{{ formatPattern(analysis.Pattern) }}</td>
+                <td>{{ analysis.Probability | percent: '1.0-0' }}</td>
                 <td>
-                  <span class="badge" [class]="getBadgeClass(analysis.Recommendation)">
-                    {{ analysis.Recommendation }}
+                  <span class="badge" [class]="getBadgeClass(analysis.RecommendationAction)">
+                    {{ formatRecommendation(analysis.RecommendationAction) }}
                   </span>
                 </td>
                 <td>{{ analysis.PredictedAt | date: 'dd/MM HH:mm' }}</td>

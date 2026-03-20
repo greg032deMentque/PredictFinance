@@ -1,16 +1,16 @@
-using BackPredictFinance.Common.enums;
+ï»¿using BackPredictFinance.Common.enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BackPredictFinance.Datas.Entities
 {
     /// <summary>
-    /// Historiser chaque opération pour reproduire l’évolution du portefeuille et calculer les gains/pertes.
+    /// Historiser chaque opÃ©ration pour reproduire lâ€™Ã©volution du portefeuille et calculer les gains/pertes.
     /// </summary>
     public class AssetTransaction : AuditableEntityBase
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string UserAssetId { get; set; }
+        public string UserAssetId { get; set; } = string.Empty;
         public UserAsset UserAsset { get; set; } = null!;
         public DateTime TimestampUtc { get; set; }
         public TransactionTypeEnum TransactionType { get; set; }  // Buy ou Sell
@@ -23,4 +23,3 @@ namespace BackPredictFinance.Datas.Entities
         public decimal Fees { get; set; }
     }
 }
-

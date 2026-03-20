@@ -1,4 +1,4 @@
-﻿import { CommonModule, CurrencyPipe, PercentPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, PercentPipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
@@ -6,7 +6,11 @@ import {
   CLIENT_SUPPORTED_PATTERNS,
   type ClientSimulationResult,
   ClientSimulationRequest,
-  type ClientSupportedPattern
+  type ClientSupportedPattern,
+  getPhaseLabel,
+  getRecommendationBadgeClass,
+  getRecommendationLabel,
+  getRiskLevelLabel
 } from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
@@ -33,35 +37,19 @@ export class FinanceSimulationComponent {
   });
 
   get recommendationLabel(): string {
-    const normalized = this.result?.Recommendation?.trim().toLowerCase() ?? '';
-
-    if (normalized === 'buy' || normalized === 'acheter') {
-      return 'Acheter';
-    }
-
-    if (normalized === 'sell' || normalized === 'vendre') {
-      return 'Vendre';
-    }
-
-    if (normalized === 'hold' || normalized === 'conserver') {
-      return 'Conserver';
-    }
-
-    return this.result?.Recommendation?.trim() || 'Conserver';
+    return getRecommendationLabel(this.result?.RecommendationAction ?? '');
   }
 
   get recommendationClass(): string {
-    const normalized = this.result?.Recommendation?.trim().toLowerCase() ?? '';
+    return getRecommendationBadgeClass(this.result?.RecommendationAction ?? '');
+  }
 
-    if (normalized === 'buy' || normalized === 'acheter') {
-      return 'text-bg-success';
-    }
+  get riskLevelLabel(): string {
+    return getRiskLevelLabel(this.result?.RiskLevel ?? '');
+  }
 
-    if (normalized === 'sell' || normalized === 'vendre') {
-      return 'text-bg-danger';
-    }
-
-    return 'text-bg-secondary';
+  get phaseLabel(): string {
+    return getPhaseLabel(this.result?.Phase ?? '');
   }
 
   get actionableSummary(): string {
@@ -70,10 +58,10 @@ export class FinanceSimulationComponent {
     }
 
     if (this.result.IsActionable) {
-      return `Le signal parait exploitable pour le moment. La posture suggeree est ${this.recommendationLabel.toLowerCase()}.`;
+      return `Le conseil produit retient actuellement une posture ${this.recommendationLabel.toLowerCase()}.`;
     }
 
-    return "Le signal reste indicatif pour l'instant. Il vaut mieux attendre une confirmation supplementaire avant d'agir.";
+    return "Le scenario reste informatif pour l'instant. Aucune action immediate n'est retenue.";
   }
 
   get performanceToneClass(): string {

@@ -31,8 +31,8 @@ def _make_ticker_frame(ticker: str) -> pd.DataFrame:
 
 def test_build_training_frame_aligns_schema(monkeypatch) -> None:
     monkeypatch.setattr(
-        "finance_ia.dataset.build_dataset.fetch_ohlcv",
-        lambda ticker, **_: _make_ticker_frame(ticker),
+        "finance_ia.dataset.build_dataset.fetch_many_ohlcv",
+        lambda tickers, **_: {ticker: _make_ticker_frame(ticker) for ticker in tickers},
     )
 
     config = TrainConfig(tickers=["AAPL", "MSFT"], start="2019-01-01", end="2020-01-01")
@@ -43,6 +43,19 @@ def test_build_training_frame_aligns_schema(monkeypatch) -> None:
     assert frame["date"].is_monotonic_increasing
     for column in FEATURE_COLUMNS:
         assert column in frame.columns
+
+
+def test_build_training_frame_skips_missing_ticker_frames(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "finance_ia.dataset.build_dataset.fetch_many_ohlcv",
+        lambda tickers, **_: {"AAPL": _make_ticker_frame("AAPL")},
+    )
+
+    config = TrainConfig(tickers=["AAPL", "MSFT"], start="2019-01-01", end="2020-01-01")
+    frame = build_training_frame(config)
+
+    assert not frame.empty
+    assert set(frame["ticker"].unique()) == {"AAPL"}
 
 
 def test_temporal_train_test_split_is_chronological() -> None:

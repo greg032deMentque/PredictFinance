@@ -46,7 +46,7 @@
             <small class="text-muted d-block">
               Horizon de {{ simulationResult.HorizonDays }} jours
               @if (simulationResult.Phase) {
-                · Phase detectee: {{ simulationResult.Phase }}
+                · Phase detectee: {{ phaseLabel }}
               }
             </small>
           </div>
@@ -78,8 +78,8 @@
           </div>
           <div class="col-6">
             <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
-              <small class="text-muted d-block">Signal</small>
-              <strong>{{ simulationResult.IsActionable ? 'Exploitable' : 'A surveiller' }}</strong>
+              <small class="text-muted d-block">Probabilite du pattern</small>
+              <strong>{{ simulationResult.Probability | percent: '1.0-0' }}</strong>
             </div>
           </div>
         </div>
@@ -111,8 +111,12 @@
 
         <div class="border-top pt-3">
           <p class="mb-2">{{ actionableSummary }}</p>
+          <p class="mb-2 text-body-secondary">{{ simulationResult.RecommendationReason }}</p>
+          <small class="text-muted d-block mb-1">
+            Risque: {{ riskLevelLabel }}
+          </small>
           <small class="text-muted d-block">
-            {{ simulationResult.Assumption || "Projection fournie a titre indicatif a partir du pattern detecte." }}
+            {{ simulationResult.Assumption || "Projection fournie a titre indicatif si le pattern se poursuit." }}
           </small>
         </div>
       </div>

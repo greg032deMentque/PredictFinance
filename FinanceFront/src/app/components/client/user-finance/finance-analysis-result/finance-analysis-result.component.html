@@ -8,42 +8,61 @@
       <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
         <div>
           <div class="h5 mb-1">{{ result.Symbol }} - {{ result.CompanyName }}</div>
-          <div class="text-muted">Pattern detecte: {{ result.Pattern }}</div>
-          @if (result.Phase) {
-            <div class="text-muted">Phase actuelle: {{ result.Phase }}</div>
-          }
+          <div class="text-muted">Pattern detecte: {{ patternLabel }}</div>
+          <div class="text-muted">Phase actuelle: {{ phaseLabel }}</div>
         </div>
         <span class="badge" [class]="recommendationClass">{{ recommendationLabel }}</span>
       </div>
 
-      <div class="row g-3 mb-3">
-        <div class="col-6 col-lg-3">
-          <small class="text-muted d-block">Confiance</small>
-          <strong>{{ result.Confidence | percent: '1.0-0' }}</strong>
-        </div>
-        <div class="col-6 col-lg-3">
-          <small class="text-muted d-block">Risque</small>
-          <strong>{{ result.RiskLevel }}</strong>
-        </div>
-        <div class="col-6 col-lg-3">
-          <small class="text-muted d-block">Horizon</small>
-          <strong>{{ result.HorizonDays }} jours</strong>
-        </div>
-        <div class="col-6 col-lg-3">
-          <small class="text-muted d-block">Date prediction</small>
-          <strong>{{ result.PredictedAt | date: 'dd/MM HH:mm' }}</strong>
+      <div class="finance-soft-panel mb-3">
+        <div class="fw-semibold mb-2">Analyse IA</div>
+        <div class="row g-3">
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Probabilite</small>
+            <strong>{{ result.Probability | percent: '1.0-0' }}</strong>
+          </div>
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Cours actuel</small>
+            <strong>{{ result.CurrentPrice | currency: 'USD' }}</strong>
+          </div>
+          @if (result.NecklinePrice !== null) {
+            <div class="col-6 col-lg-3">
+              <small class="text-muted d-block">Neckline</small>
+              <strong>{{ result.NecklinePrice | currency: 'USD' }}</strong>
+            </div>
+          }
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Date prediction</small>
+            <strong>{{ result.PredictedAt | date: 'dd/MM HH:mm' }}</strong>
+          </div>
         </div>
       </div>
 
+      <div class="finance-soft-panel mb-3">
+        <div class="fw-semibold mb-2">Conseil produit</div>
+        <div class="row g-3 mb-3">
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Posture</small>
+            <strong>{{ recommendationLabel }}</strong>
+          </div>
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Risque</small>
+            <strong>{{ riskLevelLabel }}</strong>
+          </div>
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Horizon</small>
+            <strong>{{ result.RecommendationHorizonDays }} jours</strong>
+          </div>
+          <div class="col-6 col-lg-3">
+            <small class="text-muted d-block">Actionnable</small>
+            <strong>{{ result.IsActionable ? 'Oui' : 'Non' }}</strong>
+          </div>
+        </div>
+
+        <p class="mb-0 text-body-secondary">{{ formattedReason }}</p>
+      </div>
+
       <div class="row g-3 mb-3">
-        <div class="col-6 col-lg-3">
-          <small class="text-muted d-block">Signal exploitable</small>
-          <strong>{{ result.IsActionable ? 'Oui' : 'Non' }}</strong>
-        </div>
-        <div class="col-6 col-lg-3">
-          <small class="text-muted d-block">Cours actuel</small>
-          <strong>{{ result.CurrentPrice | currency: 'USD' }}</strong>
-        </div>
         @if (result.TargetPrice !== null) {
           <div class="col-6 col-lg-3">
             <small class="text-muted d-block">Cible</small>
@@ -59,26 +78,14 @@
       </div>
 
       @if (result.ModelStatus || result.ModelMessage) {
-        <div class="alert alert-light border mb-3">
+        <div class="alert alert-light border mb-0">
           <div class="fw-semibold mb-1">Statut modele</div>
-          <div>{{ result.ModelStatus || 'n/a' }}</div>
+          <div>{{ modelStatusLabel }}</div>
           @if (result.ModelMessage) {
-          <small class="text-muted d-block mt-1">{{ result.ModelMessage }}</small>
+            <small class="text-muted d-block mt-1">{{ result.ModelMessage }}</small>
           }
         </div>
       }
-
-      <div class="finance-soft-panel">
-        <div class="fw-semibold mb-1">Lecture de l'analyse</div>
-        <p class="mb-2">{{ formattedReason }}</p>
-        <p class="mb-0 text-body-secondary">
-          @if (result.IsActionable) {
-            Le signal est exploitable pour le moment. L'action suggeree est <strong>{{ recommendationLabel }}</strong>.
-          } @else {
-            Le signal reste informatif pour le moment. Il vaut mieux attendre une confirmation avant d'agir.
-          }
-        </p>
-      </div>
     } @else {
       <div class="text-muted">Aucune analyse lancee pour le moment. Selectionne une valeur puis lance l'analyse IA.</div>
     }

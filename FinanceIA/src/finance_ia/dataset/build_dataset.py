@@ -3,30 +3,56 @@
 import pandas as pd
 
 from finance_ia.config import FEATURE_COLUMNS, TrainConfig
-from finance_ia.data.yahoo import fetch_ohlcv
+from finance_ia.data.yahoo import fetch_many_ohlcv
 from finance_ia.features.double_top import build_double_top_labels
 from finance_ia.features.indicators import add_indicators
+
+
+def _build_ticker_training_frame(
+    *,
+    ticker: str,
+    raw: pd.DataFrame,
+    config: TrainConfig,
+) -> pd.DataFrame | None:
+    enriched = add_indicators(raw)
+    labels = build_double_top_labels(enriched, config.pattern)
+
+    ticker_frame = enriched.copy()
+    ticker_frame["target"] = labels
+    ticker_frame["date"] = pd.to_datetime(ticker_frame.index).tz_localize(None)
+    ticker_frame["ticker"] = ticker
+
+    ticker_frame = ticker_frame.dropna(subset=FEATURE_COLUMNS)
+    if ticker_frame.empty:
+        return None
+
+    return ticker_frame[FEATURE_COLUMNS + ["target", "date", "ticker"]]
 
 
 def build_training_frame(config: TrainConfig) -> pd.DataFrame:
     """Build a multi-ticker tabular dataset with binary targets."""
     rows: list[pd.DataFrame] = []
+    frames_by_ticker = fetch_many_ohlcv(
+        config.tickers,
+        start=config.start,
+        end=config.end,
+        interval=config.interval,
+    )
 
     for ticker in config.tickers:
-        raw = fetch_ohlcv(ticker, start=config.start, end=config.end, interval=config.interval)
-        enriched = add_indicators(raw)
-        labels = build_double_top_labels(enriched, config.pattern)
-
-        ticker_frame = enriched.copy()
-        ticker_frame["target"] = labels
-        ticker_frame["date"] = pd.to_datetime(ticker_frame.index).tz_localize(None)
-        ticker_frame["ticker"] = ticker
-
-        ticker_frame = ticker_frame.dropna(subset=FEATURE_COLUMNS)
-        if ticker_frame.empty:
+        raw = frames_by_ticker.get(ticker)
+        if raw is None:
             continue
 
-        rows.append(ticker_frame[FEATURE_COLUMNS + ["target", "date", "ticker"]])
+        ticker_frame = _build_ticker_training_frame(
+            ticker=ticker,
+            raw=raw,
+            config=config,
+        )
+        if ticker_frame is None:
+            continue
+
+        rows.append(ticker_frame)
 
     if not rows:
         raise ValueError("No training rows were generated")

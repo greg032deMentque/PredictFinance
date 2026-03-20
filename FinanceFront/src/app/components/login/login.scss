@@ -1,4 +1,4 @@
-@import "../../../styles.scss";
+@use "../../../themes/variables" as *;
 
 .login-page {
   background: $finance-bg;

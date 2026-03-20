@@ -1,4 +1,4 @@
-using AutoMapper;
+ï»¿using AutoMapper;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using BCrypt.Net;
@@ -19,7 +19,7 @@ namespace BackPredictFinance.Services
     public class Messages
     {
         // Cette classe peut rester vide.
-        // Elle est utilisée pour identifier le fichier de ressources associé (Messages.resx et Messages.fr.resx).
+        // Elle est utilisÃ©e pour identifier le fichier de ressources associÃ© (Messages.resx et Messages.fr.resx).
     }
 
     public static class ClaimsPrincipalExtensions
@@ -40,7 +40,7 @@ namespace BackPredictFinance.Services
         public IConfiguration _configuration { get; }
         public FinanceDbContext _financeDbContext { get; }
         public IHttpContextAccessor? _httpContextAccessor { get; }
-        public List<IdentityUserRole<string>> _currentUserRoles { get; private set; }
+        public List<IdentityUserRole<string>> _currentUserRoles { get; private set; } = [];
 
         public string? _currentUserId { get; private set; }
 

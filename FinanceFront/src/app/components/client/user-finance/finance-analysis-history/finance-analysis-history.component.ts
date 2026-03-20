@@ -1,6 +1,13 @@
-﻿import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
+import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { ClientAnalysisResult } from '../../../../Models/client-finance-models/client-finance-models';
+import {
+  ClientAnalysisResult,
+  getPatternLabel,
+  getPhaseLabel,
+  getRecommendationBadgeClass,
+  getRecommendationLabel,
+  getRiskLevelLabel
+} from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
   selector: 'app-finance-analysis-history',
@@ -12,35 +19,23 @@ import { ClientAnalysisResult } from '../../../../Models/client-finance-models/c
 export class FinanceAnalysisHistoryComponent {
   @Input() history: ClientAnalysisResult[] = [];
 
-  getBadgeClass(recommendation: string): string {
-    const normalized = recommendation.trim().toLowerCase();
-
-    if (normalized === 'buy' || normalized === 'acheter') {
-      return 'text-bg-success';
-    }
-
-    if (normalized === 'sell' || normalized === 'vendre') {
-      return 'text-bg-danger';
-    }
-
-    return 'text-bg-secondary';
+  getBadgeClass(action: ClientAnalysisResult['RecommendationAction']): string {
+    return getRecommendationBadgeClass(action);
   }
 
-  getRecommendationLabel(recommendation: string): string {
-    const normalized = recommendation.trim().toLowerCase();
+  getRecommendationLabel(action: ClientAnalysisResult['RecommendationAction']): string {
+    return getRecommendationLabel(action);
+  }
 
-    if (normalized === 'buy' || normalized === 'acheter') {
-      return 'Acheter';
-    }
+  getPhaseLabel(phase: string): string {
+    return getPhaseLabel(phase);
+  }
 
-    if (normalized === 'sell' || normalized === 'vendre') {
-      return 'Vendre';
-    }
+  getRiskLevelLabel(riskLevel: ClientAnalysisResult['RiskLevel']): string {
+    return getRiskLevelLabel(riskLevel);
+  }
 
-    if (normalized === 'hold' || normalized === 'conserver') {
-      return 'Conserver';
-    }
-
-    return recommendation.trim() || 'Information';
+  getPatternLabel(pattern: ClientAnalysisResult['Pattern']): string {
+    return getPatternLabel(pattern);
   }
 }

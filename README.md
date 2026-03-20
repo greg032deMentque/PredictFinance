@@ -27,7 +27,7 @@ Il doit distinguer clairement:
 - analyse de candidats: quels patterns semblent plausibles sur une valeur
 - selection de pattern: quel pattern l'utilisateur ou le produit choisit d'explorer
 - phase: ou la valeur se situe dans la structure du pattern choisi
-- recommandation: action metier contextualisee a partir du pattern, de sa phase et de la confiance
+- recommandation: action metier contextualisee derivee cote `.NET` a partir du pattern, de sa phase et de la confiance
 
 Etat reel aujourd'hui:
 
@@ -47,13 +47,14 @@ Role de chaque brique:
 
 - `FinanceFront`: saisie utilisateur, navigation admin/client, affichage des resultats, consommation des endpoints backend
 - `FinanceAPI`: validation serveur, authentification, autorisation, orchestration metier, persistance, appel au moteur Python, exposition des DTO au front
-- `FinanceIA`: acquisition de donnees de marche, feature engineering, scoring, detection de phase, generation de sorties IA
+- `FinanceIA`: acquisition de donnees de marche, feature engineering, scoring, detection de phase, generation de sorties IA probabilistes
 
 Frontieres de responsabilite:
 
 - la logique metier critique ne doit pas vivre dans Angular
-- l'API ne doit pas reimplementer la logique pattern-specifique deja calculee par Python
+- l'API porte le conseil metier utilisateur et transporte des enums/codes stables
 - Python ne doit pas porter la logique d'autorisation, de role ou de restitution produit finale
+- Python ne doit plus produire directement `Buy` / `Sell` / `Hold`
 
 Schema textuel simple:
 
@@ -188,6 +189,13 @@ API -> Python aujourd'hui:
 - le pont `predict` transmet maintenant explicitement `--pattern`
 - un runtime HTTP FastAPI existe aussi mais n'est pas le pont principal actuellement
 
+Contrat logique actuel:
+
+- Python retourne `pattern`, `phase`, probabilites, niveaux techniques et `pattern_assessments`
+- Python ne retourne plus `decision_signal`
+- l'API derive ensuite `RecommendationAction`, `RecommendationReason`, `RiskLevel` et `IsActionable`
+- le front mappe ces codes/enums vers des libelles et badges UX
+
 Statuts fonctionnels attendus a stabiliser:
 
 - succes
@@ -211,7 +219,9 @@ Champs structurants a preserver ou generaliser:
 - `pattern`
 - `phase`
 - `pattern_assessments`
-- `decision_signal`
+- `RecommendationAction`
+- `RecommendationReason`
+- `RiskLevel`
 - `modelStatus`
 - `modelMessage`
 - `targetPrice`
@@ -312,6 +322,8 @@ Contraintes OWASP:
 - limitation des erreurs techniques exposees
 - journalisation sans fuite sensible
 - hardening du pont .NET / Python
+- rejection des enums/codes invalides
+- mapping UX controle cote front pour les domaines fermes
 
 Attentes SonarQube:
 
@@ -369,6 +381,7 @@ Points a corriger:
 Interdiction:
 
 - aucune logique metier critique de pattern, phase ou recommandation dans Angular
+- aucun libelle "pret a afficher" pour les domaines fermes en provenance du backend
 
 ## 11. Backend .NET
 
@@ -466,6 +479,7 @@ Regles obligatoires:
 - ne pas lancer de refonte big bang
 - stabiliser les contrats avant toute extension fonctionnelle
 - ne pas dupliquer la logique pattern/metier entre .NET et Python
+- garder la logique de conseil utilisateur dans `.NET`, pas dans `FinanceIA`
 - ne pas hardcoder `DOUBLE_TOP` dans les nouvelles couches
 - ne pas mettre de logique metier critique dans Angular
 - privilegier de petites etapes validables

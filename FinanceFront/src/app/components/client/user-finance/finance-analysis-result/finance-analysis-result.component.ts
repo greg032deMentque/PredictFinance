@@ -1,6 +1,14 @@
-﻿import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
+import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { ClientAnalysisResult } from '../../../../Models/client-finance-models/client-finance-models';
+import {
+  ClientAnalysisResult,
+  getModelStatusLabel,
+  getPatternLabel,
+  getPhaseLabel,
+  getRecommendationBadgeClass,
+  getRecommendationLabel,
+  getRiskLevelLabel
+} from '../../../../Models/client-finance-models/client-finance-models';
 
 @Component({
   selector: 'app-finance-analysis-result',
@@ -14,56 +22,33 @@ export class FinanceAnalysisResultComponent {
   @Input() result: ClientAnalysisResult | null = null;
 
   get recommendationLabel(): string {
-    return this.toFrenchRecommendation(this.result?.Recommendation ?? '');
-  }
-
-  get formattedReason(): string {
-    const rawReason = this.result?.Reason?.trim() ?? '';
-    if (rawReason.length === 0) {
-      return "L'analyse ne contient pas encore de detail supplementaire.";
-    }
-
-    const reasonMatch = /(?:^|;)Reason=(.+)$/i.exec(rawReason);
-    if (reasonMatch?.[1]) {
-      return reasonMatch[1].trim();
-    }
-
-    return rawReason;
+    return getRecommendationLabel(this.result?.RecommendationAction ?? '');
   }
 
   get recommendationClass(): string {
-    if (!this.result) {
-      return 'text-bg-secondary';
-    }
-
-    const normalized = this.result.Recommendation.trim().toLowerCase();
-
-    if (normalized === 'buy' || normalized === 'acheter') {
-      return 'text-bg-success';
-    }
-
-    if (normalized === 'sell' || normalized === 'vendre') {
-      return 'text-bg-danger';
-    }
-
-    return 'text-bg-secondary';
+    return getRecommendationBadgeClass(this.result?.RecommendationAction ?? '');
   }
 
-  private toFrenchRecommendation(recommendation: string): string {
-    const normalized = recommendation.trim().toLowerCase();
+  get riskLevelLabel(): string {
+    return getRiskLevelLabel(this.result?.RiskLevel ?? '');
+  }
 
-    if (normalized === 'buy' || normalized === 'acheter') {
-      return 'Acheter';
-    }
+  get patternLabel(): string {
+    return getPatternLabel(this.result?.Pattern ?? '');
+  }
 
-    if (normalized === 'sell' || normalized === 'vendre') {
-      return 'Vendre';
-    }
+  get phaseLabel(): string {
+    return getPhaseLabel(this.result?.Phase ?? '');
+  }
 
-    if (normalized === 'hold' || normalized === 'conserver') {
-      return 'Conserver';
-    }
+  get modelStatusLabel(): string {
+    return getModelStatusLabel(this.result?.ModelStatus ?? '');
+  }
 
-    return recommendation.trim() || 'Information';
+  get formattedReason(): string {
+    const rawReason = this.result?.RecommendationReason?.trim() ?? '';
+    return rawReason.length > 0
+      ? rawReason
+      : "Aucune justification metier supplementaire n'est disponible.";
   }
 }

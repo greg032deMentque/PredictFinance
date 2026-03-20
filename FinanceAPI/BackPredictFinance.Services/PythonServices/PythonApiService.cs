@@ -14,7 +14,6 @@ namespace BackPredictFinance.Services.PythonServices
     {
         Task<PredictOut> PredictAsync(AssetIn asset);
         Task<SimulationOut> SimulateAsync(PythonSimulationRequest request);
-        Task<RecommendationOut> RecommendAsync(RecommendationIn rec);
         Task<bool> HealthCheckAsync();
     }
 
@@ -71,7 +70,7 @@ namespace BackPredictFinance.Services.PythonServices
             {
                 Symbol = parsed.Symbol,
                 PredictedAt = parsed.AsOf,
-                Pattern = parsed.Pattern,
+                Pattern = ParseTradingPattern(parsed.Pattern),
                 Phase = parsed.Phase,
                 CurrentPrice = parsed.CurrentPrice,
                 LastProbability = parsed.LastProbability,
@@ -80,11 +79,6 @@ namespace BackPredictFinance.Services.PythonServices
                 ProbabilityPct = parsed.LastProbability * 100m,
                 MeanProbabilityPct = parsed.MeanProbability * 100m,
                 MaxProbabilityPct = parsed.MaxProbability * 100m,
-                SuggestedAction = parsed.DecisionSignal.Action,
-                IsActionable = parsed.DecisionSignal.Actionable,
-                ActionReason = parsed.DecisionSignal.Reason,
-                ActionConfidence = parsed.DecisionSignal.Confidence,
-                HorizonDays = parsed.DecisionSignal.HorizonDays,
                 TargetPrice = primaryAssessment?.TargetPrice,
                 InvalidationPrice = primaryAssessment?.InvalidationPrice,
                 NecklinePrice = primaryAssessment?.NecklinePrice,
@@ -101,7 +95,7 @@ namespace BackPredictFinance.Services.PythonServices
                 Patterns = parsed.PatternAssessments
                     .Select(assessment => new PatternPrediction
                     {
-                        Pattern = assessment.Pattern,
+                        Pattern = ParseTradingPattern(assessment.Pattern),
                         Phase = assessment.Phase,
                         Probability = assessment.Probability,
                         Confidence = assessment.Confidence,
@@ -114,20 +108,6 @@ namespace BackPredictFinance.Services.PythonServices
                         IsPrimary = assessment.IsPrimary
                     })
                     .ToList()
-            };
-        }
-
-        public async Task<RecommendationOut> RecommendAsync(RecommendationIn rec)
-        {
-            var prediction = await PredictAsync(new AssetIn { Symbol = rec.Symbol });
-
-            return new RecommendationOut
-            {
-                Symbol = prediction.Symbol,
-                RecommendedAt = prediction.PredictedAt,
-                Action = prediction.SuggestedAction,
-                Confidence = prediction.ActionConfidence,
-                Reason = prediction.ActionReason
             };
         }
 
@@ -160,9 +140,7 @@ namespace BackPredictFinance.Services.PythonServices
                 ModelDir = string.IsNullOrWhiteSpace(request.ModelDir) ? patternConfiguration.ModelDir : request.ModelDir,
                 Period = string.IsNullOrWhiteSpace(request.Period) ? _options.Period : request.Period,
                 InvestmentAmount = request.InvestmentAmount,
-                HorizonDays = Math.Clamp(request.HorizonDays, 1, 365),
-                SellThreshold = request.SellThreshold <= 0m ? _options.SellThreshold : request.SellThreshold,
-                BuyThreshold = request.BuyThreshold <= 0m ? _options.BuyThreshold : request.BuyThreshold
+                HorizonDays = Math.Clamp(request.HorizonDays, 1, 365)
             };
 
             var rawPayload = await RunSimulateCliAsync(simulationRequest);
@@ -171,15 +149,17 @@ namespace BackPredictFinance.Services.PythonServices
             return new SimulationOut
             {
                 Symbol = parsed.Symbol,
-                Pattern = parsed.Pattern,
+                Pattern = ParseTradingPattern(parsed.Pattern),
+                Phase = parsed.Phase,
                 SimulatedAt = parsed.AsOf,
+                CurrentPrice = parsed.CurrentPrice,
+                TargetPrice = parsed.TargetPrice,
+                InvalidationPrice = parsed.InvalidationPrice,
                 InvestmentAmount = parsed.InvestmentAmount,
                 HorizonDays = parsed.HorizonDays,
                 EstimatedReturnPct = parsed.EstimatedReturnPct,
                 EstimatedReturnAmount = parsed.EstimatedReturnAmount,
                 EstimatedFinalAmount = parsed.EstimatedFinalAmount,
-                Recommendation = parsed.Recommendation,
-                Confidence = parsed.Confidence,
                 Assumption = parsed.Assumption,
                 LastProbability = parsed.LastProbability,
                 MeanProbability = parsed.MeanProbability,
@@ -255,10 +235,6 @@ namespace BackPredictFinance.Services.PythonServices
             startInfo.ArgumentList.Add(request.InvestmentAmount.ToString(CultureInfo.InvariantCulture));
             startInfo.ArgumentList.Add("--horizon-days");
             startInfo.ArgumentList.Add(request.HorizonDays.ToString(CultureInfo.InvariantCulture));
-            startInfo.ArgumentList.Add("--sell-threshold");
-            startInfo.ArgumentList.Add(request.SellThreshold.ToString(CultureInfo.InvariantCulture));
-            startInfo.ArgumentList.Add("--buy-threshold");
-            startInfo.ArgumentList.Add(request.BuyThreshold.ToString(CultureInfo.InvariantCulture));
 
             return await RunCliAsync("simulate", startInfo, request.Symbol, request.Pattern);
         }
@@ -383,12 +359,13 @@ namespace BackPredictFinance.Services.PythonServices
 
         private void LogCliFailure(string operation, string symbol, string pattern, int? exitCode, PythonCliErrorEnvelope envelope)
         {
+            var safeExitCode = exitCode?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
             _logger.LogError(
                 "Python CLI {Operation} failed for symbol {Symbol} pattern {Pattern}. exitCode={ExitCode} errorCode={ErrorCode} errorType={ErrorType} userMessage={UserMessage} technicalMessage={TechnicalMessage}",
                 operation,
-                symbol,
-                pattern,
-                exitCode,
+                symbol ?? string.Empty,
+                pattern ?? string.Empty,
+                safeExitCode,
                 envelope.ErrorCode,
                 envelope.ErrorType,
                 envelope.UserMessage,
@@ -467,7 +444,6 @@ namespace BackPredictFinance.Services.PythonServices
             var lastProb = GetRequiredDecimal(root, "last_prob");
             var nWindows = GetRequiredInt(root, "n_windows");
             var patternAssessments = ParsePatternAssessments(root);
-            var decisionSignal = ParseDecisionSignal(root);
 
             return new PythonPredictPayload
             {
@@ -480,8 +456,7 @@ namespace BackPredictFinance.Services.PythonServices
                 MaxProbability = Clamp01(maxProb),
                 LastProbability = Clamp01(lastProb),
                 NWindows = Math.Max(0, nWindows),
-                PatternAssessments = patternAssessments,
-                DecisionSignal = decisionSignal
+                PatternAssessments = patternAssessments
             };
         }
 
@@ -507,14 +482,16 @@ namespace BackPredictFinance.Services.PythonServices
             {
                 Symbol = symbol,
                 Pattern = pattern,
+                Phase = GetRequiredString(root, "phase"),
                 AsOf = DateTime.SpecifyKind(asOfDate, DateTimeKind.Utc),
+                CurrentPrice = GetRequiredDecimal(root, "current_price"),
+                TargetPrice = GetOptionalDecimal(root, "target_price"),
+                InvalidationPrice = GetOptionalDecimal(root, "invalidation_price"),
                 InvestmentAmount = GetRequiredDecimal(root, "investment_amount"),
                 HorizonDays = GetRequiredInt(root, "horizon_days"),
                 EstimatedReturnPct = GetRequiredDecimal(root, "estimated_return_pct"),
                 EstimatedReturnAmount = GetRequiredDecimal(root, "estimated_return_amount"),
                 EstimatedFinalAmount = GetRequiredDecimal(root, "estimated_final_amount"),
-                Recommendation = GetRequiredString(root, "recommendation").ToLowerInvariant(),
-                Confidence = GetRequiredDecimal(root, "confidence"),
                 Assumption = GetRequiredString(root, "assumption"),
                 LastProbability = GetRequiredDecimal(root, "last_prob"),
                 MeanProbability = GetRequiredDecimal(root, "mean_prob"),
@@ -626,24 +603,6 @@ namespace BackPredictFinance.Services.PythonServices
             }
 
             return assessments;
-        }
-
-        private static PythonDecisionSignalPayload ParseDecisionSignal(JsonElement root)
-        {
-            if (!root.TryGetProperty("decision_signal", out var decisionElement) ||
-                decisionElement.ValueKind != JsonValueKind.Object)
-            {
-                throw new FormatException("Missing or invalid 'decision_signal'");
-            }
-
-            return new PythonDecisionSignalPayload
-            {
-                Action = GetRequiredString(decisionElement, "action").Trim().ToLowerInvariant(),
-                Actionable = GetRequiredBool(decisionElement, "actionable"),
-                Confidence = Clamp01(GetRequiredDecimal(decisionElement, "confidence")),
-                Reason = GetRequiredString(decisionElement, "reason"),
-                HorizonDays = Math.Max(0, GetRequiredInt(decisionElement, "horizon_days"))
-            };
         }
 
         private static ModelCheckResult BuildNumericCheck(ModelCheckEnum check, decimal? value, decimal threshold)
@@ -823,6 +782,20 @@ namespace BackPredictFinance.Services.PythonServices
             if (value < 0m) return 0m;
             if (value > 1m) return 1m;
             return value;
+        }
+
+        private static TradingPatternEnum ParseTradingPattern(string? rawPattern)
+        {
+            var normalized = (rawPattern ?? string.Empty).Trim().ToUpperInvariant();
+            return normalized switch
+            {
+                "HEAD_AND_SHOULDERS" => TradingPatternEnum.HeadAndShoulders,
+                "DOUBLE_TOP" => TradingPatternEnum.DoubleTop,
+                "DOUBLE_BOTTOM" => TradingPatternEnum.DoubleBottom,
+                "CUP_AND_HANDLE" => TradingPatternEnum.CupAndHandle,
+                "TRIANGLE" => TradingPatternEnum.Triangle,
+                _ => TradingPatternEnum.DoubleTop
+            };
         }
 
     }

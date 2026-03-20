@@ -21,9 +21,5 @@ namespace BackPredictFinance.API.Controllers
         [HttpGet("predict/{symbol}")]
         public async Task<IActionResult> PredictBySymbol([FromRoute] string symbol)
             => Ok(await _py.PredictAsync(new AssetIn { Symbol = symbol }));
-
-        [HttpPost("recommend")]
-        public async Task<IActionResult> Recommend([FromBody] RecommendationIn rec)
-            => Ok(await _py.RecommendAsync(rec));
     }
 }

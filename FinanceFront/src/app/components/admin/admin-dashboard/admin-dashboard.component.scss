@@ -1,4 +1,4 @@
-@import "../../../../themes/variables.scss";
+@use "../../../../themes/variables" as *;
 
 :host {
   display: block;

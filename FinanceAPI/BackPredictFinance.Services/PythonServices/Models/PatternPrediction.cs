@@ -1,8 +1,10 @@
+using BackPredictFinance.Common.enums;
+
 namespace BackPredictFinance.Services.PythonServices.Models
 {
     public sealed class PatternPrediction
     {
-        public string Pattern { get; set; } = string.Empty;
+        public TradingPatternEnum Pattern { get; set; } = TradingPatternEnum.DoubleTop;
         public string Phase { get; set; } = string.Empty;
         public decimal Probability { get; set; }
         public decimal Confidence { get; set; }

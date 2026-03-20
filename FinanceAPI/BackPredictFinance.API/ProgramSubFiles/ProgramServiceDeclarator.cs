@@ -47,6 +47,7 @@ Console.WriteLine($"services.AddScoped<{service}>();");
             services.AddScoped<IAssetService, AssetService>();
             services.AddScoped<AnalyticService>();
             services.AddScoped<ITickerService, TickerService>();
+            services.AddScoped<ITradingRecommendationService, TradingRecommendationService>();
             services.AddScoped<IClientFinanceService, ClientFinanceService>();
 
         }

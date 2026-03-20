@@ -13,7 +13,7 @@ namespace BackPredictFinance.Tests
             var payload = """
                 {
                   "schema_version": "1.0",
-                  "source": "finance_ia.cli",
+                  "source": "cli",
                   "operation": "predict",
                   "error_code": "artifact_missing",
                   "error_type": "FileNotFoundError",
@@ -55,7 +55,7 @@ namespace BackPredictFinance.Tests
             var envelope = new PythonCliErrorEnvelope
             {
                 SchemaVersion = "1.0",
-                Source = "finance_ia.cli",
+                Source = "cli",
                 Operation = "simulate",
                 ErrorCode = "invalid_input",
                 ErrorType = "ValueError",

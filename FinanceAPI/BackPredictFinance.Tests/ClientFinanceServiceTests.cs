@@ -59,7 +59,7 @@ namespace BackPredictFinance.Tests
             var pythonEnvelope = new PythonCliErrorEnvelope
             {
                 SchemaVersion = "1.0",
-                Source = "finance_ia.cli",
+                Source = "cli",
                 Operation = "predict",
                 ErrorCode = "artifact_missing",
                 ErrorType = "FileNotFoundError",
@@ -75,6 +75,7 @@ namespace BackPredictFinance.Tests
             pythonApiService
                 .Setup(service => service.PredictAsync(It.IsAny<AssetIn>()))
                 .ThrowsAsync(pythonException);
+            var tradingRecommendationService = new Mock<ITradingRecommendationService>();
 
             var tickerService = new Mock<ITickerService>();
             var patternCatalogService = new Mock<IPatternCatalogService>();
@@ -95,6 +96,7 @@ namespace BackPredictFinance.Tests
                 scopedProvider,
                 tickerService.Object,
                 pythonApiService.Object,
+                tradingRecommendationService.Object,
                 patternCatalogService.Object,
                 Options.Create(new PythonCliOptions()),
                 hostEnvironment.Object);

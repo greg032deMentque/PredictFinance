@@ -2,6 +2,15 @@
 
 Date de cloture: 2026-03-11
 
+## Mise a jour structurante du 2026-03-20
+
+Architecture verrouillee:
+
+- `FinanceIA` ne produit plus de recommandation d'action; il retourne uniquement probabilite + contexte de pattern
+- `FinanceAPI` derive le conseil metier (`Buy` / `Sell` / `Hold`) via une couche dediee
+- `FinanceFront` mappe les enums/codes backend vers les libelles et badges UX
+- OWASP et SonarQube restent des contraintes explicites sur ce flux
+
 ## Objectif
 
 Clore le plan MVP "solide" en validant un socle coherent sur 3 blocs:
@@ -30,8 +39,10 @@ Fichiers clefs:
 
 ### 2) Contrats API et couche service
 - [x] Ajout des nouveaux view models client pour profil et chart d'actif.
-- [x] Evolution du mapping de resultat d'analyse avec phase, confiance, statut modele, signal actionnable.
+- [x] Evolution du mapping de resultat d'analyse avec separation explicite entre analyse IA et conseil metier.
 - [x] Consolidation des contrats Python cote API (predict/simulate/quality gate).
+- [x] Standardisation des erreurs CLI Python en JSON (`stderr`) avec mapping .NET et persistance des echecs d'analyse dans `AnalysisRun`.
+- [x] Introduction d'une couche metier dediee au conseil utilisateur et alignement des enums/codes entre API et front.
 
 Fichiers clefs:
 - `FinanceAPI/BackPredictFinance.ViewModels/ClientFinanceViewModels/*.cs`
@@ -41,7 +52,7 @@ Fichiers clefs:
 ### 3) IA modulaire et output metier
 - [x] Ajout d'une structure patterns/runtime cote IA.
 - [x] Enrichissement de la detection Double Top avec phases metier.
-- [x] Adaptation des modeles predict/simulate pour des sorties exploitables cote produit.
+- [x] Adaptation des modeles predict/simulate pour des sorties `probabilite + contexte`, sans `decision_signal` Python.
 - [x] Couverture tests IA alignee (runtime + guardrails + smoke).
 
 Fichiers clefs:
@@ -53,8 +64,9 @@ Fichiers clefs:
 - `FinanceIA/tests/*`
 
 ### 4) Front client/admin
-- [x] Adaptation des ecrans admin/client pour les nouveaux champs d'analyse et de simulation.
+- [x] Adaptation des ecrans admin/client pour distinguer analyse IA et conseil produit.
 - [x] Evolution du service Angular de finance client vers les nouveaux contrats.
+- [x] Mapping centralise des enums/codes backend vers les libelles et badges UX.
 
 Fichiers clefs:
 - `FinanceFront/src/app/components/admin/admin-analyse-finance/*`
@@ -73,15 +85,16 @@ Fichier clef:
 ## Validation effectuee
 
 - [x] `dotnet build FinanceAPI/BackPredictFinance.sln -nologo` reussi.
-- [x] `dotnet test FinanceAPI/BackPredictFinance.Tests/BackPredictFinance.Tests.csproj --no-build` execute (0 test detecte).
+- [x] `dotnet test FinanceAPI/BackPredictFinance.Tests/BackPredictFinance.Tests.csproj` execute (10 tests OK).
 - [x] `npx tsc -p tsconfig.app.json --noEmit` reussi.
 - [x] `npx tsc -p tsconfig.spec.json --noEmit` reussi.
-- [x] `FinanceIA: .venv\\Scripts\\python.exe -m pytest tests -q -p no:cacheprovider` reussi (20 passed).
+- [x] `FinanceIA: .venv\\Scripts\\python.exe -m pytest -q` reussi (23 tests OK).
+- [x] `FinanceFront: npm run build` reussi.
 
 ## Backlog post-plan (non bloquant MVP)
 
 1. Migrations EF Core dediees aux nouvelles entites d'analyse.
 2. Secret management prod (JWT, credentials serveur) hors fichiers versionnes.
 3. CORS whitelist stricte par environnement et revue rate limiting.
-4. Remediation dependance vulnerable `MimeKit 4.14.0`.
-5. Ajout de vrais tests API (auth refresh rotation, isolation multi-user, roles).
+4. Ajouter des tests d'integration API/front autour des enums/codes et de leur mapping UX.
+5. Ajouter de vrais tests API (auth refresh rotation, isolation multi-user, roles).

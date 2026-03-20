@@ -6,6 +6,7 @@ export * from './client-transaction-create-request.model';
 export * from './client-transaction-item.model';
 export * from './client-analysis-launch-request.model';
 export * from './client-analysis-result.model';
+export * from './client-domain-metadata';
 export * from './client-patterns.constants';
 export * from './client-simulation-request.model';
 export * from './client-simulation-result.model';

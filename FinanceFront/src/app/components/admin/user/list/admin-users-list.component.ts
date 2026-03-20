@@ -4,7 +4,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
-import Swal from 'sweetalert2';
+import type { SweetAlertResult } from 'sweetalert2';
+import Swal from 'sweetalert2/dist/sweetalert2.esm.all.js';
 import { User } from '../../../../Models/User';
 import { PaginateInterface } from '../../../../Models/Paginate/paginate-interface';
 import { PaginateSettings } from '../../../../Models/Paginate/paginate-settings';
@@ -132,7 +133,7 @@ export class AdminUsersListComponent {
       confirmButtonText: 'Oui',
       cancelButtonText: 'Non',
       reverseButtons: true
-    }).then((result) => {
+    }).then((result: SweetAlertResult<unknown>) => {
       if (!result.isConfirmed || this.loading()) return;
 
       this.loading.set(true);

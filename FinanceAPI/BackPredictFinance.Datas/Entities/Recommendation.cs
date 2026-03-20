@@ -1,4 +1,4 @@
-using BackPredictFinance.Common.enums;
+ï»¿using BackPredictFinance.Common.enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -10,21 +10,21 @@ using System.Threading.Tasks;
 namespace BackPredictFinance.Datas.Entities
 {
     /// <summary>
-    /// Conseils (buy/sell/hold) générés par l’IA pour un UserAsset
+    /// Conseils (buy/sell/hold) gÃ©nÃ©rÃ©s par lâ€™IA pour un UserAsset
     /// </summary>
     public class Recommendation : AuditableEntityBase
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
-        public string UserAssetId { get; set; }
+        public string UserAssetId { get; set; } = string.Empty;
         public UserAsset UserAsset { get; set; } = null!;
 
         [Required]
         public RecommendationActionEnum Action { get; set; }
 
         /// <summary>
-        /// Confiance associée à la recommandation (0…1)
+        /// Confiance associÃ©e Ã  la recommandation (0â€¦1)
         /// </summary>
         [Column(TypeName = "decimal(5,4)")]
         public decimal Confidence { get; set; }
@@ -46,4 +46,3 @@ namespace BackPredictFinance.Datas.Entities
         public string? Reason { get; set; }
     }
 }
-

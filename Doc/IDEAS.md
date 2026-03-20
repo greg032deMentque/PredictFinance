@@ -157,6 +157,7 @@ Description:
 - coherence des reponses
 - absence d'erreurs silencieuses
 - verification du fallback mono-pattern actuel
+- separation claire entre analyse IA probabiliste et conseil metier derive cote API
 
 Priority: 0
 Complexity: Medium
@@ -187,6 +188,13 @@ TechnicalRisk:
 RecommendedTiming:
 
 - immediate
+
+Status:
+
+- Realise pour le flux principal `DOUBLE_TOP`
+- `FinanceIA` retourne maintenant probabilite + contexte
+- `FinanceAPI` derive `Buy` / `Sell` / `Hold`
+- `FinanceFront` mappe les enums/codes en UX
 
 ### 3.4 Securite
 
@@ -291,6 +299,8 @@ Description:
 - alertes importantes
 - dernieres analyses
 - patterns detectes recemment
+- signal IA recent mis en avant sur le dashboard
+- warning build Angular nettoyes sur ce scope: Sass `@use`, budgetes alignes a l'etat courant, import ESM pour `sweetalert2`
 
 Priority: 1
 Complexity: Low
@@ -317,6 +327,12 @@ TechnicalRisk:
 RecommendedTiming:
 
 - court terme
+
+Status:
+
+- Partiellement realise
+- dashboard client enrichi avec un signal IA recent
+- hygiene build Angular appliquee sur ce perimetre
 
 ### Idea
 
@@ -744,7 +760,7 @@ Description:
 
 - phase
 - niveaux techniques
-- recommandations enrichies
+- conseil metier enrichi derive cote API
 - ambiguite
 - signaux detailles
 

@@ -1,4 +1,4 @@
-using MailKit.Net.Smtp;
+ï»¿using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
@@ -70,7 +70,7 @@ namespace BackPredictFinance.Services
 
             return SendEmail(
                 userEmail,
-                "Réinitialisation de votre mot de passe - Wagram One BackOffice",
+                "RÃ©initialisation de votre mot de passe - Wagram One BackOffice",
                 body,
                 isBodyHtml: true,
                 attachments: null);
@@ -202,9 +202,9 @@ namespace BackPredictFinance.Services
 
                 await client.SendAsync(message);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError("Problème pour envoyer un email à {To}.", string.Join(", ", message.To));
+                _logger.LogError("ProblÃ¨me pour envoyer un email Ã  {To}.", string.Join(", ", message.To));
                 throw new CustomException("Une erreur est survenue lors de l'envoi de l'email.");
             }
             finally
@@ -243,13 +243,13 @@ namespace BackPredictFinance.Services
                             <tr>
                               <td style=""padding: 24px;"">
                                 <p>Bonjour,</p>
-                                <p>Vous avez demandé la réinitialisation de votre mot de passe pour l'accès au BackOffice Wagram One.</p>
-                                <p>Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe&nbsp;:</p>
+                                <p>Vous avez demandÃ© la rÃ©initialisation de votre mot de passe pour l'accÃ¨s au BackOffice Wagram One.</p>
+                                <p>Cliquez sur le bouton ci-dessous pour dÃ©finir un nouveau mot de passe&nbsp;:</p>
                                 <p style=""text-align: center; margin: 30px 0;"">
                                   <a href=""{link}""
                                      style=""display: inline-block; padding: 12px 24px; background-color: #0d6efd; color: #ffffff;
                                             text-decoration: none; border-radius: 4px; font-weight: bold;"">
-                                    Réinitialiser mon mot de passe
+                                    RÃ©initialiser mon mot de passe
                                   </a>
                                 </p>
                                 <p>
@@ -257,14 +257,14 @@ namespace BackPredictFinance.Services
                                   <a href=""{link}"">{link}</a>
                                 </p>
                                 <p style=""font-size: 12px; color: #666666; margin-top: 24px;"">
-                                  Ce lien est valable pour une durée limitée et ne peut être utilisé qu'une seule fois.
-                                  Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail.
+                                  Ce lien est valable pour une durÃ©e limitÃ©e et ne peut Ãªtre utilisÃ© qu'une seule fois.
+                                  Si vous n'Ãªtes pas Ã  l'origine de cette demande, vous pouvez ignorer cet e-mail.
                                 </p>
                               </td>
                             </tr>
                             <tr>
                               <td style=""background-color: #f0f0f0; padding: 16px 24px; font-size: 12px; color: #777777; text-align: center;"">
-                                Cet e-mail a été envoyé automatiquement, merci de ne pas y répondre.
+                                Cet e-mail a Ã©tÃ© envoyÃ© automatiquement, merci de ne pas y rÃ©pondre.
                               </td>
                             </tr>
                           </table>
@@ -276,4 +276,5 @@ namespace BackPredictFinance.Services
         }
     }
 }
+
 

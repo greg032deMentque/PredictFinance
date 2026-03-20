@@ -126,7 +126,7 @@ namespace BackPredictFinance.Services.TwelveDataServices
                     items.Add(new MarketAssetDescriptor
                     {
                         Symbol = symbol.ToUpperInvariant(),
-                        ProviderSymbol = ReadString(quote, "symbol"),
+                        ProviderSymbol = ReadString(quote, "symbol") ?? symbol,
                         CompanyName = ReadString(quote, "longname", "shortname") ?? symbol,
                         Exchange = ReadString(quote, "exchDisp", "exchange") ?? string.Empty,
                         Currency = ReadString(quote, "currency") ?? "USD",

@@ -1,6 +1,6 @@
 # FinanceIA MVP: Double Top binaire
 
-Moteur IA de PredictFinance pour detecter un pattern `Double Top`, mesurer sa qualite, puis exposer une prediction exploitable par l'API.
+Moteur IA de PredictFinance pour detecter un pattern `Double Top`, mesurer sa qualite, puis exposer une prediction probabiliste exploitable par l'API.
 
 ## Role du bloc
 
@@ -9,7 +9,7 @@ Moteur IA de PredictFinance pour detecter un pattern `Double Top`, mesurer sa qu
 1. Charger des donnees boursieres (`yfinance`).
 2. Transformer ces donnees en features techniques.
 3. Entrainer et evaluer un modele binaire.
-4. Predire sur une valeur et retourner un JSON standard.
+4. Predire sur une valeur et retourner un JSON standard `probabilite + contexte`.
 
 ## Comment l'entrainement fonctionne
 
@@ -52,7 +52,7 @@ Les metriques de train sont dans `artifacts/double_top/metrics.json`.
 - `src/finance_ia/model/evaluate.py`: calcul metriques + recherche threshold F1.
 - `src/finance_ia/model/validate.py`: evaluation d'un modele deja entraine sur une plage de dates.
 - `src/finance_ia/model/predict.py`: inference et agregation des probabilites.
-- `src/finance_ia/model/simulate.py`: simulation d'investissement basee sur la prediction IA.
+- `src/finance_ia/model/simulate.py`: simulation de scenario neutre basee sur le pattern detecte.
 - `src/finance_ia/io/artifacts.py`: lecture/ecriture des artefacts.
 - `src/finance_ia/cli/train.py`: commande train.
 - `src/finance_ia/cli/evaluate.py`: commande evaluation.
@@ -119,7 +119,7 @@ python -m finance_ia.cli.predict --ticker AAPL --model-dir artifacts/double_top 
 ### 4) Simulation operationnelle (consommee par l'API .NET)
 
 ```powershell
-python -m finance_ia.cli.simulate --ticker AAPL --model-dir artifacts/double_top --period 6mo --pattern DOUBLE_TOP --investment-amount 1000 --horizon-days 30 --sell-threshold 0.65 --buy-threshold 0.20
+python -m finance_ia.cli.simulate --ticker AAPL --model-dir artifacts/double_top --period 6mo --pattern DOUBLE_TOP --investment-amount 1000 --horizon-days 30
 ```
 
 Sortie principale:
@@ -127,9 +127,15 @@ Sortie principale:
 - `estimated_return_pct`
 - `estimated_return_amount`
 - `estimated_final_amount`
-- `recommendation`
-- `confidence`
+- `phase`
+- `last_prob`
 - `assumption`
+
+Decision d'architecture:
+
+- `FinanceIA` ne produit plus `buy/sell/hold`
+- le moteur Python retourne la probabilite du pattern et son contexte
+- le conseil utilisateur final est derive cote `.NET`
 
 ## Tests
 

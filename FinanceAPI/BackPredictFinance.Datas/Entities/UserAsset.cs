@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+ï»¿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BackPredictFinance.Datas.Entities
@@ -7,14 +7,14 @@ namespace BackPredictFinance.Datas.Entities
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        public string UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
         public User User { get; set; } = null!;
 
-        public string AssetId { get; set; }
+        public string AssetId { get; set; } = string.Empty;
         public Asset Asset { get; set; } = null!;
 
         /// <summary>
-        /// Quantité de tokens / parts que l'utilisateur détient
+        /// QuantitÃ© de tokens / parts que l'utilisateur dÃ©tient
         /// </summary>
         [Column(TypeName = "decimal(18,8)")]
         public decimal Quantity { get; set; }
@@ -24,4 +24,3 @@ namespace BackPredictFinance.Datas.Entities
     }
 
 }
-

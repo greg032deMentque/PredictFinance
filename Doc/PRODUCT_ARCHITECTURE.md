@@ -43,7 +43,7 @@ Le niveau Interpreter couvre l'analyse technique et la lecture des signaux:
 
 - patterns
 - signaux techniques
-- recommandations
+- conseil metier derive
 
 Point important:
 
@@ -136,7 +136,7 @@ Role:
 Valeur produit:
 
 - constitue le domaine IA specialise du produit
-- fournit detection, probabilite, phase et recommandations techniques
+- fournit detection, probabilite, phase et contexte technique
 
 Dependances:
 
@@ -163,6 +163,7 @@ Responsabilites:
 - saisie utilisateur
 - navigation client/admin
 - affichage des resultats
+- traduction UX des enums/codes en libelles, badges et icones
 - orchestration d'ecrans
 - consommation des endpoints backend
 
@@ -170,6 +171,7 @@ Ce que le front ne doit pas faire:
 
 - porter la logique metier critique
 - recalculer des decisions IA
+- afficher directement des libelles backend pour les domaines fermes
 - reimplementer des regles de portefeuille ou de risque complexes
 
 Ancrage reel:
@@ -185,6 +187,7 @@ Responsabilites:
 - authentification et autorisation
 - validation serveur
 - orchestration metier
+- derivation du conseil utilisateur (`Buy` / `Sell` / `Hold`) a partir de l'analyse IA
 - persistance
 - exposition des DTO
 - pont vers le moteur Python
@@ -210,11 +213,12 @@ Responsabilites:
 - feature engineering
 - scoring pattern
 - phase detection
-- generation des sorties techniques
+- generation des sorties techniques probabilistes
 
 Ce que Python ne doit pas faire:
 
 - gerer auth, roles, portefeuille, exposition ou dashboard
+- produire le conseil final utilisateur `Buy` / `Sell` / `Hold`
 - devenir un service metier global du produit
 
 Ancrage reel:
@@ -321,6 +325,9 @@ Flux cible:
 - verification auth/refresh/logout/guards
 - securisation CORS, rate limiting, validation, erreurs
 - stabilisation des contrats API <-> Python
+- normalisation des erreurs Python en JSON inter-process et historisation des echecs d'analyse dans `AnalysisRun`
+- verrouillage des enums/codes entre API et front, avec affichage UX centralise cote Angular
+- alignement OWASP et SonarQube sur les flux IA/front/API
 
 ### Enrichissements non-IA
 
@@ -354,6 +361,8 @@ Flux cible:
 - ne pas melanger logique portefeuille et logique IA
 - ne pas faire dependre tout le produit du moteur IA
 - garder l'IA specialisee dans les patterns
+- faire porter le conseil metier par l'API, pas par Python
+- transporter des codes/enums stables cote backend et mapper les libelles cote front
 - faire evoluer les contrats progressivement
 - preserver la stabilite du socle avant toute extension ambitieuse
 - ne pas introduire de refonte globale non justifiee

@@ -10,10 +10,10 @@ namespace BackPredictFinance.Datas.Context
 {
     public class FinanceDbContext : IdentityDbContext<User>
     {
-        private readonly HttpContext _context;
+        private readonly HttpContext? _context;
 
-        public string CurrentUserId { get; private set; }
-        public User CurrentUser { get; private set; }
+        public string CurrentUserId { get; private set; } = string.Empty;
+        public User? CurrentUser { get; private set; }
 
         public FinanceDbContext(DbContextOptions<FinanceDbContext> options, IHttpContextAccessor httpContextAccessor) : base(options)
         {
@@ -21,7 +21,7 @@ namespace BackPredictFinance.Datas.Context
 
             if (_context != null)
             {
-                CurrentUserId = ResolveCurrentUserId(_context.User);
+                CurrentUserId = ResolveCurrentUserId(_context.User) ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(CurrentUserId))
                 {
                     CurrentUser = Users.AsNoTracking().FirstOrDefault(u => u.Id == CurrentUserId);
@@ -40,25 +40,25 @@ namespace BackPredictFinance.Datas.Context
         #endregion
 
         #region User Data
-        public DbSet<IdentityUserRole<string>> UserRoles { get; set; }
-        public DbSet<IdentityRole> Roles { get; set; }
-        public DbSet<UserAsset> UserAssets { get; set; }
-        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public new DbSet<IdentityUserRole<string>> UserRoles { get; set; } = null!;
+        public new DbSet<IdentityRole> Roles { get; set; } = null!;
+        public DbSet<UserAsset> UserAssets { get; set; } = null!;
+        public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
         #endregion
 
         #region Finance
-        public DbSet<Asset> Assets { get; set; }
-        public DbSet<Recommendation> Recommendations { get; set; }
-        public DbSet<PriceHistory> PriceHistories { get; set; }
-        public DbSet<AssetTransaction> AssetTransactions { get; set; }
-        public DbSet<AssetQuoteSnapshot> AssetQuoteSnapshots { get; set; }
-        public DbSet<AssetCandleSnapshot> AssetCandleSnapshots { get; set; }
-        public DbSet<AnalysisBatch> AnalysisBatches { get; set; }
-        public DbSet<AnalysisRun> AnalysisRuns { get; set; }
-        public DbSet<PatternAssessment> PatternAssessments { get; set; }
-        public DbSet<DecisionSignal> DecisionSignals { get; set; }
-        public DbSet<ModelSnapshot> ModelSnapshots { get; set; }
+        public DbSet<Asset> Assets { get; set; } = null!;
+        public DbSet<Recommendation> Recommendations { get; set; } = null!;
+        public DbSet<PriceHistory> PriceHistories { get; set; } = null!;
+        public DbSet<AssetTransaction> AssetTransactions { get; set; } = null!;
+        public DbSet<AssetQuoteSnapshot> AssetQuoteSnapshots { get; set; } = null!;
+        public DbSet<AssetCandleSnapshot> AssetCandleSnapshots { get; set; } = null!;
+        public DbSet<AnalysisBatch> AnalysisBatches { get; set; } = null!;
+        public DbSet<AnalysisRun> AnalysisRuns { get; set; } = null!;
+        public DbSet<PatternAssessment> PatternAssessments { get; set; } = null!;
+        public DbSet<DecisionSignal> DecisionSignals { get; set; } = null!;
+        public DbSet<ModelSnapshot> ModelSnapshots { get; set; } = null!;
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

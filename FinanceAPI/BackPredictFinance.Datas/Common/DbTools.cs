@@ -31,7 +31,14 @@ namespace BackPredictFinance.Datas.Common
 
         public void detachIfNeeded(TEntity entity, FinanceDbContext _context)
         {
-            var local = _context.Set<TEntity>().Local.FirstOrDefault(entry => entry.GetType().GetProperty("Id").GetValue(entry).Equals(entity.GetType().GetProperty("Id").GetValue(entity)));
+            var idProperty = typeof(TEntity).GetProperty("Id");
+            if (idProperty == null)
+            {
+                return;
+            }
+
+            var entityId = idProperty.GetValue(entity);
+            var local = _context.Set<TEntity>().Local.FirstOrDefault(entry => Equals(idProperty.GetValue(entry), entityId));
             if (local != null)
             {
                 _context.Entry(local).State = EntityState.Detached;
@@ -48,7 +55,7 @@ namespace BackPredictFinance.Datas.Common
         /// <param name="entities">The entities</param>
         /// <param name="includes">The paths to include</param>
         /// <returns></returns>
-        public static IQueryable<T> SetupIncludes<T>(this DbSet<T> entities, IEnumerable<string> includes = null)
+        public static IQueryable<T> SetupIncludes<T>(this DbSet<T> entities, IEnumerable<string>? includes = null)
             where T : class
         {
             if (includes == null || !includes.Any()) return entities;

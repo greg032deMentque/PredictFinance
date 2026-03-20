@@ -15,8 +15,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pattern", default="DOUBLE_TOP", help="Pattern to simulate (DOUBLE_TOP only)")
     parser.add_argument("--investment-amount", required=True, type=float, help="Investment amount")
     parser.add_argument("--horizon-days", default=30, type=int, help="Investment horizon in days")
-    parser.add_argument("--sell-threshold", default=0.65, type=float, help="Sell action threshold")
-    parser.add_argument("--buy-threshold", default=0.20, type=float, help="Buy action threshold")
     return parser
 
 
@@ -33,8 +31,6 @@ def main(argv: list[str] | None = None) -> int:
             pattern=args.pattern,
             investment_amount=args.investment_amount,
             horizon_days=args.horizon_days,
-            sell_threshold=args.sell_threshold,
-            buy_threshold=args.buy_threshold,
         ),
     )
 

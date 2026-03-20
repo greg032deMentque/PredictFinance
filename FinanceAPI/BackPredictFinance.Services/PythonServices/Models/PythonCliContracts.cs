@@ -55,8 +55,6 @@ namespace BackPredictFinance.Services.PythonServices.Models
         public string Period { get; set; } = "6mo";
         public decimal InvestmentAmount { get; set; }
         public int HorizonDays { get; set; }
-        public decimal SellThreshold { get; set; }
-        public decimal BuyThreshold { get; set; }
     }
 
     internal sealed class PythonCliExecutionResult
@@ -81,15 +79,6 @@ namespace BackPredictFinance.Services.PythonServices.Models
         public bool IsPrimary { get; set; }
     }
 
-    public sealed class PythonDecisionSignalPayload
-    {
-        public string Action { get; set; } = "hold";
-        public bool Actionable { get; set; }
-        public decimal Confidence { get; set; }
-        public string Reason { get; set; } = string.Empty;
-        public int HorizonDays { get; set; }
-    }
-
     public sealed class PythonPredictPayload
     {
         public string Symbol { get; set; } = string.Empty;
@@ -102,7 +91,6 @@ namespace BackPredictFinance.Services.PythonServices.Models
         public decimal LastProbability { get; set; }
         public int NWindows { get; set; }
         public List<PythonPatternAssessmentPayload> PatternAssessments { get; set; } = [];
-        public PythonDecisionSignalPayload DecisionSignal { get; set; } = new();
     }
 
     public sealed class PythonSimulationPayload
@@ -119,9 +107,6 @@ namespace BackPredictFinance.Services.PythonServices.Models
         public decimal EstimatedReturnPct { get; set; }
         public decimal EstimatedReturnAmount { get; set; }
         public decimal EstimatedFinalAmount { get; set; }
-        public string Recommendation { get; set; } = "hold";
-        public bool Actionable { get; set; }
-        public decimal Confidence { get; set; }
         public string Assumption { get; set; } = string.Empty;
         public decimal LastProbability { get; set; }
         public decimal MeanProbability { get; set; }

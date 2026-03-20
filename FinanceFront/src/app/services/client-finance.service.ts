@@ -11,6 +11,12 @@ import { ClientSimulationResult } from '../Models/client-finance-models/client-s
 import { ClientTransactionCreateRequest } from '../Models/client-finance-models/client-transaction-create-request.model';
 import { ClientTransactionItem } from '../Models/client-finance-models/client-transaction-item.model';
 import { ClientWatchlistItem } from '../Models/client-finance-models/client-watchlist-item.model';
+import type {
+  ClientModelStatusCode,
+  ClientPatternCode,
+  ClientRecommendationActionCode,
+  ClientRiskLevelCode
+} from '../Models/client-finance-models/client-domain-metadata';
 import { MarketAssetOption } from '../Models/client-finance-models/market-asset-option.model';
 
 
@@ -188,18 +194,19 @@ export class ClientFinanceService {
       Id: this.readString(source, ['id', 'Id']) ?? '',
       Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
       CompanyName: this.readString(source, ['companyName', 'CompanyName']) ?? '',
-      Pattern: this.readString(source, ['pattern', 'Pattern']) ?? '',
+      Pattern: this.readString(source, ['pattern', 'Pattern']) as ClientPatternCode,
       Phase: this.readString(source, ['phase', 'Phase']) ?? '',
-      Confidence: this.readNumber(source, ['confidence', 'Confidence']) ?? 0,
-      Recommendation: this.readString(source, ['recommendation', 'Recommendation']) ?? '',
-      Reason: this.readString(source, ['reason', 'Reason']) ?? '',
-      RiskLevel: this.readString(source, ['riskLevel', 'RiskLevel']) ?? '',
-      HorizonDays: this.readNumber(source, ['horizonDays', 'HorizonDays']) ?? 0,
+      Probability: this.readNumber(source, ['probability', 'Probability']) ?? 0,
+      RecommendationAction: this.readString(source, ['recommendationAction', 'RecommendationAction']) as ClientRecommendationActionCode,
+      RecommendationReason: this.readString(source, ['recommendationReason', 'RecommendationReason']) ?? '',
+      RiskLevel: this.readString(source, ['riskLevel', 'RiskLevel']) as ClientRiskLevelCode,
+      RecommendationHorizonDays: this.readNumber(source, ['recommendationHorizonDays', 'RecommendationHorizonDays']) ?? 0,
       PredictedAt: this.readString(source, ['predictedAt', 'PredictedAt']) ?? '',
       IsActionable: this.readBoolean(source, ['isActionable', 'IsActionable']) ?? false,
-      ModelStatus: this.readString(source, ['modelStatus', 'ModelStatus']) ?? '',
+      ModelStatus: this.readString(source, ['modelStatus', 'ModelStatus']) as ClientModelStatusCode,
       ModelMessage: this.readString(source, ['modelMessage', 'ModelMessage']) ?? '',
       CurrentPrice: this.readNumber(source, ['currentPrice', 'CurrentPrice']) ?? 0,
+      NecklinePrice: this.readNumber(source, ['necklinePrice', 'NecklinePrice']),
       TargetPrice: this.readNumber(source, ['targetPrice', 'TargetPrice']),
       InvalidationPrice: this.readNumber(source, ['invalidationPrice', 'InvalidationPrice'])
     });
@@ -208,15 +215,19 @@ export class ClientFinanceService {
   private mapSimulation(source: Record<string, unknown>): ClientSimulationResult {
     return new ClientSimulationResult({
       Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      Pattern: this.readString(source, ['pattern', 'Pattern']) as ClientPatternCode,
       Phase: this.readString(source, ['phase', 'Phase']) ?? '',
       InvestmentAmount: this.readNumber(source, ['investmentAmount', 'InvestmentAmount']) ?? 0,
       HorizonDays: this.readNumber(source, ['horizonDays', 'HorizonDays']) ?? 0,
       EstimatedReturnAmount: this.readNumber(source, ['estimatedReturnAmount', 'EstimatedReturnAmount']) ?? 0,
       EstimatedReturnPct: this.readNumber(source, ['estimatedReturnPct', 'EstimatedReturnPct']) ?? 0,
       EstimatedFinalAmount: this.readNumber(source, ['estimatedFinalAmount', 'EstimatedFinalAmount']) ?? 0,
-      Recommendation: this.readString(source, ['recommendation', 'Recommendation']) ?? '',
       Assumption: this.readString(source, ['assumption', 'Assumption']) ?? '',
       CurrentPrice: this.readNumber(source, ['currentPrice', 'CurrentPrice']) ?? 0,
+      Probability: this.readNumber(source, ['probability', 'Probability']) ?? 0,
+      RecommendationAction: this.readString(source, ['recommendationAction', 'RecommendationAction']) as ClientRecommendationActionCode,
+      RecommendationReason: this.readString(source, ['recommendationReason', 'RecommendationReason']) ?? '',
+      RiskLevel: this.readString(source, ['riskLevel', 'RiskLevel']) as ClientRiskLevelCode,
       TargetPrice: this.readNumber(source, ['targetPrice', 'TargetPrice']),
       InvalidationPrice: this.readNumber(source, ['invalidationPrice', 'InvalidationPrice']),
       IsActionable: this.readBoolean(source, ['isActionable', 'IsActionable']) ?? false

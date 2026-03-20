@@ -9,9 +9,9 @@
             <th>Valeur</th>
             <th>Pattern</th>
             <th>Phase</th>
-            <th>Confiance</th>
-            <th>Recommandation</th>
-            <th>Signal</th>
+            <th>Probabilite</th>
+            <th>Conseil</th>
+            <th>Actionnable</th>
             <th>Risque</th>
             <th>Date</th>
           </tr>
@@ -23,16 +23,16 @@
                 <div class="fw-semibold">{{ item.Symbol }}</div>
                 <small class="text-muted">{{ item.CompanyName }}</small>
               </td>
-              <td>{{ item.Pattern }}</td>
-              <td>{{ item.Phase || '-' }}</td>
-              <td>{{ item.Confidence | percent: '1.0-0' }}</td>
+              <td>{{ getPatternLabel(item.Pattern) }}</td>
+              <td>{{ getPhaseLabel(item.Phase) }}</td>
+              <td>{{ item.Probability | percent: '1.0-0' }}</td>
               <td>
-                <span class="badge" [class]="getBadgeClass(item.Recommendation)">
-                  {{ getRecommendationLabel(item.Recommendation) }}
+                <span class="badge" [class]="getBadgeClass(item.RecommendationAction)">
+                  {{ getRecommendationLabel(item.RecommendationAction) }}
                 </span>
               </td>
               <td>{{ item.IsActionable ? 'Exploitable' : 'A surveiller' }}</td>
-              <td>{{ item.RiskLevel }}</td>
+              <td>{{ getRiskLevelLabel(item.RiskLevel) }}</td>
               <td>{{ item.PredictedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
             </tr>
           } @empty {

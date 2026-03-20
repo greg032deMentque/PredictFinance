@@ -36,29 +36,8 @@ class PatternAssessment:
         }
 
 
-@dataclass(slots=True)
-class DecisionSignal:
-    action: str
-    actionable: bool
-    confidence: float
-    reason: str
-    horizon_days: int
-
-    def to_dict(self) -> dict[str, object]:
-        return {
-            "action": self.action,
-            "actionable": self.actionable,
-            "confidence": self.confidence,
-            "reason": self.reason,
-            "horizon_days": self.horizon_days,
-        }
-
-
 class RuntimePatternAnalyzer(Protocol):
     pattern_name: str
 
     def build_assessment(self, frame: pd.DataFrame, last_probability: float) -> PatternAssessment:
-        ...
-
-    def build_decision(self, assessment: PatternAssessment) -> DecisionSignal:
         ...

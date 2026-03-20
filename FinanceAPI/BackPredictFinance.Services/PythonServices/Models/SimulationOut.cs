@@ -1,9 +1,11 @@
+using BackPredictFinance.Common.enums;
+
 namespace BackPredictFinance.Services.PythonServices.Models
 {
     public sealed class SimulationOut
     {
         public string Symbol { get; set; } = string.Empty;
-        public string Pattern { get; set; } = "DOUBLE_TOP";
+        public TradingPatternEnum Pattern { get; set; } = TradingPatternEnum.DoubleTop;
         public string Phase { get; set; } = string.Empty;
         public DateTime SimulatedAt { get; set; }
         public decimal CurrentPrice { get; set; }
@@ -14,9 +16,6 @@ namespace BackPredictFinance.Services.PythonServices.Models
         public decimal EstimatedReturnPct { get; set; }
         public decimal EstimatedReturnAmount { get; set; }
         public decimal EstimatedFinalAmount { get; set; }
-        public string Recommendation { get; set; } = "hold";
-        public bool IsActionable { get; set; }
-        public decimal Confidence { get; set; }
         public string Assumption { get; set; } = string.Empty;
         public decimal LastProbability { get; set; }
         public decimal MeanProbability { get; set; }

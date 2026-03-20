@@ -135,7 +135,7 @@ namespace BackPredictFinance.Services.UserServices
                 RefreshToken = string.Empty
             };
 
-            var create = await _userManager.CreateAsync(user, model.Password);
+            var create = await _userManager.CreateAsync(user, model.Password ?? string.Empty);
             if (!create.Succeeded)
             {
                 return null;
@@ -146,7 +146,7 @@ namespace BackPredictFinance.Services.UserServices
             var loginVm = new LoginViewModel
             {
                 Email = model.Email,
-                Password = model.Password
+                Password = model.Password ?? string.Empty
             };
 
             return await _accountService.Login(loginVm);

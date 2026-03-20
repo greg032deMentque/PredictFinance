@@ -8,8 +8,8 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from finance_ia.cli.predict import main as predict_main
 from finance_ia.cli.evaluate import main as evaluate_main
+from finance_ia.cli.predict import main as predict_main
 from finance_ia.cli.simulate import main as simulate_main
 from finance_ia.cli.train import main as train_main
 from finance_ia.runtime.api import run as serve_main

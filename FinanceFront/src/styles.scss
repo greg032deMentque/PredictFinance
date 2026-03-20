@@ -1,7 +1,7 @@
-@import './themes/variables.scss';
-@import './themes/button.scss';
-@import './themes/input.scss';
-@import './themes/toastr.scss';
+@use './themes/variables' as *;
+@use './themes/button';
+@use './themes/input';
+@use './themes/toastr';
 
 html,
 body {
