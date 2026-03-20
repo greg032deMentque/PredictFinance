@@ -1,0 +1,628 @@
+Je veux que tu réalises une refonte d’architecture complète de mon projet PredictFinance.
+
+Important :
+- cette demande est destinée à un travail en **mode Plan**
+- je ne veux pas encore de génération massive de code prématurée
+- je veux d’abord une cible d’architecture claire, saine, exploitable, documentée et défendable
+- tu dois raisonner comme un architecte logiciel senior produit/backend/ML
+- tu dois produire une proposition structurée, critique, concrète, maintenable sur plusieurs années
+- tu dois challenger les mauvaises abstractions au lieu de préserver artificiellement l’existant
+- si certains choix actuels sont des impasses, tu dois le dire clairement
+- tu dois viser une architecture propre, explicable, audit-able, extensible et sobre
+
+Le niveau d’exigence est élevé :
+- OWASP
+- SonarQube
+- séparation stricte des responsabilités
+- contrats explicites
+- sémantique métier non ambiguë
+- backend souverain sur la vérité métier
+- front passif sur la logique critique
+- Python interchangeable et non souverain
+- architecture réellement extensible à plusieurs patterns
+- documentation claire pour que je comprenne rapidement le rôle de chaque couche, projet, service et flux
+
+==================================================
+1. CONTEXTE PRODUIT
+==================================================
+
+Projet : PredictFinance
+
+Stack actuelle :
+- Front : Angular 21
+- API : ASP.NET Core .NET 10
+- IA : Python
+
+Vision produit cible :
+L’utilisateur doit pouvoir :
+
+1. lancer une analyse sur une valeur
+2. obtenir une lecture globale du marché
+3. voir les patterns candidats possibles
+4. voir un classement ou une priorisation de ces patterns
+5. sélectionner un pattern
+6. voir à quelle phase de ce pattern le marché semble se situer
+7. obtenir ensuite un conseil métier dérivé côté API
+8. ne jamais confondre :
+   - analyse du marché
+   - interprétation de pattern
+   - conseil produit final
+
+Contraintes importantes :
+- l’IA ne doit pas donner directement Buy/Sell/Hold
+- le conseil final doit rester dérivé côté API .NET
+- le front doit rester passif sur la logique métier critique
+- les domaines fermés doivent être transportés via enums/codes stables backend
+- le front mappe les codes vers labels/couleurs/badges
+- on ne veut pas exposer d’erreurs techniques Python/.NET au front
+- on veut une base maintenable plusieurs années
+
+==================================================
+2. ETAT ACTUEL DU PROJET
+==================================================
+
+Etat fonctionnel actuel :
+- le seul pattern réellement opérationnel aujourd’hui est DOUBLE_TOP
+- le moteur Python a été recentré :
+  - il ne produit plus directement de recommandation buy/sell/hold
+  - il produit surtout un score/probabilité + un contexte de pattern
+- l’API .NET dérive maintenant le conseil métier Buy/Sell/Hold
+- le front affiche séparément :
+  - analyse IA
+  - conseil produit
+- le système gère déjà les erreurs Python via un contrat JSON inter-process
+- les builds/tests passent actuellement
+
+Limites connues :
+- le training Python actuel reste essentiellement mono-pattern
+- le modèle apprend un signal encore très centré DOUBLE_TOP
+- le label actuel n’est pas encore une vraie probabilité métier globale
+- la phase du pattern n’est pas prédite par ML, elle est calculée par logique explicable
+- l’architecture réelle reste trop marquée mono-pattern
+- une partie des contrats et projections risque de mentir si on essaie trop tôt de faire croire à du vrai multi-pattern
+
+==================================================
+3. ORIENTATION D’ARCHITECTURE DEJA TRANCHEE
+==================================================
+
+Ces arbitrages sont déjà pris et doivent être respectés dans la proposition cible.
+
+### 3.1 Rôle de l’IA
+- l’IA est conservée dans la cible
+- l’IA ne doit pas être le pilier central du produit
+- l’IA doit être conçue comme un provider interchangeable
+- la V1 doit pouvoir exister sans dépendance forte à l’IA
+- Python ne doit jamais être la source de vérité métier finale
+- Python ne décide jamais Buy/Sell/Hold
+- Python peut scorer, prioriser, enrichir, filtrer
+- .NET garde la souveraineté métier
+
+### 3.2 V1 possible sans IA
+Une V1 forte sans IA est considérée comme saine et acceptable.
+Cette V1 peut reposer sur :
+- snapshots de marché figés
+- détecteurs heuristiques explicables
+- phase calculée par règles
+- score heuristique
+- classement de candidats
+- moteur de décision côté API
+- historisation complète
+- front passif
+
+### 3.3 Direction cible
+Le cœur du produit ne doit pas être “Python”.
+Le cœur du produit doit être :
+
+- Market snapshots fiables
+- Pattern analysis core explicable
+- Scoring layer interchangeable
+- Decision engine métier souverain
+- Persistence / audit / observability solides
+- API claire
+- Front passif
+
+### 3.4 Mutual exclusivity
+Il ne faut pas partir du principe que les patterns sont mutuellement exclusifs.
+On ne veut pas forcer par défaut une distribution fermée où la somme ferait 100%.
+Plusieurs patterns peuvent être simultanément plausibles.
+La direction à privilégier est :
+- scoring / ranking
+- pas softmax global forcé
+
+### 3.5 NO_PATTERN
+NO_PATTERN ne doit pas être traité comme une simple classe plate équivalente aux autres patterns.
+La direction à privilégier est :
+- mécanisme d’abstention
+- statut de type `NO_DOMINANT_PATTERN`
+- éventuellement d’autres statuts comme `INSUFFICIENT_DATA`, `MODEL_UNAVAILABLE`, `MARKET_CHANGED`
+
+### 3.6 Sémantique des scores
+Il ne faut pas tout appeler “probabilité”.
+La proposition cible doit distinguer proprement les natures de score possibles, par exemple :
+- pattern match score
+- confirmation score
+- actionability score
+- autre score de ranking
+Le système doit nommer clairement le type de score au lieu de mélanger tous les sens dans un seul nombre ambigu.
+
+### 3.7 Snapshot temporel
+Le snapshot doit être figé à l’étape 1.
+Le détail de pattern doit réutiliser le même snapshot par défaut.
+Le refresh doit être explicite.
+Il ne doit jamais y avoir de recalcul silencieux entre l’analyse globale et le détail si cela change l’état de marché analysé.
+
+### 3.8 Phase de pattern
+La phase doit rester explicable.
+La direction à privilégier est :
+- phase spécifique par pattern
+- éventuellement un stage/stade plus global et transversal en complément
+- pas de phase opaque pilotée par ML en V1/V2
+
+### 3.9 Conseil métier
+Buy/Sell/Hold ne doit pas être le noyau métier durable.
+Il peut exister comme façade simplifiée exposée au front.
+Mais le moteur interne doit être plus riche avec une notion de posture métier, par exemple :
+- OBSERVE
+- WATCH_FOR_CONFIRMATION
+- ENTRY_CANDIDATE
+- EXIT_CANDIDATE
+- NO_ACTION
+
+### 3.10 Source de vérité et historisation
+La vraie source de vérité doit être le batch global d’analyse rattaché à un snapshot de marché figé.
+Il faut historiser au minimum :
+- le snapshot utilisé
+- le batch global
+- tous les candidats
+- les scores
+- les détails calculés
+- les décisions produites
+- les versions de règles / modèles
+
+==================================================
+4. DECISIONS D’ARCHI QUE TU DOIS FORMALISER ET DETAILLER
+==================================================
+
+Même si certains arbitrages sont déjà pris ci-dessus, je veux que tu les formalises proprement dans une cible cohérente.
+
+Je veux que tu répondes et structures clairement les points suivants :
+
+1. Comment intégrer l’IA dans la cible sans la rendre centrale ?
+2. Comment concevoir une V1 forte qui reste valide sans IA ?
+3. Quelle architecture projet mettre en place côté .NET / Python / Front ?
+4. Quelle structure de solution recommandes-tu ?
+5. Quels projets / assemblies / packages créer ?
+6. Quelle responsabilité exacte pour chaque projet ?
+7. Où doivent vivre :
+   - les snapshots marché
+   - les détecteurs de patterns
+   - le scoring
+   - la phase explicable
+   - la décision métier
+   - les contrats API
+   - les contrats Python
+   - la persistance
+   - l’audit
+   - l’observabilité
+8. Quel modèle de données persister ?
+9. Quels enums/codes stables backend créer ?
+10. Quel contrat JSON exposer au front ?
+11. Quel contrat JSON utiliser entre .NET et Python ?
+12. Comment gérer proprement la cohérence temporelle entre analyse globale et détail de pattern ?
+13. Que faut-il historiser exactement ?
+14. Quelle roadmap V1 / V2 / V3 proposer ?
+
+==================================================
+5. POINTS A CHALLENGER ET A EXPLICITER FORTEMENT
+==================================================
+
+Je veux une réponse franche et critique sur les sujets suivants :
+
+1. Mutual exclusivity des patterns
+- pourquoi il ne faut pas forcer une somme à 100%
+- dans quels cas plusieurs patterns peuvent être simultanément plausibles
+- pourquoi scoring/ranking est plus sain qu’une distribution fermée
+
+2. NO_PATTERN
+- pourquoi ce n’est pas une vraie classe métier plate
+- pourquoi un mécanisme d’abstention est plus sain
+- quels statuts d’abstention ou d’indisponibilité prévoir
+
+3. Sémantique des scores
+- comment nommer proprement les scores
+- comment éviter de tromper l’utilisateur
+- comment éviter de comparer des scores qui n’ont pas le même sens
+- faut-il parler de probabilité, de score, de ranking, de confiance, de calibration
+
+4. Snapshot temporel
+- pourquoi il faut figer le snapshot
+- pourquoi il faut réutiliser le même au détail
+- comment gérer le refresh explicite
+- comment éviter l’incohérence perçue par l’utilisateur
+
+5. Phase de pattern
+- pourquoi garder la phase explicable
+- comment modéliser phase spécifique + stage global si nécessaire
+- comment éviter une explosion de complexité avec plusieurs patterns
+
+6. Conseil métier
+- pourquoi Buy/Sell/Hold est trop pauvre comme noyau métier
+- comment distinguer posture interne et action simplifiée
+- comment préparer un moteur de décision plus riche sans surcomplexifier V1
+
+7. Evolutivité
+- qu’est-ce qui casse en premier quand on passe de 1 à plusieurs patterns
+- comment éviter une architecture qui se dit multi-pattern mais replie tout en mono-pattern côté API/UI
+- comment éviter les `if pattern == DOUBLE_TOP` partout
+
+==================================================
+6. ARCHITECTURE CIBLE ATTENDUE
+==================================================
+
+Je veux une proposition de structure projet de ce type, à adapter si tu penses qu’il existe mieux :
+
+- PredictFinance.Domain
+- PredictFinance.Application
+- PredictFinance.Patterns
+- PredictFinance.Scoring
+- PredictFinance.Decisions
+- PredictFinance.Infrastructure
+- PredictFinance.Api
+- PredictFinance.Front
+
+Tu peux proposer une variante si elle est meilleure, mais tu dois la justifier clairement.
+
+Pour chaque projet, je veux impérativement :
+- rôle exact
+- ce qui a le droit d’y vivre
+- ce qui ne doit jamais y vivre
+- dépendances autorisées
+- dépendances interdites
+- exemples de composants typiques
+
+==================================================
+7. STRUCTURE DE SOLUTION ET RESPONSABILITES ATTENDUES
+==================================================
+
+Je veux que tu proposes une structure claire et pédagogique.
+
+Je veux voir explicitement :
+
+### PredictFinance.Domain
+- rôle
+- invariants
+- entités/value objects/enums
+- ce qui y est interdit
+
+### PredictFinance.Application
+- use cases
+- orchestration
+- ports
+- DTO internes
+- ce qui y est interdit
+
+### PredictFinance.Patterns
+- registry de patterns
+- détecteurs
+- phase evaluators
+- level extractors
+- explanation builders
+
+### PredictFinance.Scoring
+- interfaces de scoring
+- rule-based scorer
+- hybrid scorer
+- éventuellement intégration de providers multiples
+
+### PredictFinance.Decisions
+- posture métier
+- action simplifiée
+- règles de décision
+- futur enrichissement produit
+
+### PredictFinance.Infrastructure
+- EF Core
+- providers de données marché
+- cache
+- logs
+- observabilité
+- implémentation Python bridge
+- stockage snapshots
+
+### PredictFinance.Api
+- endpoints
+- auth
+- validation
+- mappings
+- problem details
+- sécurité d’exposition
+
+### PredictFinance.Front
+- affichage
+- UX
+- mapping codes -> labels/couleurs/badges
+- navigation batch / détail / décision
+- aucun calcul métier critique
+
+==================================================
+8. MODELE DE DONNEES CIBLE ATTENDU
+==================================================
+
+Je veux une proposition claire d’entités/tables minimales à créer ou à conserver, par exemple :
+
+- MarketSnapshot
+- AnalysisBatch
+- AnalysisCandidate
+- PatternInspection
+- DecisionSignal
+- ModelArtifactReference
+- AuditEvent
+
+Pour chaque entité :
+- rôle
+- champs clés
+- liens
+- invariants importants
+- source de vérité
+- ce qui doit être historisé
+
+Je veux aussi que tu expliques clairement :
+- pourquoi il faut persister le batch complet
+- pourquoi il ne faut pas persister uniquement le pattern final choisi
+
+==================================================
+9. CONTRATS ATTENDUS
+==================================================
+
+Je veux trois niveaux de contrats.
+
+### 9.1 Contrat API exposé au front
+Je veux que tu proposes :
+- endpoints recommandés
+- payloads de requête
+- payloads de réponse
+- conventions de nommage
+- statuts/codes exposés
+- ce qui ne doit jamais être exposé au front
+
+### 9.2 Contrat applicatif interne
+Je veux que tu proposes les objets applicatifs principaux et leurs responsabilités.
+
+### 9.3 Contrat .NET <-> Python
+Je veux que tu proposes :
+- format JSON strict
+- versioning du contrat
+- request id/correlation
+- status codes provider
+- model version
+- warning/error handling
+- champs autorisés
+- champs interdits
+
+Important :
+Python ne doit jamais retourner :
+- Buy
+- Sell
+- Hold
+- décision produit finale
+
+==================================================
+10. ENUMS / CODES STABLES BACKEND
+==================================================
+
+Je veux une liste recommandée d’enums/codes backend stables, au minimum du type :
+
+- PatternCode
+- AnalysisStatusCode
+- PatternPhaseCode
+- PatternStageCode
+- DecisionPostureCode
+- ActionCode
+- RiskLevelCode
+- ScoreTypeCode
+- ConfidenceBandCode
+- ModelStatusCode
+- DataFreshnessCode
+- MarketDataSourceCode
+- RefreshModeCode
+- AuditEventTypeCode
+
+Je veux que tu expliques :
+- leur rôle
+- où ils doivent vivre
+- lesquels sont exposés au front
+- lesquels restent internes
+- comment éviter les strings libres
+
+==================================================
+11. REGLES NON NEGOCIABLES
+==================================================
+
+Je veux une section “règles non négociables” avec des formulations très claires.
+
+Exemples du niveau attendu :
+- ce que le front ne doit jamais faire
+- ce que Python ne doit jamais décider
+- ce que l’API doit toujours maîtriser
+- comment protéger la sémantique métier
+- comment éviter que l’architecture dérive avec le temps
+- comment éviter le faux multi-pattern
+- comment éviter de mentir avec des scores mal nommés
+
+==================================================
+12. ROADMAP ATTENDUE
+==================================================
+
+Je veux une roadmap réaliste et progressive :
+
+### V1
+Je veux que tu assumes explicitement :
+- V1 peut être forte sans IA
+- V1 doit rester honnête et mono ou peu de patterns si nécessaire
+- V1 doit prioriser architecture propre, snapshot, audit, explicabilité, décision API
+
+### V2
+Je veux :
+- ajout de scorers IA
+- ouverture multi-candidats plus sérieuse
+- abstention formalisée
+- enrichissement des contrats
+- meilleure calibration/structuration des scores
+
+### V3
+Je veux :
+- scoring hybride plus avancé
+- décision métier enrichie
+- personnalisation potentielle
+- backtesting produit
+- amélioration de l’expérience multi-pattern
+
+Pour chaque version :
+- objectif
+- périmètre
+- ce qu’on fait
+- ce qu’on refuse encore de faire
+- risques maîtrisés
+
+==================================================
+13. DOCUMENTATION A PRODUIRE
+==================================================
+
+Je veux aussi que tu rédiges un mini-kit documentaire clair, utile et pédagogique, en Markdown, comme si tu préparais la base documentaire du repo.
+
+Produis ces documents avec contenu complet :
+
+1. `Docs/01_ARCHITECTURE_OVERVIEW.md`
+Contenu attendu :
+- vision globale
+- principes d’architecture
+- grands composants
+- rôle de chaque bloc
+- pourquoi l’IA est optionnelle/interchangeable
+- schéma textuel simple des flux
+
+2. `Docs/02_PROJECT_STRUCTURE.md`
+Contenu attendu :
+- liste des projets
+- rôle de chacun
+- dépendances autorisées / interdites
+- exemples de contenu par projet
+- guide “où mettre quoi”
+
+3. `Docs/03_RUNTIME_FLOW.md`
+Contenu attendu :
+- déroulé complet d’une analyse
+- snapshot
+- batch
+- détection
+- scoring
+- abstention
+- détail
+- décision
+- persistance
+- audit
+- refresh explicite
+
+4. `Docs/04_DOMAIN_MODEL.md`
+Contenu attendu :
+- entités métier
+- relations
+- invariants
+- enums/codes
+- source de vérité
+- historisation
+
+5. `Docs/05_API_CONTRACTS.md`
+Contenu attendu :
+- endpoints recommandés
+- DTO de requête/réponse
+- conventions de nommage
+- erreurs métier
+- ce qui ne doit jamais être exposé au front
+
+6. `Docs/06_PYTHON_INTEGRATION.md`
+Contenu attendu :
+- rôle exact de Python
+- ce que Python peut retourner
+- ce que Python ne décide jamais
+- format du contrat d’échange
+- gestion des erreurs
+- versioning modèle et contrat
+
+7. `Docs/07_DECISION_ENGINE.md`
+Contenu attendu :
+- séparation analyse / interprétation / décision
+- posture interne vs action simplifiée
+- exemples de règles
+- points d’extension futurs
+
+8. `Docs/08_V1_V2_V3_ROADMAP.md`
+Contenu attendu :
+- plan incrémental réaliste
+- périmètre de chaque version
+- dette assumée
+- dette refusée
+- garde-fous d’évolution
+
+==================================================
+14. SI TU PROPOSES DES STRUCTURES OU DU CODE
+==================================================
+
+Comme cette demande est en mode Plan, je veux prioritairement :
+- architecture
+- contrats
+- découpage
+- documentation
+- conventions
+- roadmap
+- règles d’architecture
+
+Tu peux proposer :
+- arborescences
+- signatures d’interfaces
+- exemples de DTO
+- exemples d’enums
+- pseudo-structures de solution
+
+Mais :
+- ne pars pas dans une génération massive de code
+- n’écris pas une fausse implémentation prématurée
+- ne noie pas la réflexion dans du boilerplate
+
+Si tu proposes des snippets, respecte :
+- .NET 10
+- Angular 21
+- OWASP
+- SonarQube
+- clean architecture
+- aucun stringly-typed pour les domaines fermés
+- aucun mélange logique métier / transport technique
+
+==================================================
+15. FORMAT DE SORTIE ATTENDU
+==================================================
+
+Je veux une réponse finale dans cet ordre :
+
+1. Verdict d’architecture
+2. Décisions d’archi tranchées
+3. Architecture cible recommandée
+4. Structure de solution / projets
+5. Flux runtime cible
+6. Modèle de données cible
+7. Contrats recommandés
+8. Enums / codes stables backend
+9. Règles non négociables
+10. Roadmap V1 / V2 / V3
+11. Erreurs à éviter absolument
+12. Documentation Markdown complète prête à intégrer au repo
+
+Très important :
+- sois précis
+- sois critique
+- évite le blabla
+- n’essaie pas de sauver artificiellement l’existant si c’est une impasse
+- si une V1 sans IA est plus saine, dis-le clairement
+- si tu gardes l’IA, impose une architecture où elle est interchangeable et non souveraine
+- la documentation doit être suffisamment claire pour que je comprenne rapidement le rôle de chaque couche et composant
+- garde une logique cohérente avec un travail de mode Plan
