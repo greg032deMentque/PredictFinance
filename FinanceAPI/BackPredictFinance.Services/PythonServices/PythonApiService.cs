@@ -1,10 +1,11 @@
+using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Services.PythonServices.Models;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Text.Json;
 
 namespace BackPredictFinance.Services.PythonServices
@@ -22,13 +23,13 @@ namespace BackPredictFinance.Services.PythonServices
         private readonly PythonCliOptions _options;
         private readonly IPatternCatalogService _patternCatalogService;
         private readonly IHostEnvironment _environment;
-        private readonly ILogger<PythonApiService> _logger;
+        private readonly ILogService _logger;
 
         public PythonApiService(
             IOptions<PythonCliOptions> options,
             IPatternCatalogService patternCatalogService,
             IHostEnvironment environment,
-            ILogger<PythonApiService> logger)
+            ILogService logger)
         {
             _options = options.Value;
             _patternCatalogService = patternCatalogService;
@@ -62,7 +63,7 @@ namespace BackPredictFinance.Services.PythonServices
             };
 
             var rawPayload = await RunPredictCliAsync(request);
-            var parsed = ParsePredictPayload(rawPayload);
+            var parsed = ParsePredictPayloadWithContract(rawPayload, request.Symbol, request.Pattern);
             var qualityGate = BuildModelQualityGate(patternConfiguration.ModelDir);
             var primaryAssessment = GetPrimaryAssessment(parsed.PatternAssessments);
 
@@ -165,7 +166,7 @@ namespace BackPredictFinance.Services.PythonServices
             };
 
             var rawPayload = await RunSimulateCliAsync(simulationRequest);
-            var parsed = ParseSimulatePayload(rawPayload);
+            var parsed = ParseSimulatePayloadWithContract(rawPayload, simulationRequest.Symbol, simulationRequest.Pattern);
 
             return new SimulationOut
             {
@@ -222,26 +223,7 @@ namespace BackPredictFinance.Services.PythonServices
 
         private async Task<string> RunPredictCliAsync(PythonPredictRequest request)
         {
-            var pythonExe = ResolvePath(_options.PythonExe);
-            var workingDirectory = ResolvePath(_options.WorkingDirectory);
-            if (!File.Exists(pythonExe))
-            {
-                throw new FileNotFoundException($"Python executable not found: {pythonExe}");
-            }
-            if (!Directory.Exists(workingDirectory))
-            {
-                throw new DirectoryNotFoundException($"Python working directory not found: {workingDirectory}");
-            }
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = pythonExe,
-                WorkingDirectory = workingDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
+            var startInfo = CreatePythonProcessStartInfo();
             startInfo.ArgumentList.Add("-m");
             startInfo.ArgumentList.Add("finance_ia.cli.predict");
             startInfo.ArgumentList.Add("--ticker");
@@ -253,71 +235,12 @@ namespace BackPredictFinance.Services.PythonServices
             startInfo.ArgumentList.Add("--pattern");
             startInfo.ArgumentList.Add(request.Pattern);
 
-            using var process = new Process { StartInfo = startInfo };
-            var timeout = TimeSpan.FromSeconds(Math.Max(5, _options.TimeoutSeconds));
-            using var timeoutCts = new CancellationTokenSource(timeout);
-
-            try
-            {
-                process.Start();
-                var stdoutTask = process.StandardOutput.ReadToEndAsync();
-                var stderrTask = process.StandardError.ReadToEndAsync();
-
-                await process.WaitForExitAsync(timeoutCts.Token);
-
-                var stdout = await stdoutTask;
-                var stderr = await stderrTask;
-
-                if (process.ExitCode != 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Python predict command failed (exit={process.ExitCode}): {stderr}");
-                }
-
-                if (string.IsNullOrWhiteSpace(stdout))
-                {
-                    throw new InvalidOperationException("Python predict command returned empty output");
-                }
-
-                return stdout;
-            }
-            catch (OperationCanceledException)
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-                throw new TimeoutException($"Python predict command timed out after {timeout.TotalSeconds:0}s");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Python CLI prediction failed for symbol {Symbol}", request.Symbol);
-                throw;
-            }
+            return await RunCliAsync("predict", startInfo, request.Symbol, request.Pattern);
         }
 
         private async Task<string> RunSimulateCliAsync(PythonSimulationRequest request)
         {
-            var pythonExe = ResolvePath(_options.PythonExe);
-            var workingDirectory = ResolvePath(_options.WorkingDirectory);
-            if (!File.Exists(pythonExe))
-            {
-                throw new FileNotFoundException($"Python executable not found: {pythonExe}");
-            }
-            if (!Directory.Exists(workingDirectory))
-            {
-                throw new DirectoryNotFoundException($"Python working directory not found: {workingDirectory}");
-            }
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = pythonExe,
-                WorkingDirectory = workingDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
+            var startInfo = CreatePythonProcessStartInfo();
             startInfo.ArgumentList.Add("-m");
             startInfo.ArgumentList.Add("finance_ia.cli.simulate");
             startInfo.ArgumentList.Add("--ticker");
@@ -337,6 +260,11 @@ namespace BackPredictFinance.Services.PythonServices
             startInfo.ArgumentList.Add("--buy-threshold");
             startInfo.ArgumentList.Add(request.BuyThreshold.ToString(CultureInfo.InvariantCulture));
 
+            return await RunCliAsync("simulate", startInfo, request.Symbol, request.Pattern);
+        }
+
+        private async Task<string> RunCliAsync(string operation, ProcessStartInfo startInfo, string symbol, string pattern)
+        {
             using var process = new Process { StartInfo = startInfo };
             var timeout = TimeSpan.FromSeconds(Math.Max(5, _options.TimeoutSeconds));
             using var timeoutCts = new CancellationTokenSource(timeout);
@@ -349,21 +277,31 @@ namespace BackPredictFinance.Services.PythonServices
 
                 await process.WaitForExitAsync(timeoutCts.Token);
 
-                var stdout = await stdoutTask;
-                var stderr = await stderrTask;
-
-                if (process.ExitCode != 0)
+                var result = new PythonCliExecutionResult
                 {
-                    throw new InvalidOperationException(
-                        $"Python simulate command failed (exit={process.ExitCode}): {stderr}");
+                    ExitCode = process.ExitCode,
+                    Stdout = await stdoutTask,
+                    Stderr = await stderrTask
+                };
+
+                if (result.ExitCode != 0)
+                {
+                    ThrowForCliFailure(operation, symbol, pattern, result);
                 }
 
-                if (string.IsNullOrWhiteSpace(stdout))
+                if (string.IsNullOrWhiteSpace(result.Stdout))
                 {
-                    throw new InvalidOperationException("Python simulate command returned empty output");
+                    var envelope = PythonCliErrorHandling.BuildFallbackEnvelope(
+                        operation,
+                        symbol,
+                        pattern,
+                        "invalid_output",
+                        $"Python {operation} command returned empty output.");
+                    LogCliFailure(operation, symbol, pattern, 0, envelope);
+                    throw PythonCliErrorHandling.CreateCustomException(operation, symbol, pattern, envelope);
                 }
 
-                return stdout;
+                return result.Stdout;
             }
             catch (OperationCanceledException)
             {
@@ -371,13 +309,136 @@ namespace BackPredictFinance.Services.PythonServices
                 {
                     process.Kill(entireProcessTree: true);
                 }
-                throw new TimeoutException($"Python simulate command timed out after {timeout.TotalSeconds:0}s");
+
+                var envelope = PythonCliErrorHandling.BuildFallbackEnvelope(
+                    operation,
+                    symbol,
+                    pattern,
+                    "unexpected_error",
+                    $"Python {operation} command timed out after {timeout.TotalSeconds:0}s",
+                    "Le moteur IA a dépassé le délai de réponse.",
+                    new Dictionary<string, string?> { ["timeout_seconds"] = timeout.TotalSeconds.ToString("0", CultureInfo.InvariantCulture) });
+                LogCliFailure(operation, symbol, pattern, null, envelope);
+                throw PythonCliErrorHandling.CreateCustomException(
+                    operation,
+                    symbol,
+                    pattern,
+                    envelope,
+                    overrideStatusCode: HttpStatusCode.GatewayTimeout,
+                    overrideFrontMessage: "Le moteur IA a dépassé le délai de réponse.");
+            }
+            catch (CustomException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Python CLI simulation failed for symbol {Symbol}", request.Symbol);
-                throw;
+                var errorCode = ex is FileNotFoundException or DirectoryNotFoundException ? "artifact_missing" : "unexpected_error";
+                var envelope = PythonCliErrorHandling.BuildFallbackEnvelope(operation, symbol, pattern, errorCode, ex.Message);
+                LogCliFailure(operation, symbol, pattern, null, envelope);
+                throw PythonCliErrorHandling.CreateCustomException(operation, symbol, pattern, envelope);
             }
+        }
+
+        private ProcessStartInfo CreatePythonProcessStartInfo()
+        {
+            var pythonExe = ResolvePath(_options.PythonExe);
+            var workingDirectory = ResolvePath(_options.WorkingDirectory);
+            if (!File.Exists(pythonExe))
+            {
+                throw new FileNotFoundException($"Python executable not found: {pythonExe}", pythonExe);
+            }
+
+            if (!Directory.Exists(workingDirectory))
+            {
+                throw new DirectoryNotFoundException($"Python working directory not found: {workingDirectory}");
+            }
+
+            return new ProcessStartInfo
+            {
+                FileName = pythonExe,
+                WorkingDirectory = workingDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+        }
+
+        private void ThrowForCliFailure(string operation, string symbol, string pattern, PythonCliExecutionResult result)
+        {
+            var envelope = PythonCliErrorHandling.TryParseEnvelope(result.Stderr, out var parsedEnvelope)
+                ? parsedEnvelope
+                : PythonCliErrorHandling.BuildFallbackEnvelope(
+                    operation,
+                    symbol,
+                    pattern,
+                    "unexpected_error",
+                    $"Python {operation} command failed with exit code {result.ExitCode}: {PythonCliErrorHandling.Truncate(result.Stderr, 2048)}",
+                    details: new Dictionary<string, string?> { ["exit_code"] = result.ExitCode.ToString(CultureInfo.InvariantCulture) });
+
+            LogCliFailure(operation, symbol, pattern, result.ExitCode, envelope);
+            throw PythonCliErrorHandling.CreateCustomException(operation, symbol, pattern, envelope);
+        }
+
+        private void LogCliFailure(string operation, string symbol, string pattern, int? exitCode, PythonCliErrorEnvelope envelope)
+        {
+            _logger.LogError(
+                "Python CLI {Operation} failed for symbol {Symbol} pattern {Pattern}. exitCode={ExitCode} errorCode={ErrorCode} errorType={ErrorType} userMessage={UserMessage} technicalMessage={TechnicalMessage}",
+                operation,
+                symbol,
+                pattern,
+                exitCode,
+                envelope.ErrorCode,
+                envelope.ErrorType,
+                envelope.UserMessage,
+                PythonCliErrorHandling.Truncate(envelope.Message, 1024));
+        }
+
+        private PythonPredictPayload ParsePredictPayloadWithContract(string json, string symbol, string pattern)
+        {
+            try
+            {
+                return ParsePredictPayload(json);
+            }
+            catch (JsonException ex)
+            {
+                throw BuildInvalidOutputException("predict", symbol, pattern, "Python predict command returned invalid JSON.", ex);
+            }
+            catch (FormatException ex)
+            {
+                throw BuildInvalidOutputException("predict", symbol, pattern, ex.Message, ex);
+            }
+        }
+
+        private PythonSimulationPayload ParseSimulatePayloadWithContract(string json, string symbol, string pattern)
+        {
+            try
+            {
+                return ParseSimulatePayload(json);
+            }
+            catch (JsonException ex)
+            {
+                throw BuildInvalidOutputException("simulate", symbol, pattern, "Python simulate command returned invalid JSON.", ex);
+            }
+            catch (FormatException ex)
+            {
+                throw BuildInvalidOutputException("simulate", symbol, pattern, ex.Message, ex);
+            }
+        }
+
+        private CustomException BuildInvalidOutputException(string operation, string symbol, string pattern, string technicalMessage, Exception exception)
+        {
+            var envelope = PythonCliErrorHandling.BuildFallbackEnvelope(
+                operation,
+                symbol,
+                pattern,
+                "invalid_output",
+                technicalMessage,
+                details: new Dictionary<string, string?> { ["stage"] = "dotnet_response_parse" });
+            PythonCliErrorHandling.AttachEnvelope(exception, envelope);
+            LogCliFailure(operation, symbol, pattern, 0, envelope);
+            return PythonCliErrorHandling.CreateCustomException(operation, symbol, pattern, envelope);
         }
 
         private PythonPredictPayload ParsePredictPayload(string json)

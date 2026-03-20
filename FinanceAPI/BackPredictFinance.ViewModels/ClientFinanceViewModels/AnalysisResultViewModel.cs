@@ -36,13 +36,13 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
                 .ForMember(dest => dest.Phase, opt => opt.MapFrom(src => GetPrimaryPhase(src)))
                 .ForMember(dest => dest.Confidence, opt => opt.MapFrom(src => GetConfidence(src)))
                 .ForMember(dest => dest.Recommendation, opt => opt.MapFrom(src => GetAction(src)))
-                .ForMember(dest => dest.Reason, opt => opt.MapFrom(src => src.DecisionSignal != null ? src.DecisionSignal.Reason : "Aucune justification"))
+                .ForMember(dest => dest.Reason, opt => opt.MapFrom(src => GetReason(src)))
                 .ForMember(dest => dest.RiskLevel, opt => opt.MapFrom(src => InferRiskLevel(GetConfidence(src), src.DecisionSignal != null && src.DecisionSignal.IsActionable)))
                 .ForMember(dest => dest.HorizonDays, opt => opt.MapFrom(src => src.DecisionSignal != null ? src.DecisionSignal.HorizonDays : 0))
                 .ForMember(dest => dest.PredictedAt, opt => opt.MapFrom(src => src.CompletedAtUtc ?? src.StartedAtUtc))
                 .ForMember(dest => dest.IsActionable, opt => opt.MapFrom(src => src.DecisionSignal != null && src.DecisionSignal.IsActionable))
                 .ForMember(dest => dest.ModelStatus, opt => opt.MapFrom(src => src.ModelSnapshot != null ? src.ModelSnapshot.ModelStatus.ToString() : ModelStatusEnum.NoGo.ToString()))
-                .ForMember(dest => dest.ModelMessage, opt => opt.MapFrom(src => src.ModelSnapshot != null ? src.ModelSnapshot.ModelMessage : string.Empty))
+                .ForMember(dest => dest.ModelMessage, opt => opt.MapFrom(src => GetModelMessage(src)))
                 .ForMember(dest => dest.CurrentPrice, opt => opt.MapFrom(src => GetCurrentPrice(src)))
                 .ForMember(dest => dest.TargetPrice, opt => opt.MapFrom(src => GetTargetPrice(src)))
                 .ForMember(dest => dest.InvalidationPrice, opt => opt.MapFrom(src => GetInvalidationPrice(src)));
@@ -61,7 +61,7 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
             => GetPrimaryAssessment(source)?.InvalidationPrice;
 
         private static string GetPrimaryPattern(AnalysisRun source)
-            => FormatPattern(GetPrimaryAssessment(source)?.Pattern ?? TradingPatternEnum.DoubleTop);
+            => FormatPattern(GetPrimaryAssessment(source)?.Pattern ?? source.RequestedPattern);
 
         private static string GetPrimaryPhase(AnalysisRun source)
             => GetPrimaryAssessment(source)?.Phase ?? string.Empty;
@@ -71,6 +71,14 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
 
         private static string GetAction(AnalysisRun source)
             => FormatAction(source.DecisionSignal?.Action ?? RecommendationActionEnum.NonActionable);
+
+        private static string GetReason(AnalysisRun source)
+            => source.DecisionSignal?.Reason
+                ?? (string.IsNullOrWhiteSpace(source.ErrorMessage) ? "Aucune justification" : source.ErrorMessage);
+
+        private static string GetModelMessage(AnalysisRun source)
+            => source.ModelSnapshot?.ModelMessage
+                ?? (string.IsNullOrWhiteSpace(source.ErrorMessage) ? string.Empty : source.ErrorMessage);
 
         private static string FormatPattern(TradingPatternEnum pattern)
         {

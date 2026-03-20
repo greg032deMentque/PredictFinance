@@ -9,7 +9,6 @@ export class ToastService {
   constructor(private toastr: ToastrService,) { }
 
   public error(message: string) {
-    console.log(message)
     if(message != null){
       if (message.length > 160) {
         message = "Une erreur est survenue."

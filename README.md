@@ -571,6 +571,9 @@ Derniere mise a jour structurante documentee:
 - envoi explicite de `RequestedPattern` depuis le front d'analyse, meilleure lisibilite de l'historique client et messages plus clairs pour l'analyse/simulation en francais
 - impact: les parcours client/admin d'analyse sont mieux alignes avec le contrat backend existant et la restitution front devient plus lisible sans changer le perimetre mono-pattern
 - rapprochement de la cible multi-pattern: oui, leger, car le contrat d'analyse est plus coherent cote front et les champs deja exposes sont mieux exploites
+- ajout d'une action rapide `Analyser` directement depuis la watchlist client
+- impact: l'utilisateur peut lancer l'analyse IA d'une valeur suivie en un clic sans repasser par la selection manuelle
+- rapprochement de la cible multi-pattern: indirect, car cela fluidifie le parcours analyse existant sans modifier le contrat mono-pattern
 - branchement effectif du `RateLimitingMiddleware` dans le pipeline `Program.cs`
 - impact: les endpoints API sont maintenant proteges par un premier garde-fou anti-abus, sans modifier les contrats applicatifs
 - rapprochement de la cible multi-pattern: indirect, car cela durcit l'exposition des futurs endpoints de simulation/analyse avant d'ajouter plus de charge metier

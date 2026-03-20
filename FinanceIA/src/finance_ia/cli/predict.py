@@ -1,9 +1,9 @@
 ﻿from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
+from finance_ia.cli.error_handling import run_cli_command
 from finance_ia.model.predict import predict_ticker
 
 
@@ -18,14 +18,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    result = predict_ticker(
+    return run_cli_command(
+        operation="predict",
         ticker=args.ticker,
-        model_dir=Path(args.model_dir),
-        period=args.period,
         pattern=args.pattern,
+        action=lambda: predict_ticker(
+            ticker=args.ticker,
+            model_dir=Path(args.model_dir),
+            period=args.period,
+            pattern=args.pattern,
+        ),
     )
-    print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
-    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover

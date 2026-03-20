@@ -5,21 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net;
-using System.Security.Claims;
-using System.Text;
 
 namespace BackPredictFinance.API.Middleware
 {
-    public class CustomErrorMessage
-    {
-        public int StatusCode { get; set; }
-        public string Exception { get; set; } = "";
-        public string Request_uri { get; set; } = "";
-        public string Request_method { get; set; } = "";
-        public string CurrentUserId { get; set; } = "";
-        public string TraceId { get; set; } = "";
-    }
-
     public class ExceptionMiddleware
     {
         private readonly RequestDelegate _next;
@@ -60,25 +48,25 @@ namespace BackPredictFinance.API.Middleware
             var traceId = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier;
 
             var statusCode = MapStatusCode(ex);
-            var userMessage = MapUserMessage(statusCode, ex);
-            string detail = ex.Message;
+            var userMessage = MapUserMessage(statusCode);
+            string? detail = _env.IsDevelopment() ? ex.Message : null;
+            IReadOnlyCollection<string>? errors = null;
 
             if (ex is SecurityTokenExpiredException)
             {
                 statusCode = HttpStatusCode.Unauthorized;
                 userMessage = "Veuillez vous reconnecter.";
-                detail = "Le token a expiré.";
+                detail = _env.IsDevelopment() ? "Le token a expiré." : null;
             }
             else if (ex is CustomException customEx)
             {
                 statusCode = customEx.StatusCode;
                 userMessage = string.IsNullOrWhiteSpace(customEx.FrontMessage)
-                    ? "Requête invalide."
+                    ? MapUserMessage(customEx.StatusCode)
                     : customEx.FrontMessage;
-                detail = customEx.Message;
+                detail = _env.IsDevelopment() ? customEx.Message : null;
+                errors = customEx.ErrorMessages?.Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
             }
-
-          
 
             context.Response.Headers["X-Trace-Id"] = traceId;
 
@@ -90,6 +78,8 @@ namespace BackPredictFinance.API.Middleware
                 type = "about:blank",
                 title = StatusCodeTitle(statusCode),
                 status = (int)statusCode,
+                message = userMessage,
+                errors,
                 detail,
                 traceId,
                 instance = context.Request.Path.Value,
@@ -106,7 +96,7 @@ namespace BackPredictFinance.API.Middleware
             var action = rv.TryGetValue("action", out var a) ? a?.ToString() ?? "" : "";
 
             logSvc.LogError(
-                $"Unhandled exception middleware. traceId={traceId} path={context.Request.Path.Value} method={context.Request.Method} endpoint={endpointName} controller={controller} action={action}",
+                $"Unhandled exception middleware. statusCode={(int)statusCode} traceId={traceId} path={context.Request.Path.Value} method={context.Request.Method} endpoint={endpointName} controller={controller} action={action}",
                 ex
             );
         }
@@ -127,8 +117,9 @@ namespace BackPredictFinance.API.Middleware
                 _ => HttpStatusCode.InternalServerError
             };
 
-        private static string MapUserMessage(HttpStatusCode status, Exception ex) => status switch
+        private static string MapUserMessage(HttpStatusCode status) => status switch
         {
+            HttpStatusCode.BadRequest => "Requête invalide.",
             HttpStatusCode.Unauthorized => "Veuillez vous reconnecter.",
             HttpStatusCode.Forbidden => "Action non autorisée.",
             HttpStatusCode.NotFound => "Ressource introuvable.",

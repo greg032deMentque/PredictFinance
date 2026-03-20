@@ -46,6 +46,17 @@ export class AdminAnalyseFinance implements OnInit {
     this.selectedAsset = this.analyzableAssets.find((item) => item.Symbol === symbol) ?? null;
   }
 
+  analyzeSelectedAsset(symbol: string): void {
+    if (!symbol || this.analysisLoading) {
+      return;
+    }
+
+    this.selectedSymbol = symbol;
+    this.selectedAsset = this.analyzableAssets.find((item) => item.Symbol === symbol) ?? this.selectedAsset;
+    this.toastService.success(`Analyse lancee pour ${symbol}.`);
+    this.runAnalysis();
+  }
+
   runAnalysis(): void {
     if (!this.selectedSymbol || this.analysisLoading) {
       this.toastService.warning('Selectionne une valeur avant de lancer l analyse.');

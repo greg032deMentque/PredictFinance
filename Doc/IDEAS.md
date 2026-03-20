@@ -252,7 +252,6 @@ Description:
 - notes utilisateur
 - objectifs de prix
 - horizon d'investissement
-- liens explicites vers analyse/simulation
 
 Priority: 1
 Complexity: Medium

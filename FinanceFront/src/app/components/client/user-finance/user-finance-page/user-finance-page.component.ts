@@ -124,6 +124,16 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
     this.startQuoteRefresh(symbol);
   }
 
+  onAnalyzeFromWatchlist(symbol: string): void {
+    if (!symbol || this.analysisLoading) {
+      return;
+    }
+
+    this.selectedSymbol = symbol;
+    this.toastService.success(`Analyse lancee pour ${symbol}.`);
+    this.launchAnalysis();
+  }
+
   onRemoveFromWatchlist(symbol: string): void {
     if (!symbol || this.watchlistLoading) {
       return;

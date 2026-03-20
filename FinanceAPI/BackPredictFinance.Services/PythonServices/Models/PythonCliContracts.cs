@@ -1,7 +1,44 @@
 using BackPredictFinance.Common.enums;
+using System.Text.Json.Serialization;
 
 namespace BackPredictFinance.Services.PythonServices.Models
 {
+    public sealed class PythonCliErrorEnvelope
+    {
+        [JsonPropertyName("schema_version")]
+        public string SchemaVersion { get; set; } = string.Empty;
+
+        [JsonPropertyName("source")]
+        public string Source { get; set; } = string.Empty;
+
+        [JsonPropertyName("operation")]
+        public string Operation { get; set; } = string.Empty;
+
+        [JsonPropertyName("error_code")]
+        public string ErrorCode { get; set; } = string.Empty;
+
+        [JsonPropertyName("error_type")]
+        public string ErrorType { get; set; } = string.Empty;
+
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = string.Empty;
+
+        [JsonPropertyName("user_message")]
+        public string UserMessage { get; set; } = string.Empty;
+
+        [JsonPropertyName("ticker")]
+        public string? Ticker { get; set; }
+
+        [JsonPropertyName("pattern")]
+        public string? Pattern { get; set; }
+
+        [JsonPropertyName("details")]
+        public Dictionary<string, string?>? Details { get; set; }
+
+        [JsonPropertyName("logged_at_utc")]
+        public DateTime LoggedAtUtc { get; set; }
+    }
+
     public sealed class PythonPredictRequest
     {
         public string Symbol { get; set; } = string.Empty;
@@ -20,6 +57,13 @@ namespace BackPredictFinance.Services.PythonServices.Models
         public int HorizonDays { get; set; }
         public decimal SellThreshold { get; set; }
         public decimal BuyThreshold { get; set; }
+    }
+
+    internal sealed class PythonCliExecutionResult
+    {
+        public int ExitCode { get; init; }
+        public string Stdout { get; init; } = string.Empty;
+        public string Stderr { get; init; } = string.Empty;
     }
 
     public sealed class PythonPatternAssessmentPayload

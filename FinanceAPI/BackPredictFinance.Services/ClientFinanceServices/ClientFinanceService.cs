@@ -1,3 +1,4 @@
+using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services.PythonServices;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System.Data;
+using System.Net;
 using System.Text.Json;
 
 namespace BackPredictFinance.Services.ClientFinanceServices
@@ -433,14 +435,38 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             }
             EnsureSymbolIsAllowed(symbol);
             var requestedPattern = NormalizeRequestedAnalysisPattern(request.RequestedPattern);
-
-            var prediction = await _pythonApiService.PredictAsync(new AssetIn
-            {
-                Symbol = symbol,
-                Pattern = requestedPattern
-            });
-            var completedAtUtc = DateTime.UtcNow;
             var asset = await EnsureAssetAsync(symbol, symbol, ct);
+
+            PredictOut prediction;
+            try
+            {
+                prediction = await _pythonApiService.PredictAsync(new AssetIn
+                {
+                    Symbol = symbol,
+                    Pattern = requestedPattern
+                });
+            }
+            catch (Exception ex)
+            {
+                var failedAtUtc = DateTime.UtcNow;
+                await TryPersistFailedAnalysisRunAsync(asset, requestedPattern, startedAtUtc, failedAtUtc, ex, ct);
+
+                if (ex is CustomException customException)
+                {
+                    throw customException;
+                }
+
+                var envelope = PythonCliErrorHandling.GetOrBuildEnvelope(ex, "predict", symbol, requestedPattern);
+                throw PythonCliErrorHandling.CreateCustomException(
+                    "predict",
+                    symbol,
+                    requestedPattern,
+                    envelope,
+                    overrideStatusCode: HttpStatusCode.InternalServerError,
+                    overrideFrontMessage: "Le moteur IA n'a pas pu terminer l'analyse.");
+            }
+
+            var completedAtUtc = DateTime.UtcNow;
             var userAsset = await EnsureUserAssetAsync(asset.Id, ct);
             var analysisRun = await TryPersistAnalysisRunAsync(asset, requestedPattern, prediction, startedAtUtc, completedAtUtc, ct);
 
@@ -541,6 +567,44 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                     PositiveSamples = prediction.PositiveSamples,
                     SelectedThreshold = prediction.SelectedThreshold
                 }
+            };
+
+            await _financeDbContext.AnalysisRuns.AddAsync(analysisRun, ct);
+            await _financeDbContext.SaveChangesAsync(ct);
+            return analysisRun;
+        }
+
+        private async Task<AnalysisRun?> TryPersistFailedAnalysisRunAsync(
+            Asset asset,
+            string requestedPattern,
+            DateTime startedAtUtc,
+            DateTime completedAtUtc,
+            Exception exception,
+            CancellationToken ct)
+        {
+            if (!await CanUseAnalysisHistoryAsync(ct))
+            {
+                return null;
+            }
+
+            var envelope = PythonCliErrorHandling.GetOrBuildEnvelope(exception, "predict", asset.Symbol, requestedPattern);
+            var rawPayload = PythonCliErrorHandling.TryGetSerializedEnvelope(exception) ?? PythonCliErrorHandling.SerializeEnvelope(envelope);
+            var errorMessage = exception is CustomException customException && !string.IsNullOrWhiteSpace(customException.FrontMessage)
+                ? customException.FrontMessage.Trim()
+                : envelope.UserMessage;
+
+            var analysisRun = new AnalysisRun
+            {
+                UserId = _currentUserId,
+                AssetId = asset.Id,
+                RequestedPattern = ParseTradingPattern(requestedPattern),
+                Status = "Failed",
+                StartedAtUtc = startedAtUtc,
+                CompletedAtUtc = completedAtUtc,
+                RawPayload = rawPayload,
+                ErrorMessage = string.IsNullOrWhiteSpace(errorMessage)
+                    ? "Le moteur IA n'a pas pu terminer l'analyse."
+                    : errorMessage
             };
 
             await _financeDbContext.AnalysisRuns.AddAsync(analysisRun, ct);

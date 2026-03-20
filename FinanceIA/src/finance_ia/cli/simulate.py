@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
+from finance_ia.cli.error_handling import run_cli_command
 from finance_ia.model.simulate import simulate_ticker
 
 
@@ -22,18 +22,21 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    result = simulate_ticker(
+    return run_cli_command(
+        operation="simulate",
         ticker=args.ticker,
-        model_dir=Path(args.model_dir),
-        period=args.period,
         pattern=args.pattern,
-        investment_amount=args.investment_amount,
-        horizon_days=args.horizon_days,
-        sell_threshold=args.sell_threshold,
-        buy_threshold=args.buy_threshold,
+        action=lambda: simulate_ticker(
+            ticker=args.ticker,
+            model_dir=Path(args.model_dir),
+            period=args.period,
+            pattern=args.pattern,
+            investment_amount=args.investment_amount,
+            horizon_days=args.horizon_days,
+            sell_threshold=args.sell_threshold,
+            buy_threshold=args.buy_threshold,
+        ),
     )
-    print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
-    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -53,9 +53,26 @@
       </ng-select>
 
       @if (selectedAsset; as asset) {
-        <div class="finance-soft-panel px-3">
-          <div class="fw-semibold">{{ asset.Symbol }} - {{ asset.CompanyName }}</div>
-          <small class="text-muted">{{ asset.Market }} - {{ asset.Currency }}</small>
+        <div class="finance-soft-panel px-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          <div>
+            <div class="fw-semibold">{{ asset.Symbol }} - {{ asset.CompanyName }}</div>
+            <small class="text-muted d-block">{{ asset.Market }} - {{ asset.Currency }}</small>
+            <small
+              class="d-block"
+              [class.text-success]="asset.DayVariationPct >= 0"
+              [class.text-danger]="asset.DayVariationPct < 0"
+            >
+              Dernier cours: {{ asset.LastPrice | number: "1.2-2" }} | Variation: {{ asset.DayVariationPct | number: "1.2-2" }}%
+            </small>
+          </div>
+          <button
+            class="btn btn-primary"
+            type="button"
+            (click)="analyzeSelectedAsset(asset.Symbol)"
+            [disabled]="analysisLoading"
+          >
+            {{ analysisLoading ? "Analyse en cours..." : "Analyser maintenant" }}
+          </button>
         </div>
       }
 

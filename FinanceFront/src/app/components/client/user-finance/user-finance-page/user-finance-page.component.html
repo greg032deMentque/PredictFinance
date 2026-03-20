@@ -99,6 +99,7 @@
     [quote]="selectedQuote"
     [quoteLoading]="quoteLoading"
     (requestQuote)="onRequestQuote($event)"
+    (requestAnalysis)="onAnalyzeFromWatchlist($event)"
     (removeFromWatchlist)="onRemoveFromWatchlist($event)"
   ></app-finance-watchlist>
 

@@ -14,6 +14,8 @@ type ApiClientErrorResponse = {
   statusCode?: number;
   traceId?: string;
   message?: string;
+  title?: string;
+  detail?: string | null;
   errors?: string[];
 };
 
@@ -44,27 +46,70 @@ export class ErrorHandlingInterceptor implements HttpInterceptor {
     }
 
     const body = err.error as ApiClientErrorResponse | string | null | undefined;
+    const traceId = this.extractTraceId(err, body);
 
     if (typeof body === 'string' && body.trim().length > 0) {
-      return body.trim();
+      return this.withTraceId(body.trim(), traceId);
     }
 
     if (body && typeof body === 'object') {
       const apiMessage = (body.message ?? '').trim();
-      const traceId = (body.traceId ?? '').trim();
+      const title = (body.title ?? '').trim();
       const errors = Array.isArray(body.errors) ? body.errors.filter((x) => !!x && x.trim().length > 0) : [];
 
       if (apiMessage.length > 0) {
-        return traceId ? `${apiMessage} (ref: ${traceId})` : apiMessage;
+        return this.withTraceId(apiMessage, traceId);
       }
 
       if (errors.length > 0) {
         const joined = errors.slice(0, 3).join(' | ');
-        return traceId ? `${joined} (ref: ${traceId})` : joined;
+        return this.withTraceId(joined, traceId);
+      }
+
+      if (title.length > 0) {
+        return this.withTraceId(title, traceId);
       }
     }
 
-    const fallback = (err.message ?? '').trim();
-    return fallback.length > 0 ? fallback : 'Une erreur est survenue.';
+    return this.withTraceId(this.getGenericMessage(err.status), traceId);
+  }
+
+  private extractTraceId(
+    err: HttpErrorResponse,
+    body: ApiClientErrorResponse | string | null | undefined
+  ): string {
+    if (body && typeof body === 'object') {
+      const traceId = (body.traceId ?? '').trim();
+      if (traceId.length > 0) {
+        return traceId;
+      }
+    }
+
+    return (err.headers.get('X-Trace-Id') ?? '').trim();
+  }
+
+  private withTraceId(message: string, traceId: string): string {
+    return traceId ? `${message} (ref: ${traceId})` : message;
+  }
+
+  private getGenericMessage(status: number): string {
+    switch (status) {
+      case 400:
+        return 'Requête invalide.';
+      case 401:
+        return 'Veuillez vous reconnecter.';
+      case 403:
+        return 'Action non autorisée.';
+      case 404:
+        return 'Ressource introuvable.';
+      case 409:
+        return 'Conflit sur la ressource.';
+      case 422:
+        return 'Données invalides.';
+      case 429:
+        return 'Trop de requêtes. Patientez un instant.';
+      default:
+        return status >= 500 ? 'Service momentanément indisponible.' : 'Une erreur est survenue.';
+    }
   }
 }

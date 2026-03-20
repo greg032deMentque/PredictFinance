@@ -15,6 +15,7 @@ export class FinanceWatchlistComponent {
   @Input() quoteLoading = false;
 
   @Output() requestQuote = new EventEmitter<string>();
+  @Output() requestAnalysis = new EventEmitter<string>();
   @Output() removeFromWatchlist = new EventEmitter<string>();
 
   onSelectSymbol(symbol: string): void {
@@ -23,5 +24,9 @@ export class FinanceWatchlistComponent {
 
   onRemoveSymbol(symbol: string): void {
     this.removeFromWatchlist.emit(symbol);
+  }
+
+  onAnalyzeSymbol(symbol: string): void {
+    this.requestAnalysis.emit(symbol);
   }
 }
