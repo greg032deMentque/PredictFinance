@@ -5,7 +5,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 {
     public interface ITradingRecommendationService
     {
-        TradingRecommendationResult EvaluateAnalysis(PredictOut prediction);
+        TradingRecommendationResult EvaluateAnalysis(TradingPatternEnum pattern, string phase, decimal probability, decimal? targetPrice, decimal? invalidationPrice);
         TradingRecommendationResult EvaluateSimulation(SimulationOut simulation);
     }
 
@@ -17,16 +17,14 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             "pullback_after_break"
         ];
 
-        public TradingRecommendationResult EvaluateAnalysis(PredictOut prediction)
+        public TradingRecommendationResult EvaluateAnalysis(TradingPatternEnum pattern, string phase, decimal probability, decimal? targetPrice, decimal? invalidationPrice)
         {
-            ArgumentNullException.ThrowIfNull(prediction);
-
             return Evaluate(
-                prediction.Pattern,
-                prediction.Phase,
-                prediction.LastProbability,
-                prediction.TargetPrice,
-                prediction.InvalidationPrice);
+                pattern,
+                phase,
+                probability,
+                targetPrice,
+                invalidationPrice);
         }
 
         public TradingRecommendationResult EvaluateSimulation(SimulationOut simulation)

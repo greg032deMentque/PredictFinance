@@ -1,6 +1,6 @@
-using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services.ClientFinanceServices.AnalysisV1;
 using BackPredictFinance.Services.PythonServices;
 using BackPredictFinance.Services.PythonServices.Models;
 using BackPredictFinance.Services.TwelveDataServices;
@@ -8,8 +8,6 @@ using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using System.Data;
-using System.Net;
 using System.Text.Json;
 
 namespace BackPredictFinance.Services.ClientFinanceServices
@@ -49,9 +47,11 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         private readonly IPythonApiService _pythonApiService;
         private readonly ITradingRecommendationService _tradingRecommendationService;
         private readonly IPatternCatalogService _patternCatalogService;
+        private readonly IAnalysisRequestCompatibilityResolver _analysisRequestCompatibilityResolver;
+        private readonly IAnalysisLegacyCompatibilityService _analysisLegacyCompatibilityService;
+        private readonly IAnalysisOrchestrator _analysisOrchestrator;
         private readonly PythonCliOptions _pythonOptions;
         private readonly IHostEnvironment _environment;
-        private bool? _analysisHistorySchemaAvailable;
 
         public ClientFinanceService(
             IServiceProvider serviceProvider,
@@ -59,6 +59,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             IPythonApiService pythonApiService,
             ITradingRecommendationService tradingRecommendationService,
             IPatternCatalogService patternCatalogService,
+            IAnalysisRequestCompatibilityResolver analysisRequestCompatibilityResolver,
+            IAnalysisLegacyCompatibilityService analysisLegacyCompatibilityService,
+            IAnalysisOrchestrator analysisOrchestrator,
             IOptions<PythonCliOptions> pythonOptions,
             IHostEnvironment environment)
             : base(serviceProvider)
@@ -67,6 +70,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             _pythonApiService = pythonApiService;
             _tradingRecommendationService = tradingRecommendationService;
             _patternCatalogService = patternCatalogService;
+            _analysisRequestCompatibilityResolver = analysisRequestCompatibilityResolver;
+            _analysisLegacyCompatibilityService = analysisLegacyCompatibilityService;
+            _analysisOrchestrator = analysisOrchestrator;
             _pythonOptions = pythonOptions.Value;
             _environment = environment;
         }
@@ -430,267 +436,27 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
         public async Task<AnalysisResultViewModel> RunAnalysisAsync(AnalysisRunRequestViewModel request, CancellationToken ct = default)
         {
-            var startedAtUtc = DateTime.UtcNow;
-            var symbol = NormalizeSymbol(request.Symbol);
-            if (string.IsNullOrWhiteSpace(symbol))
+            var normalizedRequest = new AnalysisRunRequestViewModel
+            {
+                Symbol = NormalizeSymbol(request.Symbol),
+                RequestedPattern = request.RequestedPattern
+            };
+
+            if (string.IsNullOrWhiteSpace(normalizedRequest.Symbol))
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
-            EnsureSymbolIsAllowed(symbol);
-            var requestedPattern = NormalizeRequestedAnalysisPattern(request.RequestedPattern);
-            var asset = await EnsureAssetAsync(symbol, symbol, ct);
 
-            PredictOut prediction;
-            try
-            {
-                prediction = await _pythonApiService.PredictAsync(new AssetIn
-                {
-                    Symbol = symbol,
-                    Pattern = requestedPattern
-                });
-            }
-            catch (Exception ex)
-            {
-                var failedAtUtc = DateTime.UtcNow;
-                await TryPersistFailedAnalysisRunAsync(asset, requestedPattern, startedAtUtc, failedAtUtc, ex, ct);
+            EnsureSymbolIsAllowed(normalizedRequest.Symbol);
 
-                if (ex is CustomException customException)
-                {
-                    throw customException;
-                }
-
-                var envelope = PythonCliErrorHandling.GetOrBuildEnvelope(ex, "predict", symbol, requestedPattern);
-                throw PythonCliErrorHandling.CreateCustomException(
-                    "predict",
-                    symbol,
-                    requestedPattern,
-                    envelope,
-                    overrideStatusCode: HttpStatusCode.InternalServerError,
-                    overrideFrontMessage: "Le moteur IA n'a pas pu terminer l'analyse.");
-            }
-
-            var completedAtUtc = DateTime.UtcNow;
-            var userAsset = await EnsureUserAssetAsync(asset.Id, ct);
-            var recommendation = _tradingRecommendationService.EvaluateAnalysis(prediction);
-            var analysisRun = await TryPersistAnalysisRunAsync(asset, requestedPattern, prediction, startedAtUtc, completedAtUtc, ct);
-
-            var legacyRecommendation = new Recommendation
-            {
-                UserAssetId = userAsset.Id,
-                Action = recommendation.Action,
-                Confidence = recommendation.Confidence,
-                RecommendedAtUtc = prediction.PredictedAt,
-                Reason = recommendation.Reason
-            };
-
-            await _financeDbContext.Set<Recommendation>().AddAsync(legacyRecommendation, ct);
-            await _financeDbContext.SaveChangesAsync(ct);
-
-            return MapAnalysisResult(analysisRun?.Id ?? legacyRecommendation.Id, asset, prediction, recommendation);
+            var resolvedRequest = await _analysisRequestCompatibilityResolver.ResolveAsync(normalizedRequest, GetRequiredCurrentUserId(), ct);
+            var analysisResponse = await _analysisOrchestrator.RunAnalysisAsync(resolvedRequest, ct);
+            return _analysisLegacyCompatibilityService.MapRunResult(analysisResponse);
         }
 
         public async Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(int take, CancellationToken ct = default)
         {
-            var size = Math.Clamp(take, 1, 100);
-            if (await CanUseAnalysisHistoryAsync(ct))
-            {
-                var analysisRuns = await _financeDbContext.AnalysisRuns
-                    .AsNoTracking()
-                    .Include(x => x.Asset)
-                    .Include(x => x.PatternAssessments)
-                    .Include(x => x.DecisionSignal)
-                    .Include(x => x.ModelSnapshot)
-                    .Where(x => x.UserId == _currentUserId)
-                    .OrderByDescending(x => x.CompletedAtUtc ?? x.StartedAtUtc)
-                    .Take(size)
-                    .ToListAsync(ct);
-
-                return _mapper.Map<List<AnalysisResultViewModel>>(analysisRuns);
-            }
-
-            var recommendations = await _financeDbContext.Set<Recommendation>()
-                .AsNoTracking()
-                .Include(x => x.UserAsset)
-                .ThenInclude(x => x.Asset)
-                .Where(x => x.UserAsset.UserId == _currentUserId)
-                .OrderByDescending(x => x.RecommendedAtUtc)
-                .Take(size)
-                .ToListAsync(ct);
-
-            return recommendations.Select(recommendation => new AnalysisResultViewModel
-            {
-                Id = recommendation.Id,
-                Symbol = recommendation.UserAsset.Asset.Symbol,
-                CompanyName = recommendation.UserAsset.Asset.Name ?? recommendation.UserAsset.Asset.Symbol,
-                Pattern = TradingPatternEnum.DoubleTop,
-                Probability = recommendation.Confidence,
-                RecommendationAction = recommendation.Action,
-                RecommendationReason = recommendation.Reason ?? "Aucune justification",
-                RiskLevel = RiskLevelEnum.Information,
-                PredictedAt = recommendation.RecommendedAtUtc,
-                IsActionable = recommendation.Action != RecommendationActionEnum.Hold && recommendation.Action != RecommendationActionEnum.NonActionable,
-                ModelStatus = ModelStatusEnum.NoGo
-            }).ToList();
-        }
-
-        private async Task<AnalysisRun?> TryPersistAnalysisRunAsync(
-            Asset asset,
-            string requestedPattern,
-            PredictOut prediction,
-            DateTime startedAtUtc,
-            DateTime completedAtUtc,
-            CancellationToken ct)
-        {
-            if (!await CanUseAnalysisHistoryAsync(ct))
-            {
-                return null;
-            }
-
-            var analysisRun = new AnalysisRun
-            {
-                UserId = GetRequiredCurrentUserId(),
-                AssetId = asset.Id,
-                RequestedPattern = ParseTradingPattern(requestedPattern),
-                Status = "Completed",
-                StartedAtUtc = startedAtUtc,
-                CompletedAtUtc = completedAtUtc,
-                RawPayload = JsonSerializer.Serialize(prediction),
-                PatternAssessments = BuildPatternAssessments(prediction),
-                DecisionSignal = BuildDecisionSignal(prediction),
-                ModelSnapshot = new ModelSnapshot
-                {
-                    ModelStatus = prediction.ModelStatus,
-                    ModelMessage = string.IsNullOrWhiteSpace(prediction.ModelMessage)
-                        ? string.Empty
-                        : prediction.ModelMessage.Trim(),
-                    ModelVersion = string.IsNullOrWhiteSpace(prediction.ModelVersion)
-                        ? _patternCatalogService.Resolve(requestedPattern).ModelVersion
-                        : prediction.ModelVersion.Trim(),
-                    Precision = prediction.Precision,
-                    F1 = prediction.F1,
-                    RocAuc = prediction.RocAuc,
-                    PositiveSamples = prediction.PositiveSamples,
-                    SelectedThreshold = prediction.SelectedThreshold
-                }
-            };
-
-            await _financeDbContext.AnalysisRuns.AddAsync(analysisRun, ct);
-            await _financeDbContext.SaveChangesAsync(ct);
-            return analysisRun;
-        }
-
-        private async Task<AnalysisRun?> TryPersistFailedAnalysisRunAsync(
-            Asset asset,
-            string requestedPattern,
-            DateTime startedAtUtc,
-            DateTime completedAtUtc,
-            Exception exception,
-            CancellationToken ct)
-        {
-            if (!await CanUseAnalysisHistoryAsync(ct))
-            {
-                return null;
-            }
-
-            var envelope = PythonCliErrorHandling.GetOrBuildEnvelope(exception, "predict", asset.Symbol, requestedPattern);
-            var rawPayload = PythonCliErrorHandling.TryGetSerializedEnvelope(exception) ?? PythonCliErrorHandling.SerializeEnvelope(envelope);
-            var errorMessage = exception is CustomException customException && !string.IsNullOrWhiteSpace(customException.FrontMessage)
-                ? customException.FrontMessage.Trim()
-                : envelope.UserMessage;
-
-            var analysisRun = new AnalysisRun
-            {
-                UserId = GetRequiredCurrentUserId(),
-                AssetId = asset.Id,
-                RequestedPattern = ParseTradingPattern(requestedPattern),
-                Status = "Failed",
-                StartedAtUtc = startedAtUtc,
-                CompletedAtUtc = completedAtUtc,
-                RawPayload = rawPayload,
-                ErrorMessage = string.IsNullOrWhiteSpace(errorMessage)
-                    ? "Le moteur IA n'a pas pu terminer l'analyse."
-                    : errorMessage
-            };
-
-            await _financeDbContext.AnalysisRuns.AddAsync(analysisRun, ct);
-            await _financeDbContext.SaveChangesAsync(ct);
-            return analysisRun;
-        }
-
-        private static List<PatternAssessment> BuildPatternAssessments(PredictOut prediction)
-        {
-            if (prediction.Patterns.Count > 0)
-            {
-                return prediction.Patterns
-                    .Select(pattern => new PatternAssessment
-                    {
-                        Pattern = pattern.Pattern,
-                        Phase = string.IsNullOrWhiteSpace(pattern.Phase) ? prediction.Phase : pattern.Phase.Trim(),
-                        Probability = pattern.Probability,
-                        Confidence = pattern.Confidence,
-                        CurrentPrice = pattern.CurrentPrice,
-                        NecklinePrice = pattern.NecklinePrice,
-                        TargetPrice = pattern.TargetPrice,
-                        InvalidationPrice = pattern.InvalidationPrice,
-                        FirstPeakAtUtc = pattern.FirstPeakAtUtc,
-                        SecondPeakAtUtc = pattern.SecondPeakAtUtc,
-                        IsPrimary = pattern.IsPrimary
-                    })
-                    .ToList();
-            }
-
-            return
-            [
-                new PatternAssessment
-                {
-                    Pattern = prediction.Pattern,
-                    Phase = prediction.Phase,
-                    Probability = prediction.LastProbability,
-                    Confidence = prediction.LastProbability,
-                    CurrentPrice = prediction.CurrentPrice,
-                    NecklinePrice = prediction.NecklinePrice,
-                    TargetPrice = prediction.TargetPrice,
-                    InvalidationPrice = prediction.InvalidationPrice,
-                    IsPrimary = true
-                }
-            ];
-        }
-
-        private async Task<bool> CanUseAnalysisHistoryAsync(CancellationToken ct)
-        {
-            if (_analysisHistorySchemaAvailable.HasValue)
-            {
-                return _analysisHistorySchemaAvailable.Value;
-            }
-
-            const string sql = """
-                SELECT COUNT(*)
-                FROM INFORMATION_SCHEMA.TABLES
-                WHERE TABLE_NAME IN ('AnalysisRuns', 'PatternAssessments', 'DecisionSignals', 'ModelSnapshots')
-                """;
-
-            var connection = _financeDbContext.Database.GetDbConnection();
-            var shouldClose = connection.State != ConnectionState.Open;
-            if (shouldClose)
-            {
-                await connection.OpenAsync(ct);
-            }
-
-            try
-            {
-                await using var command = connection.CreateCommand();
-                command.CommandText = sql;
-                var scalar = await command.ExecuteScalarAsync(ct);
-                _analysisHistorySchemaAvailable = Convert.ToInt32(scalar) == 4;
-                return _analysisHistorySchemaAvailable.Value;
-            }
-            finally
-            {
-                if (shouldClose)
-                {
-                    await connection.CloseAsync();
-                }
-            }
+            return await _analysisLegacyCompatibilityService.GetRecentAnalysesAsync(GetRequiredCurrentUserId(), take, ct);
         }
 
         public async Task<SimulationResultViewModel> RunSimulationAsync(SimulationRequestViewModel request, CancellationToken ct = default)
@@ -816,28 +582,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return asset;
         }
 
-        private async Task<UserAsset> EnsureUserAssetAsync(string assetId, CancellationToken ct)
-        {
-            var userAsset = await _financeDbContext.UserAssets
-                .FirstOrDefaultAsync(x => x.UserId == _currentUserId && x.AssetId == assetId, ct);
-
-            if (userAsset != null)
-            {
-                return userAsset;
-            }
-
-            var created = new UserAsset
-            {
-                UserId = GetRequiredCurrentUserId(),
-                AssetId = assetId,
-                Quantity = 0m
-            };
-
-            await _financeDbContext.UserAssets.AddAsync(created, ct);
-            await _financeDbContext.SaveChangesAsync(ct);
-            return created;
-        }
-
         private static string NormalizeSymbol(string? symbol)
         {
             return (symbol ?? string.Empty).Trim().ToUpperInvariant();
@@ -940,65 +684,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             throw new ArgumentException("Le type de transaction doit etre Buy ou Sell.", nameof(rawType));
         }
 
-        private static AnalysisResultViewModel MapAnalysisResult(
-            string id,
-            Asset asset,
-            PredictOut prediction,
-            TradingRecommendationResult recommendation)
-        {
-            return new AnalysisResultViewModel
-            {
-                Id = id,
-                Symbol = asset.Symbol,
-                CompanyName = asset.Name ?? asset.Symbol,
-                Pattern = prediction.Pattern,
-                Phase = prediction.Phase,
-                Probability = prediction.LastProbability,
-                RecommendationAction = recommendation.Action,
-                RecommendationReason = recommendation.Reason,
-                RiskLevel = recommendation.RiskLevel,
-                RecommendationHorizonDays = recommendation.HorizonDays,
-                PredictedAt = prediction.PredictedAt,
-                IsActionable = recommendation.IsActionable,
-                ModelStatus = prediction.ModelStatus,
-                ModelMessage = prediction.ModelMessage,
-                CurrentPrice = prediction.CurrentPrice,
-                NecklinePrice = prediction.NecklinePrice,
-                TargetPrice = prediction.TargetPrice,
-                InvalidationPrice = prediction.InvalidationPrice
-            };
-        }
-
-        private static string NormalizeRequestedAnalysisPattern(string? requestedPattern)
-        {
-            var normalized = (requestedPattern ?? string.Empty).Trim().ToUpperInvariant();
-            if (string.IsNullOrWhiteSpace(normalized))
-            {
-                return "DOUBLE_TOP";
-            }
-
-            if (normalized == "DOUBLE_TOP")
-            {
-                return normalized;
-            }
-
-            throw new ArgumentException("Le pattern supporte est uniquement DOUBLE_TOP.", nameof(requestedPattern));
-        }
-
-        private static TradingPatternEnum ParseTradingPattern(string? rawPattern)
-        {
-            var normalized = (rawPattern ?? string.Empty).Trim().ToUpperInvariant();
-            return normalized switch
-            {
-                "HEAD_AND_SHOULDERS" => TradingPatternEnum.HeadAndShoulders,
-                "DOUBLE_TOP" => TradingPatternEnum.DoubleTop,
-                "DOUBLE_BOTTOM" => TradingPatternEnum.DoubleBottom,
-                "CUP_AND_HANDLE" => TradingPatternEnum.CupAndHandle,
-                "TRIANGLE" => TradingPatternEnum.Triangle,
-                _ => TradingPatternEnum.DoubleTop
-            };
-        }
-
         private static DateTime ComputeNextMarketOpenUtc()
         {
             var now = DateTime.UtcNow;
@@ -1026,20 +711,5 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             };
         }
 
-        private DecisionSignal BuildDecisionSignal(PredictOut prediction)
-        {
-            var recommendation = _tradingRecommendationService.EvaluateAnalysis(prediction);
-
-            return new DecisionSignal
-            {
-                Action = recommendation.Action,
-                IsActionable = recommendation.IsActionable,
-                Confidence = recommendation.Confidence,
-                HorizonDays = recommendation.HorizonDays,
-                Reason = string.IsNullOrWhiteSpace(recommendation.Reason)
-                    ? "Aucune justification"
-                    : recommendation.Reason.Trim()
-            };
-        }
     }
 }

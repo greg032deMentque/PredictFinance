@@ -1,6 +1,5 @@
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Services.ClientFinanceServices;
-using BackPredictFinance.Services.PythonServices.Models;
 
 namespace BackPredictFinance.Tests
 {
@@ -11,16 +10,12 @@ namespace BackPredictFinance.Tests
         [Fact]
         public void EvaluateAnalysis_ReturnsSell_ForConfirmedBearishDoubleTop()
         {
-            var prediction = new PredictOut
-            {
-                Pattern = TradingPatternEnum.DoubleTop,
-                Phase = "neckline_break_confirmed",
-                LastProbability = 0.72m,
-                TargetPrice = 88m,
-                InvalidationPrice = 103m
-            };
-
-            var result = _service.EvaluateAnalysis(prediction);
+            var result = _service.EvaluateAnalysis(
+                TradingPatternEnum.DoubleTop,
+                "neckline_break_confirmed",
+                0.72m,
+                88m,
+                103m);
 
             Assert.Equal(RecommendationActionEnum.Sell, result.Action);
             Assert.True(result.IsActionable);
@@ -31,14 +26,12 @@ namespace BackPredictFinance.Tests
         [Fact]
         public void EvaluateAnalysis_ReturnsHold_WhenPatternIsStillObservational()
         {
-            var prediction = new PredictOut
-            {
-                Pattern = TradingPatternEnum.DoubleTop,
-                Phase = "second_peak_candidate",
-                LastProbability = 0.48m
-            };
-
-            var result = _service.EvaluateAnalysis(prediction);
+            var result = _service.EvaluateAnalysis(
+                TradingPatternEnum.DoubleTop,
+                "second_peak_candidate",
+                0.48m,
+                null,
+                null);
 
             Assert.Equal(RecommendationActionEnum.Hold, result.Action);
             Assert.False(result.IsActionable);

@@ -3,10 +3,9 @@ using BackPredictFinance.Common;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services;
-using BackPredictFinance.Services.ClientFinanceServices;
+using BackPredictFinance.Services.ClientFinanceServices.AnalysisV1;
 using BackPredictFinance.Services.PythonServices;
 using BackPredictFinance.Services.PythonServices.Models;
-using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +13,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -28,7 +26,7 @@ namespace BackPredictFinance.Tests
     public class ClientFinanceServiceTests
     {
         [Fact]
-        public async Task RunAnalysisAsync_PersistsFailedAnalysisRun_WhenPythonFails()
+        public async Task AnalysisOrchestrator_RunAnalysisAsync_PersistsFailedAnalysisRun_WhenPythonFails()
         {
             var services = new ServiceCollection();
             services.AddLogging();
@@ -71,43 +69,35 @@ namespace BackPredictFinance.Tests
             };
             var pythonException = PythonCliErrorHandling.CreateCustomException("predict", "AAPL", "DOUBLE_TOP", pythonEnvelope);
 
-            var pythonApiService = new Mock<IPythonApiService>();
-            pythonApiService
-                .Setup(service => service.PredictAsync(It.IsAny<AssetIn>()))
+            var pythonAdapter = new Mock<IOptionalPythonAnalysisAdapter>();
+            pythonAdapter
+                .Setup(service => service.ExecuteAsync(It.IsAny<ResolvedAnalysisRunRequest>(), It.IsAny<ResolvedAnalysisPattern>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(pythonException);
-            var tradingRecommendationService = new Mock<ITradingRecommendationService>();
-
-            var tickerService = new Mock<ITickerService>();
-            var patternCatalogService = new Mock<IPatternCatalogService>();
-            patternCatalogService
-                .Setup(service => service.Resolve(It.IsAny<string?>()))
-                .Returns(new PatternCatalogItem
+            var recommendationPolicyService = new Mock<IRecommendationPolicyService>();
+            var patternRegistry = new Mock<IAnalysisPatternRegistry>();
+            patternRegistry
+                .Setup(service => service.ResolveRequestedPattern(It.IsAny<string?>()))
+                .Returns(new ResolvedAnalysisPattern
                 {
-                    PatternKey = "DOUBLE_TOP",
-                    Enabled = true,
+                    PatternId = "DOUBLE_TOP",
                     ModelDir = "artifacts/double_top",
                     ModelVersion = "double_top@v1"
                 });
 
-            var hostEnvironment = new Mock<IHostEnvironment>();
-            hostEnvironment.SetupGet(env => env.ContentRootPath).Returns(AppContext.BaseDirectory);
-
-            var service = new ClientFinanceService(
-                scopedProvider,
-                tickerService.Object,
-                pythonApiService.Object,
-                tradingRecommendationService.Object,
-                patternCatalogService.Object,
-                Options.Create(new PythonCliOptions()),
-                hostEnvironment.Object);
-
-            SetAnalysisHistoryAvailable(service, true);
+            var persistenceService = new AnalysisSnapshotPersistenceService(scopedProvider);
+            SetAnalysisHistoryAvailable(persistenceService, true);
+            var service = new ClientAnalysisOrchestrator(
+                patternRegistry.Object,
+                pythonAdapter.Object,
+                recommendationPolicyService.Object,
+                persistenceService);
 
             var exception = await Assert.ThrowsAsync<CustomException>(() => service.RunAnalysisAsync(
-                new AnalysisRunRequestViewModel
+                new ResolvedAnalysisRunRequest
                 {
+                    UserId = "user-1",
                     Symbol = "AAPL",
-                    RequestedPattern = "DOUBLE_TOP"
+                    RequestedPatternId = "DOUBLE_TOP"
                 }));
 
             Assert.Equal("Le modèle IA est indisponible pour le moment.", exception.FrontMessage);
@@ -176,9 +166,9 @@ namespace BackPredictFinance.Tests
                 Mock.Of<IUserConfirmation<User>>());
         }
 
-        private static void SetAnalysisHistoryAvailable(ClientFinanceService service, bool value)
+        private static void SetAnalysisHistoryAvailable(AnalysisSnapshotPersistenceService service, bool value)
         {
-            var field = typeof(ClientFinanceService).GetField("_analysisHistorySchemaAvailable", BindingFlags.Instance | BindingFlags.NonPublic);
+            var field = typeof(AnalysisSnapshotPersistenceService).GetField("_analysisHistorySchemaAvailable", BindingFlags.Instance | BindingFlags.NonPublic);
             field!.SetValue(service, value);
         }
     }

@@ -126,8 +126,6 @@ ProgramServiceDeclarator.ServicesDeclarator(builder.Services);
 
 var mapperConfiguration = new MapperConfiguration(cfg =>
 {
-    // Explicitly load profiles from the ViewModels assembly to avoid missing maps
-    // when relying on currently loaded AppDomain assemblies.
     cfg.AddMaps(typeof(UserViewModelProfile).Assembly);
 }, NullLoggerFactory.Instance);
 
@@ -135,14 +133,12 @@ builder.Services.AddSingleton<IMapper>(mapperConfiguration.CreateMapper());
 
 builder.Services.Configure<EmailServiceConfiguration>(configuration.GetSection("EmailService"));
 builder.Services.Configure<PythonCliOptions>(configuration.GetSection("PythonCli"));
-
-
-builder.Services.AddControllers()
-    .AddJsonOptions(opts => opts.JsonSerializerOptions.PropertyNamingPolicy = null);
+builder.Services.Configure<MarketDataOptions>(configuration.GetSection("MarketData"));
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
