@@ -7,7 +7,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
 {
     public interface IAnalysisRequestCompatibilityResolver
     {
-        Task<ResolvedAnalysisRunRequest> ResolveAsync(AnalysisRunRequestViewModel request, string userId, CancellationToken ct = default);
+        Task<AnalysisRequest> ResolveAsync(AnalysisRunRequestViewModel request, string userId, CancellationToken ct = default);
     }
 
     public interface IAnalysisLegacyCompatibilityService
@@ -18,7 +18,12 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
 
     public interface IAnalysisOrchestrator
     {
-        Task<AnalysisResponse> RunAnalysisAsync(ResolvedAnalysisRunRequest request, CancellationToken ct = default);
+        Task<AnalysisResponse> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default);
+    }
+
+    public interface IAnalysisExecutionService
+    {
+        Task<AnalysisExecutionArtifact> ExecuteAsync(AnalysisRequest request, CancellationToken ct = default);
     }
 
     public interface IAnalysisPatternRegistry
@@ -29,22 +34,25 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
 
     public interface IRecommendationPolicyService
     {
-        Recommendation EvaluateAnalysis(ResolvedAnalysisRunRequest request, AnalysisExecutionArtifact executionArtifact);
+        Recommendation EvaluateAnalysis(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisOutcome outcome);
     }
 
     public interface IAnalysisSnapshotPersistenceService
     {
         Task<PersistedAnalysisRecord> PersistSuccessfulAnalysisAsync(
-            ResolvedAnalysisRunRequest request,
+            AnalysisRequest request,
             ResolvedAnalysisPattern pattern,
             AnalysisExecutionArtifact executionArtifact,
             Recommendation recommendation,
+            AnalysisOutcome outcome,
+            string pedagogicalSummary,
+            string explanationPolicyVersion,
             DateTime startedAtUtc,
             DateTime completedAtUtc,
             CancellationToken ct = default);
 
         Task PersistFailedAnalysisAsync(
-            ResolvedAnalysisRunRequest request,
+            AnalysisRequest request,
             ResolvedAnalysisPattern pattern,
             DateTime startedAtUtc,
             DateTime completedAtUtc,
@@ -54,7 +62,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
 
     public interface IOptionalPythonAnalysisAdapter
     {
-        Task<AnalysisExecutionArtifact> ExecuteAsync(ResolvedAnalysisRunRequest request, ResolvedAnalysisPattern pattern, CancellationToken ct = default);
+        Task<AnalysisExecutionArtifact> ExecuteAsync(AnalysisRequest request, ResolvedAnalysisPattern pattern, CancellationToken ct = default);
     }
 
     public interface IPortfolioContextLoader
@@ -69,6 +77,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
 
     public interface IPedagogicalExplanationService
     {
+        string PolicyVersion { get; }
+        PatternExplanation BuildPatternExplanation(PatternAssessment patternAssessment, bool hasMultipleCompatiblePatterns, bool hasModelWarning);
         string BuildAnalysisSummary(AnalysisOutcome outcome, IReadOnlyList<PatternAssessment> compatiblePatterns, Recommendation? recommendation, PortfolioContext? portfolioContext);
     }
 
@@ -77,14 +87,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
         public string PatternId { get; set; } = string.Empty;
         public string ModelDir { get; set; } = string.Empty;
         public string ModelVersion { get; set; } = string.Empty;
-    }
-
-    public sealed class ResolvedAnalysisRunRequest
-    {
-        public string UserId { get; set; } = string.Empty;
-        public string Symbol { get; set; } = string.Empty;
-        public string RequestedPatternId { get; set; } = string.Empty;
-        public bool HoldsInstrument { get; set; }
     }
 
     public sealed class ExecutedPatternArtifact

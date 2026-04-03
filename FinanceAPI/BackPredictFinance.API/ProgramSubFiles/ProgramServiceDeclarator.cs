@@ -34,8 +34,12 @@ namespace BackPredictFinance.API.ProgramSubFiles
             services.AddScoped<IAnalysisRequestCompatibilityResolver, AnalysisRequestCompatibilityResolver>();
             services.AddScoped<IAnalysisLegacyCompatibilityService, AnalysisLegacyCompatibilityService>();
             services.AddScoped<IAnalysisPatternRegistry, AnalysisPatternRegistry>();
+            services.AddScoped<IPortfolioContextLoader, PortfolioContextLoader>();
+            services.AddScoped<IAnalysisExecutionService, DeterministicAnalysisExecutionService>();
             services.AddScoped<IOptionalPythonAnalysisAdapter, PythonAnalysisAdapter>();
+            services.AddScoped<IRiskEvaluationService, RiskEvaluationService>();
             services.AddScoped<IRecommendationPolicyService, RecommendationPolicyService>();
+            services.AddScoped<IPedagogicalExplanationService, PedagogicalExplanationService>();
             services.AddScoped<IAnalysisSnapshotPersistenceService, AnalysisSnapshotPersistenceService>();
             services.AddScoped<IAnalysisOrchestrator, ClientAnalysisOrchestrator>();
             services.AddScoped<IClientFinanceService, ClientFinanceService>();

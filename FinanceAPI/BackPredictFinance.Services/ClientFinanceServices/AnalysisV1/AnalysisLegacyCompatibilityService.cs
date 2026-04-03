@@ -108,6 +108,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
             return kind switch
             {
                 RecommendationKind.Buy => RecommendationActionEnum.Buy,
+                RecommendationKind.Reinforce => RecommendationActionEnum.Buy,
+                RecommendationKind.Lighten => RecommendationActionEnum.Sell,
                 RecommendationKind.Sell => RecommendationActionEnum.Sell,
                 _ => RecommendationActionEnum.Hold
             };

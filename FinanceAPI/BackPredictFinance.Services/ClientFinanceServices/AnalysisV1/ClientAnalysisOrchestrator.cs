@@ -1,6 +1,5 @@
 using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
-using BackPredictFinance.Services.PythonServices;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using System.Net;
 
@@ -9,33 +8,40 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
     public sealed class ClientAnalysisOrchestrator : IAnalysisOrchestrator
     {
         private readonly IAnalysisPatternRegistry _patternRegistry;
-        private readonly IOptionalPythonAnalysisAdapter _pythonAnalysisAdapter;
+        private readonly IAnalysisExecutionService _analysisExecutionService;
+        private readonly IRiskEvaluationService _riskEvaluationService;
         private readonly IRecommendationPolicyService _recommendationPolicyService;
+        private readonly IPedagogicalExplanationService _pedagogicalExplanationService;
         private readonly IAnalysisSnapshotPersistenceService _snapshotPersistenceService;
 
         public ClientAnalysisOrchestrator(
             IAnalysisPatternRegistry patternRegistry,
-            IOptionalPythonAnalysisAdapter pythonAnalysisAdapter,
+            IAnalysisExecutionService analysisExecutionService,
+            IRiskEvaluationService riskEvaluationService,
             IRecommendationPolicyService recommendationPolicyService,
+            IPedagogicalExplanationService pedagogicalExplanationService,
             IAnalysisSnapshotPersistenceService snapshotPersistenceService)
         {
             _patternRegistry = patternRegistry;
-            _pythonAnalysisAdapter = pythonAnalysisAdapter;
+            _analysisExecutionService = analysisExecutionService;
+            _riskEvaluationService = riskEvaluationService;
             _recommendationPolicyService = recommendationPolicyService;
+            _pedagogicalExplanationService = pedagogicalExplanationService;
             _snapshotPersistenceService = snapshotPersistenceService;
         }
 
-        public async Task<AnalysisResponse> RunAnalysisAsync(ResolvedAnalysisRunRequest request, CancellationToken ct = default)
+        public async Task<AnalysisResponse> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(request);
 
             var startedAtUtc = DateTime.UtcNow;
-            var resolvedPattern = _patternRegistry.ResolveRequestedPattern(request.RequestedPatternId);
+            var resolvedPatternId = request.ResolvedPatternIds.FirstOrDefault();
+            var resolvedPattern = _patternRegistry.ResolveRequestedPattern(resolvedPatternId);
 
             AnalysisExecutionArtifact executionArtifact;
             try
             {
-                executionArtifact = await _pythonAnalysisAdapter.ExecuteAsync(request, resolvedPattern, ct);
+                executionArtifact = await _analysisExecutionService.ExecuteAsync(request, ct);
             }
             catch (Exception ex)
             {
@@ -47,36 +53,69 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
                     throw customException;
                 }
 
-                var envelope = PythonCliErrorHandling.GetOrBuildEnvelope(ex, "predict", request.Symbol, resolvedPattern.PatternId);
-                throw PythonCliErrorHandling.CreateCustomException(
-                    "predict",
-                    request.Symbol,
-                    resolvedPattern.PatternId,
-                    envelope,
-                    overrideStatusCode: HttpStatusCode.InternalServerError,
-                    overrideFrontMessage: "Le moteur IA n'a pas pu terminer l'analyse.");
+                throw new CustomException(
+                    $"L'analyse V1 a echoue pour {request.Instrument.Symbol} sur le pattern {resolvedPattern.PatternId}: {ex.Message}",
+                    "L'analyse V1 n'a pas pu etre calculee.",
+                    statusCode: HttpStatusCode.InternalServerError);
             }
 
-            var recommendation = _recommendationPolicyService.EvaluateAnalysis(request, executionArtifact);
+            foreach (var executedPattern in executionArtifact.Patterns)
+            {
+                executedPattern.ContractAssessment.RiskHints = _riskEvaluationService.EvaluatePrimaryRisk(executionArtifact, executedPattern.ContractAssessment);
+            }
+
+            var orderedPatterns = executionArtifact.Patterns
+                .OrderByDescending(pattern => pattern.IsPrimary)
+                .ThenByDescending(pattern => pattern.Confidence)
+                .ThenByDescending(pattern => pattern.Probability)
+                .ToList();
+
+            var compatiblePatterns = orderedPatterns
+                .Select(pattern => pattern.ContractAssessment)
+                .Where(pattern => pattern.Detection.IsCompatible)
+                .ToList();
+
+            var outcome = compatiblePatterns.Count switch
+            {
+                0 => AnalysisOutcome.NoCrediblePattern,
+                > 1 => AnalysisOutcome.MultipleCompatiblePatterns,
+                _ => AnalysisOutcome.CrediblePatternFound
+            };
+
+            foreach (var patternAssessment in orderedPatterns.Select(x => x.ContractAssessment))
+            {
+                patternAssessment.Explanation = _pedagogicalExplanationService.BuildPatternExplanation(
+                    patternAssessment,
+                    compatiblePatterns.Count > 1,
+                    executionArtifact.ModelStatus != ModelStatusEnum.Go);
+            }
+
+            var recommendation = _recommendationPolicyService.EvaluateAnalysis(request, compatiblePatterns, outcome);
+            var pedagogicalSummary = _pedagogicalExplanationService.BuildAnalysisSummary(outcome, compatiblePatterns, recommendation, request.PortfolioContext);
             var completedAtUtc = DateTime.UtcNow;
             var persisted = await _snapshotPersistenceService.PersistSuccessfulAnalysisAsync(
                 request,
                 resolvedPattern,
                 executionArtifact,
                 recommendation,
+                outcome,
+                pedagogicalSummary,
+                _pedagogicalExplanationService.PolicyVersion,
                 startedAtUtc,
                 completedAtUtc,
                 ct);
 
-            return BuildAnalysisResponse(request, persisted, resolvedPattern, executionArtifact, recommendation);
+            return BuildAnalysisResponse(request, persisted, resolvedPattern, executionArtifact, recommendation, outcome, pedagogicalSummary);
         }
 
         private static AnalysisResponse BuildAnalysisResponse(
-            ResolvedAnalysisRunRequest request,
+            AnalysisRequest request,
             PersistedAnalysisRecord persisted,
             ResolvedAnalysisPattern resolvedPattern,
             AnalysisExecutionArtifact executionArtifact,
-            Recommendation recommendation)
+            Recommendation recommendation,
+            AnalysisOutcome outcome,
+            string pedagogicalSummary)
         {
             var orderedPatterns = executionArtifact.Patterns
                 .OrderByDescending(pattern => pattern.IsPrimary)
@@ -91,18 +130,12 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
 
             var mainPattern = compatiblePatterns.FirstOrDefault();
             var alternativePatterns = compatiblePatterns.Skip(1).ToList();
-            var outcome = compatiblePatterns.Count switch
-            {
-                0 => AnalysisOutcome.NoCrediblePattern,
-                > 1 => AnalysisOutcome.MultipleCompatiblePatterns,
-                _ => AnalysisOutcome.CrediblePatternFound
-            };
 
             return new AnalysisResponse
             {
                 AnalysisId = persisted.PublicId,
                 GeneratedAtUtc = executionArtifact.GeneratedAtUtc,
-                AsOfDate = DateOnly.FromDateTime(executionArtifact.GeneratedAtUtc),
+                AsOfDate = request.HistoryEndDate,
                 Outcome = outcome,
                 Instrument = new Instrument
                 {
@@ -118,12 +151,12 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
                     LastProfileSyncUtc = persisted.LastProfileSyncUtc,
                     Summary = persisted.Summary
                 },
-                RequestedPatternIds = string.IsNullOrWhiteSpace(request.RequestedPatternId) ? [] : [request.RequestedPatternId],
+                RequestedPatternIds = request.RequestedPatternIds,
                 ExecutedPatternIds = [resolvedPattern.PatternId],
                 MainPattern = mainPattern,
                 AlternativePatterns = alternativePatterns,
                 Recommendation = recommendation,
-                PedagogicalSummary = recommendation.Rationale,
+                PedagogicalSummary = pedagogicalSummary,
                 NoCrediblePatternReason = outcome == AnalysisOutcome.NoCrediblePattern
                     ? "Aucun pattern compatible n'a ete identifie."
                     : null,

@@ -6,9 +6,7 @@ using BackPredictFinance.Services.PythonServices.Models;
 using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 
 namespace BackPredictFinance.Services.ClientFinanceServices
 {
@@ -30,19 +28,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
     public class ClientFinanceService : BaseService, IClientFinanceService
     {
-        private static readonly HashSet<string> DefaultTrainingSymbols = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "AAPL",
-            "MSFT",
-            "NVDA",
-            "AMZN",
-            "GOOGL",
-            "META",
-            "JPM",
-            "XOM",
-            "TSLA"
-        };
-
         private readonly ITickerService _tickerService;
         private readonly IPythonApiService _pythonApiService;
         private readonly ITradingRecommendationService _tradingRecommendationService;
@@ -51,7 +36,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         private readonly IAnalysisLegacyCompatibilityService _analysisLegacyCompatibilityService;
         private readonly IAnalysisOrchestrator _analysisOrchestrator;
         private readonly PythonCliOptions _pythonOptions;
-        private readonly IHostEnvironment _environment;
 
         public ClientFinanceService(
             IServiceProvider serviceProvider,
@@ -62,8 +46,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             IAnalysisRequestCompatibilityResolver analysisRequestCompatibilityResolver,
             IAnalysisLegacyCompatibilityService analysisLegacyCompatibilityService,
             IAnalysisOrchestrator analysisOrchestrator,
-            IOptions<PythonCliOptions> pythonOptions,
-            IHostEnvironment environment)
+            IOptions<PythonCliOptions> pythonOptions)
             : base(serviceProvider)
         {
             _tickerService = tickerService;
@@ -74,7 +57,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             _analysisLegacyCompatibilityService = analysisLegacyCompatibilityService;
             _analysisOrchestrator = analysisOrchestrator;
             _pythonOptions = pythonOptions.Value;
-            _environment = environment;
         }
 
         public async Task<ClientDashboardViewModel> GetDashboardAsync(CancellationToken ct = default)
@@ -126,25 +108,19 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 return [];
             }
 
-            var trainingSymbols = GetTrainingSymbols();
-            var matches = trainingSymbols
-                .Where(symbol => symbol.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(symbol => symbol, StringComparer.OrdinalIgnoreCase)
-                .Take(20)
-                .ToList();
-
+            var matches = await _tickerService.SearchAssetsAsync(normalizedQuery, ct);
             var response = new List<AssetSearchItemViewModel>(matches.Count);
-            foreach (var symbol in matches)
+            foreach (var asset in matches)
             {
-                var quote = await BuildQuoteAsync(symbol);
                 response.Add(new AssetSearchItemViewModel
                 {
-                    Symbol = symbol,
-                    CompanyName = $"{symbol} Inc.",
-                    Market = GuessMarket(symbol),
-                    Currency = "USD",
-                    LastPrice = quote.LastPrice,
-                    DayVariationPct = quote.DayVariationPct
+                    Symbol = asset.Symbol,
+                    AssetType = MapAssetType(asset.AssetType),
+                    CompanyName = asset.CompanyName,
+                    Market = asset.Exchange,
+                    Currency = asset.Currency,
+                    LastPrice = asset.LastPrice,
+                    DayVariationPct = asset.DayVariationPct
                 });
             }
 
@@ -174,7 +150,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             foreach (var userAsset in userAssets)
             {
-                var quote = await BuildQuoteAsync(userAsset.Asset.Symbol);
+                var quote = await BuildQuoteAsync(userAsset.Asset.Symbol, ct);
                 groupedTransactions.TryGetValue(userAsset.Id, out var history);
                 history ??= [];
 
@@ -194,8 +170,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 {
                     UserAssetId = userAsset.Id,
                     Symbol = userAsset.Asset.Symbol,
+                    AssetType = MapAssetType(userAsset.Asset.AssetType),
                     CompanyName = userAsset.Asset.Name ?? userAsset.Asset.Symbol,
-                    Market = GuessMarket(userAsset.Asset.Symbol),
+                    Market = userAsset.Asset.Exchange,
+                    Currency = userAsset.Asset.Currency,
                     LastPrice = quote.LastPrice,
                     DayVariationPct = quote.DayVariationPct,
                     HeldQuantity = userAsset.Quantity,
@@ -215,7 +193,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
-            EnsureSymbolIsAllowed(symbol);
 
             var asset = await EnsureAssetAsync(symbol, request.CompanyName, ct);
             var userAsset = await _financeDbContext.UserAssets
@@ -234,14 +211,16 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 await _financeDbContext.SaveChangesAsync(ct);
             }
 
-            var quote = await BuildQuoteAsync(symbol);
+            var quote = await BuildQuoteAsync(symbol, ct);
 
             return new WatchlistItemViewModel
             {
                 UserAssetId = userAsset.Id,
                 Symbol = asset.Symbol,
+                AssetType = MapAssetType(asset.AssetType),
                 CompanyName = asset.Name ?? asset.Symbol,
-                Market = GuessMarket(asset.Symbol),
+                Market = asset.Exchange,
+                Currency = asset.Currency,
                 LastPrice = quote.LastPrice,
                 DayVariationPct = quote.DayVariationPct,
                 HeldQuantity = userAsset.Quantity,
@@ -258,15 +237,15 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(symbol));
             }
-            EnsureSymbolIsAllowed(normalizedSymbol);
 
-            var quote = await BuildQuoteAsync(normalizedSymbol);
-            var asset = await EnsureAssetAsync(normalizedSymbol, normalizedSymbol, ct);
+            var asset = await EnsureAssetAsync(normalizedSymbol, null, ct);
+            var quote = await BuildQuoteAsync(normalizedSymbol, ct);
             await SavePriceHistoryAsync(asset.Id, quote.LastPrice, ct);
 
             return new LiveQuoteViewModel
             {
                 Symbol = normalizedSymbol,
+                AssetType = MapAssetType(asset.AssetType),
                 LastPrice = quote.LastPrice,
                 DayVariationPct = quote.DayVariationPct,
                 AsOfUtc = DateTime.UtcNow
@@ -321,7 +300,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
-            EnsureSymbolIsAllowed(symbol);
 
             var transactionType = ParseTransactionType(request.TransactionType);
             var asset = await EnsureAssetAsync(symbol, symbol, ct);
@@ -447,8 +425,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
 
-            EnsureSymbolIsAllowed(normalizedRequest.Symbol);
-
+            await EnsureAssetAsync(normalizedRequest.Symbol, null, ct);
             var resolvedRequest = await _analysisRequestCompatibilityResolver.ResolveAsync(normalizedRequest, GetRequiredCurrentUserId(), ct);
             var analysisResponse = await _analysisOrchestrator.RunAnalysisAsync(resolvedRequest, ct);
             return _analysisLegacyCompatibilityService.MapRunResult(analysisResponse);
@@ -477,7 +454,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
-            EnsureSymbolIsAllowed(symbol);
+            await EnsureFrenchEquityEligibilityAsync(symbol, ct);
 
             var horizonDays = Math.Clamp(request.HorizonDays, 1, 365);
             var simulation = await _pythonApiService.SimulateAsync(
@@ -514,23 +491,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             };
         }
 
-        private async Task<(decimal LastPrice, decimal DayVariationPct)> BuildQuoteAsync(string symbol)
+        private async Task<(decimal LastPrice, decimal DayVariationPct)> BuildQuoteAsync(string symbol, CancellationToken ct)
         {
-            var candles = await _tickerService.GetTimeSeriesAsync(symbol, "1day", 2);
-            if (candles.Candles.Count == 0)
-            {
-                return (0m, 0m);
-            }
-
-            var last = candles.Candles[^1].Close;
-            if (candles.Candles.Count == 1 || candles.Candles[^2].Close == 0m)
-            {
-                return (decimal.Round(last, 4), 0m);
-            }
-
-            var previous = candles.Candles[^2].Close;
-            var variation = ((last - previous) / previous) * 100m;
-            return (decimal.Round(last, 4), decimal.Round(variation, 4));
+            var quote = await _tickerService.GetQuoteAsync(symbol, ct);
+            return (quote.LastPrice, quote.DayVariationPct);
         }
 
         private async Task SavePriceHistoryAsync(string assetId, decimal price, CancellationToken ct)
@@ -555,26 +519,31 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         private async Task<Asset> EnsureAssetAsync(string symbol, string? companyName, CancellationToken ct)
         {
             var normalizedSymbol = NormalizeSymbol(symbol);
+            var marketProfile = await EnsureFrenchEquityEligibilityAsync(normalizedSymbol, ct);
 
             var existing = await _financeDbContext.Assets
                 .FirstOrDefaultAsync(x => x.Symbol == normalizedSymbol, ct);
 
             if (existing != null)
             {
-                if (!string.IsNullOrWhiteSpace(companyName) && string.IsNullOrWhiteSpace(existing.Name))
-                {
-                    existing.Name = companyName.Trim();
-                    await _financeDbContext.SaveChangesAsync(ct);
-                }
-
+                ApplyMarketProfile(existing, marketProfile, companyName);
+                await _financeDbContext.SaveChangesAsync(ct);
                 return existing;
             }
 
             var asset = new Asset
             {
                 Symbol = normalizedSymbol,
-                Name = string.IsNullOrWhiteSpace(companyName) ? normalizedSymbol : companyName.Trim(),
-                AssetType = AssetTypeEnum.Stock
+                ProviderSymbol = marketProfile.ProviderSymbol,
+                Name = ResolveCompanyName(marketProfile.CompanyName, companyName, normalizedSymbol),
+                Exchange = marketProfile.Exchange,
+                Currency = marketProfile.Currency,
+                Country = marketProfile.Country,
+                Sector = marketProfile.Sector,
+                Category = marketProfile.Category,
+                Summary = marketProfile.Summary,
+                LastProfileSyncUtc = DateTime.UtcNow,
+                AssetType = marketProfile.AssetType
             };
 
             await _financeDbContext.Assets.AddAsync(asset, ct);
@@ -597,80 +566,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             throw new InvalidOperationException("Aucun utilisateur courant n'est disponible.");
         }
 
-        private void EnsureSymbolIsAllowed(string symbol)
+        private async Task<MarketAssetProfileData> EnsureFrenchEquityEligibilityAsync(string symbol, CancellationToken ct)
         {
-            var trainingSymbols = GetTrainingSymbols();
-            if (trainingSymbols.Contains(symbol))
-            {
-                return;
-            }
-
-            throw new InvalidOperationException($"Le symbole {symbol} n'est pas disponible pour ce modele.");
-        }
-
-        private HashSet<string> GetTrainingSymbols()
-        {
-            var trainConfigPath = ResolveTrainConfigPath();
-            if (!File.Exists(trainConfigPath))
-            {
-                return new HashSet<string>(DefaultTrainingSymbols, StringComparer.OrdinalIgnoreCase);
-            }
-
-            try
-            {
-                using var document = JsonDocument.Parse(File.ReadAllText(trainConfigPath));
-                if (!document.RootElement.TryGetProperty("tickers", out var tickersElement) ||
-                    tickersElement.ValueKind != JsonValueKind.Array)
-                {
-                    return new HashSet<string>(DefaultTrainingSymbols, StringComparer.OrdinalIgnoreCase);
-                }
-
-                var symbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var tickerElement in tickersElement.EnumerateArray())
-                {
-                    if (tickerElement.ValueKind != JsonValueKind.String)
-                    {
-                        continue;
-                    }
-
-                    var symbol = NormalizeSymbol(tickerElement.GetString());
-                    if (string.IsNullOrWhiteSpace(symbol))
-                    {
-                        continue;
-                    }
-
-                    symbols.Add(symbol);
-                }
-
-                return symbols.Count > 0
-                    ? symbols
-                    : new HashSet<string>(DefaultTrainingSymbols, StringComparer.OrdinalIgnoreCase);
-            }
-            catch
-            {
-                return new HashSet<string>(DefaultTrainingSymbols, StringComparer.OrdinalIgnoreCase);
-            }
-        }
-
-        private string ResolveTrainConfigPath()
-        {
-            var workingDirectory = ResolvePath(_pythonOptions.WorkingDirectory);
-            var modelDirectory = _patternCatalogService.Resolve().ModelDir;
-            var resolvedModelDirectory = Path.IsPathRooted(modelDirectory)
-                ? modelDirectory
-                : Path.Combine(workingDirectory, modelDirectory);
-
-            return Path.Combine(resolvedModelDirectory, "train_config.json");
-        }
-
-        private string ResolvePath(string pathValue)
-        {
-            if (Path.IsPathRooted(pathValue))
-            {
-                return pathValue;
-            }
-
-            return Path.GetFullPath(Path.Combine(_environment.ContentRootPath, pathValue));
+            return await _tickerService.GetAssetProfileAsync(symbol, ct);
         }
 
         private static TransactionTypeEnum ParseTransactionType(string? rawType)
@@ -686,30 +584,66 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
         private static DateTime ComputeNextMarketOpenUtc()
         {
-            var now = DateTime.UtcNow;
-            var next = new DateTime(now.Year, now.Month, now.Day, 14, 30, 0, DateTimeKind.Utc);
+            var parisTimeZone = ResolveParisTimeZone();
+            var nowUtc = DateTime.UtcNow;
+            var nowParis = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, parisTimeZone);
+            var nextParisOpen = new DateTime(nowParis.Year, nowParis.Month, nowParis.Day, 9, 0, 0, DateTimeKind.Unspecified);
 
-            if (now >= next)
+            if (nowParis >= nextParisOpen)
             {
-                next = next.AddDays(1);
+                nextParisOpen = nextParisOpen.AddDays(1);
             }
 
-            while (next.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            while (nextParisOpen.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
             {
-                next = next.AddDays(1);
+                nextParisOpen = nextParisOpen.AddDays(1);
             }
 
-            return next;
+            return TimeZoneInfo.ConvertTimeToUtc(nextParisOpen, parisTimeZone);
         }
 
-        private static string GuessMarket(string symbol)
+        private static TimeZoneInfo ResolveParisTimeZone()
         {
-            return symbol switch
+            try
             {
-                "AAPL" or "MSFT" or "NVDA" or "AMZN" or "GOOGL" or "META" => "NASDAQ",
-                _ => "NYSE"
-            };
+                return TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("Europe/Paris");
+            }
         }
 
+        private static string MapAssetType(AssetTypeEnum assetType)
+            => assetType.ToString().ToUpperInvariant();
+
+        private static void ApplyMarketProfile(Asset asset, MarketAssetProfileData marketProfile, string? fallbackCompanyName)
+        {
+            asset.ProviderSymbol = marketProfile.ProviderSymbol;
+            asset.Name = ResolveCompanyName(marketProfile.CompanyName, fallbackCompanyName, asset.Symbol);
+            asset.Exchange = marketProfile.Exchange;
+            asset.Currency = marketProfile.Currency;
+            asset.Country = marketProfile.Country;
+            asset.Sector = marketProfile.Sector;
+            asset.Category = marketProfile.Category;
+            asset.Summary = marketProfile.Summary;
+            asset.LastProfileSyncUtc = DateTime.UtcNow;
+            asset.AssetType = marketProfile.AssetType;
+        }
+
+        private static string ResolveCompanyName(string? providerCompanyName, string? fallbackCompanyName, string symbol)
+        {
+            if (!string.IsNullOrWhiteSpace(providerCompanyName))
+            {
+                return providerCompanyName.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(fallbackCompanyName))
+            {
+                return fallbackCompanyName.Trim();
+            }
+
+            return symbol;
+        }
     }
 }

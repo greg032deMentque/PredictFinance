@@ -16,11 +16,11 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
             _pythonApiService = pythonApiService;
         }
 
-        public async Task<AnalysisExecutionArtifact> ExecuteAsync(ResolvedAnalysisRunRequest request, ResolvedAnalysisPattern pattern, CancellationToken ct = default)
+        public async Task<AnalysisExecutionArtifact> ExecuteAsync(AnalysisRequest request, ResolvedAnalysisPattern pattern, CancellationToken ct = default)
         {
             var prediction = await _pythonApiService.PredictAsync(new AssetIn
             {
-                Symbol = request.Symbol,
+                Symbol = request.Instrument.Symbol,
                 Pattern = pattern.PatternId
             });
 
@@ -41,7 +41,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
             };
         }
 
-        private static List<ExecutedPatternArtifact> BuildPatternArtifacts(PredictOut prediction, ResolvedAnalysisPattern pattern)
+        private static List<ExecutedPatternArtifact> BuildPatternArtifacts(PythonPredictionResult prediction, ResolvedAnalysisPattern pattern)
         {
             if (prediction.Patterns.Count > 0)
             {
@@ -70,16 +70,12 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
             ];
         }
 
-        private static ExecutedPatternArtifact BuildPatternArtifact(PatternPrediction patternPrediction, PredictOut prediction, ResolvedAnalysisPattern pattern)
+        private static ExecutedPatternArtifact BuildPatternArtifact(PatternPrediction patternPrediction, PythonPredictionResult prediction, ResolvedAnalysisPattern pattern)
         {
             var normalizedPhase = NormalizePhase(patternPrediction.Phase);
             var confidence = NormalizeConfidence(patternPrediction.Confidence > 0m ? patternPrediction.Confidence : patternPrediction.Probability);
             var status = MapStatus(normalizedPhase);
             var patternId = MapPatternId(patternPrediction.Pattern);
-            var suggestedStopLoss = patternPrediction.InvalidationPrice;
-            var suggestedTakeProfit = patternPrediction.TargetPrice;
-            var riskRewardRatio = BuildRiskRewardRatio(patternPrediction.CurrentPrice, suggestedStopLoss, suggestedTakeProfit);
-            var hasRiskPlan = suggestedStopLoss.HasValue || suggestedTakeProfit.HasValue || riskRewardRatio.HasValue;
 
             var assessment = new PatternAssessment
             {
@@ -131,29 +127,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
                     ],
                     ScoreVersion = pattern.ModelVersion
                 },
-                RiskHints = new PatternRiskHints
-                {
-                    HasRiskPlan = hasRiskPlan,
-                    SuggestedStopLoss = suggestedStopLoss,
-                    SuggestedTakeProfit = suggestedTakeProfit,
-                    RiskRewardRatio = riskRewardRatio,
-                    PositioningNote = hasRiskPlan
-                        ? "Le plan de risque est derive des niveaux detectes."
-                        : "Aucun plan de risque exploitable n'a ete derive."
-                },
-                Explanation = new PatternExplanation
-                {
-                    WhyListed = confidence > 0m
-                        ? "Le pattern reste visible dans la sortie d'analyse disponible."
-                        : "Le pattern est conserve pour compatibilite mais sans confiance exploitable.",
-                    PedagogicalSummary = BuildPatternSummary(patternPrediction.Pattern, normalizedPhase, confidence),
-                    AmbiguityNote = prediction.Patterns.Count > 1
-                        ? "Plusieurs lectures restent compatibles avec la meme serie."
-                        : null,
-                    LimitationsNote = prediction.ModelStatus == ModelStatusEnum.Go
-                        ? null
-                        : "Le modele legacy n'est pas dans son etat de validation nominal."
-                },
+                RiskHints = new PatternRiskHints(),
+                Explanation = new PatternExplanation(),
                 Trace = new PatternTrace
                 {
                     PatternVersion = pattern.ModelVersion,
@@ -240,28 +215,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
             return confidence;
         }
 
-        private static decimal? BuildRiskRewardRatio(decimal currentPrice, decimal? stopLoss, decimal? takeProfit)
-        {
-            if (!stopLoss.HasValue || !takeProfit.HasValue)
-            {
-                return null;
-            }
-
-            var risk = Math.Abs(currentPrice - stopLoss.Value);
-            if (risk <= 0m)
-            {
-                return null;
-            }
-
-            var reward = Math.Abs(takeProfit.Value - currentPrice);
-            if (reward <= 0m)
-            {
-                return null;
-            }
-
-            return Math.Round(reward / risk, 4);
-        }
-
         private static string BuildConfidenceLabel(decimal confidence)
         {
             if (confidence >= 0.75m)
@@ -299,11 +252,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices.AnalysisV1
                 PatternStatus.Monitoring => $"La structure reste a surveiller autour de {currentPrice.ToString(CultureInfo.InvariantCulture)}.",
                 _ => $"La structure reste en formation autour de {currentPrice.ToString(CultureInfo.InvariantCulture)}."
             };
-        }
-
-        private static string BuildPatternSummary(TradingPatternEnum pattern, string phase, decimal confidence)
-        {
-            return $"{GetDisplayName(pattern)} en phase {BuildPhaseLabel(phase).ToLowerInvariant()} avec une confiance {BuildConfidenceLabel(confidence).ToLowerInvariant()}.";
         }
 
         private static string MapPatternId(TradingPatternEnum pattern)

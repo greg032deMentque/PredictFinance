@@ -7,10 +7,16 @@ V1 enabled scope is restricted to active French listed equities only.
 ## PortfolioLine
 Open holding lot with multi-line support.
 PRU is derived, not stored as authoritative V1 truth.
+V1 open-line reconstruction uses strict FIFO for portfolio contextualization:
+- each Buy creates one line
+- each Sell consumes the oldest still-open buy lines first
+- only remaining open quantities stay in `openLines`
+- this is a V1 contextualization rule, not a tax/accounting policy
 
 ## PortfolioContext
 Available to recommendation and explanation.
 Forbidden as an input to pattern detection logic.
+`openLines` must reflect the remaining open buy lines after strict FIFO sell consumption in V1.
 
 ## AnalysisRequest
 Single instrument, daily candles, server-resolved history window.

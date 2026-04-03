@@ -83,9 +83,17 @@
 - Per-line quantity, cost basis, fees, and buy date
 - Derived total quantity and PRU for recommendation context
 
+### V1 open-line reconstruction rule
+- In V1, open holding lines are reconstructed with a strict FIFO consumption rule for portfolio contextualization.
+- Each `Buy` creates one open line candidate.
+- Each `Sell` consumes the remaining quantity of the oldest still-open buy lines first.
+- `PortfolioContext.openLines` contains only the remaining open quantities after applying FIFO consumption.
+- This rule is used to reconstruct holding context, derive open-line quantities, and derive PRU from open lines.
+- This V1 rule is a product simplification for contextualization; it must not be silently reinterpreted as a tax or broker accounting policy.
+
 ### Explicitly deferred
 - Closed-lot tax accounting
-- FIFO/LIFO tax policies
+- Alternative depletion policies such as LIFO, weighted-average, or proportional depletion
 - dividend events
 - FX conversion history
 - broker import reconciliation
@@ -113,11 +121,17 @@
 ### Invariants
 - If `holdsInstrument=false`, then `openLineCount=0`, `totalQuantityHeld=0`, `averageUnitCost=null`, `openLines=[]`.
 - If `holdsInstrument=true`, then `openLineCount>0`, `totalQuantityHeld>0`, `openLines` is non-empty.
+- `openLines` are the remaining open buy lines after strict FIFO consumption of sell quantities in V1.
 - Pattern detection may read `instrumentId` and `asOfDate`, but must not depend on holdings fields.
 
 ### Exact usage boundary
 - Allowed consumers: recommendation policy, pedagogical explanation, snapshot persistence.
 - Forbidden consumers: provider adapters, market-data normalization, per-pattern detection rules.
+
+### V1 reconstruction note
+- If holdings are reconstructed from transaction history rather than persisted as explicit open lines, the reconstruction policy must use the strict V1 FIFO rule above.
+- This rule applies to remaining quantities and open-line derivation only.
+- Sale fees, realized P&L, and tax interpretation are outside this V1 contextualization rule unless another contract explicitly states otherwise.
 
 ---
 

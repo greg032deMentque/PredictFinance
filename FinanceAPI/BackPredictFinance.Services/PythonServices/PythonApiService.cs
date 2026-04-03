@@ -12,7 +12,7 @@ namespace BackPredictFinance.Services.PythonServices
 {
     public interface IPythonApiService
     {
-        Task<PredictOut> PredictAsync(AssetIn asset);
+        Task<PythonPredictionResult> PredictAsync(AssetIn asset);
         Task<SimulationOut> SimulateAsync(PythonSimulationRequest request);
         Task<bool> HealthCheckAsync();
     }
@@ -36,7 +36,7 @@ namespace BackPredictFinance.Services.PythonServices
             _logger = logger;
         }
 
-        public async Task<PredictOut> PredictAsync(AssetIn asset)
+        public async Task<PythonPredictionResult> PredictAsync(AssetIn asset)
         {
             var symbol = (asset.Symbol ?? string.Empty).Trim().ToUpperInvariant();
             if (string.IsNullOrWhiteSpace(symbol))
@@ -66,7 +66,7 @@ namespace BackPredictFinance.Services.PythonServices
             var qualityGate = BuildModelQualityGate(patternConfiguration.ModelDir);
             var primaryAssessment = GetPrimaryAssessment(parsed.PatternAssessments);
 
-            return new PredictOut
+            return new PythonPredictionResult
             {
                 Symbol = parsed.Symbol,
                 PredictedAt = parsed.AsOf,

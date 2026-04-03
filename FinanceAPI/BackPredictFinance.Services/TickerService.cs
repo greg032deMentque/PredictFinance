@@ -15,7 +15,7 @@ namespace BackPredictFinance.Services.TwelveDataServices
         public string ProviderSymbol { get; set; } = string.Empty;
         public string CompanyName { get; set; } = string.Empty;
         public string Exchange { get; set; } = string.Empty;
-        public string Currency { get; set; } = "USD";
+        public string Currency { get; set; } = string.Empty;
         public AssetTypeEnum AssetType { get; set; } = AssetTypeEnum.Stock;
         public decimal LastPrice { get; set; }
         public decimal DayVariationPct { get; set; }
@@ -37,7 +37,7 @@ namespace BackPredictFinance.Services.TwelveDataServices
         public string CompanyName { get; set; } = string.Empty;
         public AssetTypeEnum AssetType { get; set; } = AssetTypeEnum.Stock;
         public string Exchange { get; set; } = string.Empty;
-        public string Currency { get; set; } = "USD";
+        public string Currency { get; set; } = string.Empty;
         public string Country { get; set; } = string.Empty;
         public string Sector { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
@@ -129,7 +129,7 @@ namespace BackPredictFinance.Services.TwelveDataServices
                         ProviderSymbol = ReadString(quote, "symbol") ?? symbol,
                         CompanyName = ReadString(quote, "longname", "shortname") ?? symbol,
                         Exchange = ReadString(quote, "exchDisp", "exchange") ?? string.Empty,
-                        Currency = ReadString(quote, "currency") ?? "USD",
+                        Currency = ReadString(quote, "currency") ?? string.Empty,
                         AssetType = ParseAssetType(ReadString(quote, "quoteType")),
                         LastPrice = ReadDecimal(quote, "regularMarketPrice") ?? 0m,
                         DayVariationPct = ReadDecimal(quote, "regularMarketChangePercent") ?? 0m
@@ -208,7 +208,7 @@ namespace BackPredictFinance.Services.TwelveDataServices
                 CompanyName = ReadString(price, "longName", "shortName") ?? normalized,
                 AssetType = ParseAssetType(ReadString(price, "quoteType")),
                 Exchange = ReadString(price, "exchangeName") ?? string.Empty,
-                Currency = ReadString(price, "currency") ?? "USD",
+                Currency = ReadString(price, "currency") ?? string.Empty,
                 Country = ReadString(summaryProfile, "country", "domicile") ?? string.Empty,
                 Sector = ReadString(summaryProfile, "sector") ?? string.Empty,
                 Category = ReadString(fundProfile, "categoryName", "legalType", "family") ?? string.Empty,
@@ -381,18 +381,21 @@ namespace BackPredictFinance.Services.TwelveDataServices
         {
             var known = await _context.Assets
                 .AsNoTracking()
-                .Where(x => !string.IsNullOrWhiteSpace(x.Exchange))
-                .Select(x => x.Exchange)
-                .Distinct()
-                .OrderBy(x => x)
+                .Select(x => new
+                {
+                    x.Exchange,
+                    x.Country,
+                    x.AssetType
+                })
                 .ToListAsync(ct);
 
-            if (known.Count > 0)
-            {
-                return known;
-            }
-
-            return ["AMEX", "ARCA", "NASDAQ", "NYSE"];
+            return known
+                .Where(x => x.AssetType == AssetTypeEnum.Stock && IsFrenchCountry(x.Country))
+                .Select(x => NormalizeExchange(x.Exchange))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         public async Task<IReadOnlyList<string>> GetSymbolsByExchangeAsync(string exchange, CancellationToken ct = default)
@@ -402,27 +405,37 @@ namespace BackPredictFinance.Services.TwelveDataServices
                 return [];
             }
 
-            return await _context.Assets
+            var normalizedExchange = NormalizeExchange(exchange);
+            var assets = await _context.Assets
                 .AsNoTracking()
-                .Where(x => x.Exchange == exchange)
-                .Select(x => x.Symbol)
-                .Distinct()
-                .OrderBy(x => x)
                 .ToListAsync(ct);
+
+            return assets
+                .Where(x => x.AssetType == AssetTypeEnum.Stock && IsFrenchCountry(x.Country))
+                .Where(x => string.Equals(NormalizeExchange(x.Exchange), normalizedExchange, StringComparison.OrdinalIgnoreCase))
+                .Select(x => NormalizeSymbol(x.Symbol))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         public async Task<IReadOnlyList<string>> GetAllSymbolsAsync(CancellationToken ct = default)
         {
-            return await _context.Assets
+            var assets = await _context.Assets
                 .AsNoTracking()
-                .Select(x => x.Symbol)
-                .Distinct()
-                .OrderBy(x => x)
                 .ToListAsync(ct);
+
+            return assets
+                .Where(x => x.AssetType == AssetTypeEnum.Stock && IsFrenchCountry(x.Country))
+                .Select(x => NormalizeSymbol(x.Symbol))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         public async Task<TickerTimeSeriesResponse> GetTimeSeriesAsync(string symbol, string interval, int outputSize, CancellationToken ct = default)
         {
+            var profile = await GetEligibleFrenchEquityProfileAsync(symbol, ct);
             var normalizedOutputSize = Math.Clamp(outputSize, 5, 500);
             var range = normalizedOutputSize switch
             {
@@ -432,10 +445,10 @@ namespace BackPredictFinance.Services.TwelveDataServices
                 _ => "1y"
             };
 
-            var candles = await _priceProvider.GetChartAsync(symbol, interval, range, ct);
+            var candles = await _priceProvider.GetChartAsync(profile.Symbol, interval, range, ct);
             var response = new TickerTimeSeriesResponse
             {
-                Symbol = symbol.Trim().ToUpperInvariant(),
+                Symbol = profile.Symbol,
                 Interval = interval,
                 OutputSize = normalizedOutputSize,
                 Candles = candles.TakeLast(normalizedOutputSize).ToList()
@@ -443,14 +456,140 @@ namespace BackPredictFinance.Services.TwelveDataServices
             return response;
         }
 
-        public Task<IReadOnlyList<MarketAssetDescriptor>> SearchAssetsAsync(string query, CancellationToken ct = default)
-            => _catalogProvider.SearchAssetsAsync(query, ct);
+        public async Task<IReadOnlyList<MarketAssetDescriptor>> SearchAssetsAsync(string query, CancellationToken ct = default)
+        {
+            var descriptors = await _catalogProvider.SearchAssetsAsync(query, ct);
+            if (descriptors.Count == 0)
+            {
+                return [];
+            }
 
-        public Task<MarketQuoteData> GetQuoteAsync(string symbol, CancellationToken ct = default)
-            => _priceProvider.GetQuoteAsync(symbol, ct);
+            var response = new List<MarketAssetDescriptor>();
+            foreach (var descriptor in descriptors)
+            {
+                if (string.IsNullOrWhiteSpace(descriptor.Symbol))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var profile = await GetEligibleFrenchEquityProfileAsync(descriptor.Symbol, ct);
+                    response.Add(new MarketAssetDescriptor
+                    {
+                        Symbol = profile.Symbol,
+                        ProviderSymbol = profile.ProviderSymbol,
+                        CompanyName = profile.CompanyName,
+                        Exchange = profile.Exchange,
+                        Currency = profile.Currency,
+                        AssetType = profile.AssetType,
+                        LastPrice = profile.LastPrice,
+                        DayVariationPct = profile.DayVariationPct
+                    });
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or JsonException)
+                {
+                    continue;
+                }
+            }
+
+            return response
+                .GroupBy(x => x.Symbol, StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.First())
+                .OrderBy(x => x.Symbol, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        public async Task<MarketQuoteData> GetQuoteAsync(string symbol, CancellationToken ct = default)
+        {
+            var profile = await GetEligibleFrenchEquityProfileAsync(symbol, ct);
+            return new MarketQuoteData
+            {
+                Symbol = profile.Symbol,
+                AssetType = profile.AssetType,
+                LastPrice = profile.LastPrice,
+                DayVariationPct = profile.DayVariationPct,
+                AsOfUtc = profile.AsOfUtc
+            };
+        }
 
         public Task<MarketAssetProfileData> GetAssetProfileAsync(string symbol, CancellationToken ct = default)
-            => _catalogProvider.GetAssetProfileAsync(symbol, ct);
+            => GetEligibleFrenchEquityProfileAsync(symbol, ct);
+
+        private async Task<MarketAssetProfileData> GetEligibleFrenchEquityProfileAsync(string symbol, CancellationToken ct)
+        {
+            var normalizedSymbol = NormalizeSymbol(symbol);
+            var profile = await _catalogProvider.GetAssetProfileAsync(normalizedSymbol, ct);
+            return EnsureFrenchEquityEligibility(profile, normalizedSymbol);
+        }
+
+        private static MarketAssetProfileData EnsureFrenchEquityEligibility(MarketAssetProfileData profile, string symbol)
+        {
+            ArgumentNullException.ThrowIfNull(profile);
+
+            var normalizedSymbol = NormalizeSymbol(string.IsNullOrWhiteSpace(profile.Symbol) ? symbol : profile.Symbol);
+            var normalizedProviderSymbol = NormalizeSymbol(string.IsNullOrWhiteSpace(profile.ProviderSymbol) ? normalizedSymbol : profile.ProviderSymbol);
+            var exchange = NormalizeExchange(profile.Exchange);
+            var currency = (profile.Currency ?? string.Empty).Trim().ToUpperInvariant();
+            var normalizedCountry = NormalizeCountryCode(profile.Country);
+            var companyName = string.IsNullOrWhiteSpace(profile.CompanyName) ? normalizedSymbol : profile.CompanyName.Trim();
+            var sector = (profile.Sector ?? string.Empty).Trim();
+            var category = (profile.Category ?? string.Empty).Trim();
+            var summary = (profile.Summary ?? string.Empty).Trim();
+
+            if (profile.AssetType != AssetTypeEnum.Stock ||
+                normalizedCountry != "FR" ||
+                string.IsNullOrWhiteSpace(exchange) ||
+                string.IsNullOrWhiteSpace(currency) ||
+                profile.LastPrice <= 0m)
+            {
+                throw new InvalidOperationException($"L'instrument {normalizedSymbol} n'entre pas dans le perimetre V1. Seules les actions francaises cotees avec des donnees de marche disponibles sont prises en charge.");
+            }
+
+            return new MarketAssetProfileData
+            {
+                Symbol = normalizedSymbol,
+                ProviderSymbol = normalizedProviderSymbol,
+                CompanyName = companyName,
+                AssetType = profile.AssetType,
+                Exchange = exchange,
+                Currency = currency,
+                Country = normalizedCountry,
+                Sector = sector,
+                Category = category,
+                Summary = summary,
+                LastPrice = profile.LastPrice,
+                DayVariationPct = profile.DayVariationPct,
+                AsOfUtc = profile.AsOfUtc
+            };
+        }
+
+        private static string NormalizeCountryCode(string? country)
+        {
+            return (country ?? string.Empty).Trim().ToUpperInvariant() switch
+            {
+                "FR" => "FR",
+                "FRANCE" => "FR",
+                _ => string.Empty
+            };
+        }
+
+        private static bool IsFrenchCountry(string? country)
+            => NormalizeCountryCode(country) == "FR";
+
+        private static string NormalizeExchange(string? exchange)
+            => (exchange ?? string.Empty).Trim().ToUpperInvariant();
+
+        private static string NormalizeSymbol(string? symbol)
+        {
+            var normalized = (symbol ?? string.Empty).Trim().ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                throw new ArgumentException("Symbol is required.", nameof(symbol));
+            }
+
+            return normalized;
+        }
     }
 
     public class TickerTimeSeriesResponse

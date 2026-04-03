@@ -26,3 +26,10 @@ Construire une application pédagogique d’aide à l’investissement pour part
 - granularité : bougies journalières
 - IA : optionnelle et périphérique
 - source de vérité métier : API
+
+## Décision métier V1 complémentaire
+- la reconstruction des lignes d’achat ouvertes après ventes suit une règle FIFO stricte
+- chaque achat crée une ligne
+- chaque vente consomme d’abord les quantités restantes des lignes les plus anciennes encore ouvertes
+- le contexte portefeuille utilisé pour la recommandation et l’explication est construit à partir de ces lignes ouvertes restantes
+- cette règle V1 sert à la contextualisation portefeuille et ne vaut pas politique fiscale/comptable générale
