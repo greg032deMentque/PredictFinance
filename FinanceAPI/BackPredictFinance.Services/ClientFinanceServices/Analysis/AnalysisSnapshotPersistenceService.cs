@@ -6,11 +6,36 @@ using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
-using RecommendationContract = BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.Recommendation;
+using BackPredictFinance.Common.AnalysisV1;
+using AnalysisRecommendation = BackPredictFinance.Common.AnalysisV1.AnalysisRecommendation;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IAnalysisSnapshotPersistenceService
+{
+    Task<PersistedAnalysisRecord> PersistSuccessfulAnalysisAsync(
+        AnalysisRequest request,
+        ResolvedAnalysisPattern pattern,
+        AnalysisExecutionArtifact executionArtifact,
+        AnalysisRecommendation recommendation,
+        AnalysisOutcome outcome,
+        string pedagogicalSummary,
+        string explanationPolicyVersion,
+        DateTime startedAtUtc,
+        DateTime completedAtUtc,
+        CancellationToken ct = default);
+
+    Task PersistFailedAnalysisAsync(
+        AnalysisRequest request,
+        ResolvedAnalysisPattern pattern,
+        DateTime startedAtUtc,
+        DateTime completedAtUtc,
+        Exception exception,
+        CancellationToken ct = default);
+}
+
+
     public sealed class AnalysisSnapshotPersistenceService : BaseService, IAnalysisSnapshotPersistenceService
     {
         private const string SnapshotPayloadVersion = "analysis-snapshot-history@prompt5";
@@ -27,7 +52,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             AnalysisRequest request,
             ResolvedAnalysisPattern pattern,
             AnalysisExecutionArtifact executionArtifact,
-            RecommendationContract recommendation,
+            AnalysisRecommendation recommendation,
             AnalysisOutcome outcome,
             string pedagogicalSummary,
             string explanationPolicyVersion,
@@ -43,9 +68,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             {
                 UserAssetId = userAsset.Id,
                 Action = MapRecommendationAction(recommendation.Kind),
-                Confidence = executionArtifact.Patterns
-                    .OrderByDescending(executedPattern => executedPattern.IsPrimary)
-                    .ThenByDescending(executedPattern => executedPattern.Confidence)
+                Confidence = executionArtifact.GetOrderedPatterns()
                     .Select(executedPattern => executedPattern.Confidence)
                     .FirstOrDefault(),
                 RecommendedAtUtc = executionArtifact.GeneratedAtUtc,
@@ -89,7 +112,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             Asset asset,
             ResolvedAnalysisPattern pattern,
             AnalysisExecutionArtifact executionArtifact,
-            RecommendationContract recommendation,
+            AnalysisRecommendation recommendation,
             AnalysisOutcome outcome,
             string pedagogicalSummary,
             string explanationPolicyVersion,
@@ -102,11 +125,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 return null;
             }
 
-            var primaryPattern = executionArtifact.Patterns
-                .OrderByDescending(executedPattern => executedPattern.IsPrimary)
-                .ThenByDescending(executedPattern => executedPattern.Confidence)
-                .ThenByDescending(executedPattern => executedPattern.Probability)
-                .FirstOrDefault();
+            var primaryPattern = executionArtifact.GetOrderedPatterns().FirstOrDefault();
 
             var snapshotPayload = BuildSuccessfulSnapshotPayload(
                 request,
@@ -136,10 +155,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 DecisionSignal = new DecisionSignal
                 {
                     Action = MapRecommendationAction(recommendation.Kind),
-                    IsActionable = recommendation.Kind is BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind.Buy
-                        or BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind.Reinforce
-                        or BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind.Lighten
-                        or BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind.Sell,
+                    IsActionable = recommendation.Kind is RecommendationKind.Buy
+                        or RecommendationKind.Reinforce
+                        or RecommendationKind.Lighten
+                        or RecommendationKind.Sell,
                     Confidence = primaryPattern?.Confidence ?? 0m,
                     HorizonDays = recommendation.ReviewHorizonDays ?? 0,
                     Reason = string.IsNullOrWhiteSpace(recommendation.Rationale) ? "Aucune justification" : recommendation.Rationale.Trim()
@@ -150,9 +169,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                     ModelMessage = string.IsNullOrWhiteSpace(executionArtifact.ModelMessage)
                         ? string.Empty
                         : executionArtifact.ModelMessage.Trim(),
-                    ModelVersion = string.IsNullOrWhiteSpace(executionArtifact.ModelVersion)
-                        ? pattern.ModelVersion
-                        : executionArtifact.ModelVersion.Trim(),
+                    ModelVersion = executionArtifact.ResolveAnalysisEngineVersion(pattern.ModelVersion),
                     Precision = executionArtifact.Precision,
                     F1 = executionArtifact.F1,
                     RocAuc = executionArtifact.RocAuc,
@@ -255,7 +272,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             Asset asset,
             ResolvedAnalysisPattern pattern,
             AnalysisExecutionArtifact executionArtifact,
-            RecommendationContract recommendation,
+            AnalysisRecommendation recommendation,
             AnalysisOutcome outcome,
             string pedagogicalSummary,
             string explanationPolicyVersion,
@@ -280,16 +297,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                     PatternAssessmentPayload = executedPattern.ContractAssessment
                 })
                 .ToList();
-
-            var executedPatternIds = patternRows
-                .Select(x => x.PatternId)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            if (executedPatternIds.Count == 0)
-            {
-                executedPatternIds.Add(pattern.PatternId);
-            }
 
             var primaryPatternId = patternRows
                 .Where(x => x.IsCompatible)
@@ -319,7 +326,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 InstrumentId = asset.Id,
                 InstrumentSnapshot = CloneInstrument(request.Instrument),
                 RequestedPatternIds = [.. request.RequestedPatternIds],
-                ExecutedPatternIds = executedPatternIds,
+                ExecutedPatternIds = executionArtifact.GetExecutedPatternIds(pattern.PatternId),
                 Outcome = outcome,
                 RequestedAtUtc = startedAtUtc,
                 CompletedAtUtc = completedAtUtc,
@@ -333,7 +340,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 PrimaryPatternId = primaryPatternId,
                 RecommendationId = recommendation.RecommendationId,
                 TraceId = snapshotId,
-                AnalysisEngineVersion = string.IsNullOrWhiteSpace(executionArtifact.ModelVersion) ? pattern.ModelVersion : executionArtifact.ModelVersion.Trim(),
+                AnalysisEngineVersion = executionArtifact.ResolveAnalysisEngineVersion(pattern.ModelVersion),
                 RecommendationPolicyVersion = string.IsNullOrWhiteSpace(recommendation.PolicyVersion) ? null : recommendation.PolicyVersion.Trim(),
                 ExplanationPolicyVersion = string.IsNullOrWhiteSpace(explanationPolicyVersion) ? null : explanationPolicyVersion.Trim(),
                 MarketNormalizationVersion = null,
@@ -344,7 +351,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 {
                     ModelStatus = executionArtifact.ModelStatus,
                     ModelMessage = string.IsNullOrWhiteSpace(executionArtifact.ModelMessage) ? string.Empty : executionArtifact.ModelMessage.Trim(),
-                    ModelVersion = string.IsNullOrWhiteSpace(executionArtifact.ModelVersion) ? pattern.ModelVersion : executionArtifact.ModelVersion.Trim(),
+                    ModelVersion = executionArtifact.ResolveAnalysisEngineVersion(pattern.ModelVersion),
                     Precision = executionArtifact.Precision,
                     F1 = executionArtifact.F1,
                     RocAuc = executionArtifact.RocAuc,
@@ -552,26 +559,22 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 
         private static TradingPatternEnum ParseTradingPattern(string? rawPattern)
         {
-            var normalized = (rawPattern ?? string.Empty).Trim().ToUpperInvariant();
-            return normalized switch
+            var normalizedPattern = (rawPattern ?? string.Empty).Trim().ToUpperInvariant();
+            return normalizedPattern switch
             {
-                "HEAD_AND_SHOULDERS" => TradingPatternEnum.HeadAndShoulders,
                 "DOUBLE_TOP" => TradingPatternEnum.DoubleTop,
-                "DOUBLE_BOTTOM" => TradingPatternEnum.DoubleBottom,
-                "CUP_AND_HANDLE" => TradingPatternEnum.CupAndHandle,
-                "TRIANGLE" => TradingPatternEnum.Triangle,
-                _ => TradingPatternEnum.DoubleTop
+                _ => throw new InvalidOperationException($"Le runtime V1 actif ne prend pas en charge le pattern {normalizedPattern}.")
             };
         }
 
-        private static RecommendationActionEnum MapRecommendationAction(BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind kind)
+        private static RecommendationActionEnum MapRecommendationAction(RecommendationKind kind)
         {
             return kind switch
             {
-                BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind.Buy => RecommendationActionEnum.Buy,
-                BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind.Reinforce => RecommendationActionEnum.Buy,
-                BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind.Lighten => RecommendationActionEnum.Sell,
-                BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.RecommendationKind.Sell => RecommendationActionEnum.Sell,
+                RecommendationKind.Buy => RecommendationActionEnum.Buy,
+                RecommendationKind.Reinforce => RecommendationActionEnum.Buy,
+                RecommendationKind.Lighten => RecommendationActionEnum.Sell,
+                RecommendationKind.Sell => RecommendationActionEnum.Sell,
                 _ => RecommendationActionEnum.Hold
             };
         }

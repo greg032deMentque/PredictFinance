@@ -27,7 +27,7 @@ using System.Security.Claims;
 using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Contracts.Analysis;
 using BackPredictFinance.Contracts.Common;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
+using BackPredictFinance.Common.AnalysisV1;
 
 namespace BackPredictFinance.Tests
 {
@@ -366,7 +366,7 @@ namespace BackPredictFinance.Tests
                 HistoryEndDate = new DateOnly(2025, 1, 31)
             };
 
-            var assessment = new BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.PatternAssessment
+            var assessment = new BackPredictFinance.Common.AnalysisV1.PatternAssessment
             {
                 AssessmentId = "assessment-1",
                 PatternId = "DOUBLE_TOP",
@@ -464,7 +464,7 @@ namespace BackPredictFinance.Tests
                 RawProviderPayloadJson = "{\"provider\":\"yfinance\"}"
             };
 
-            var recommendation = new BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.Recommendation
+            var recommendation = new AnalysisRecommendation
             {
                 RecommendationId = "rec-1",
                 Kind = RecommendationKind.Hold,
@@ -993,6 +993,114 @@ namespace BackPredictFinance.Tests
             }, "user-1"));
 
             Assert.Equal("Le runtime V1 actif requiert un pattern explicite tant que plusieurs definitions de patterns sont actives.", exception.Message);
+        }
+
+
+        [Fact]
+        public void AnalysisLegacyCompatibilityService_MapRunResult_PreservesModelTruthFromActiveResponse()
+        {
+            var service = new AnalysisLegacyCompatibilityService(BuildServiceProviderForLegacyCompatibility());
+            var response = new AnalysisResponseViewModel
+            {
+                AnalysisId = "analysis-1",
+                GeneratedAtUtc = new DateTime(2025, 4, 1, 12, 0, 0, DateTimeKind.Utc),
+                AsOfDate = new DateOnly(2025, 4, 1),
+                Outcome = AnalysisOutcome.NoCrediblePattern,
+                Instrument = new Instrument
+                {
+                    InstrumentId = "asset-1",
+                    Symbol = "AIR.PA",
+                    DisplayName = "Airbus"
+                },
+                ExecutedPatternIds = ["DOUBLE_TOP"],
+                PedagogicalSummary = "Aucun pattern credible n'a ete retenu.",
+                ModelStatus = ModelStatusEnum.Go,
+                ModelMessage = "Model quality gate passed."
+            };
+
+            var result = service.MapRunResult(response);
+
+            Assert.Equal(ModelStatusEnum.Go, result.ModelStatus);
+            Assert.Equal("Model quality gate passed.", result.ModelMessage);
+            Assert.Equal(TradingPatternEnum.DoubleTop, result.Pattern);
+        }
+
+        [Fact]
+        public void RecommendationPolicyService_EvaluateAnalysis_RejectsUnsupportedPatternId()
+        {
+            var service = new RecommendationPolicyService(Mock.Of<ITradingRecommendationService>());
+            var request = new AnalysisRequest
+            {
+                InstrumentId = "asset-1",
+                UserId = "user-1",
+                Instrument = new Instrument
+                {
+                    InstrumentId = "asset-1",
+                    Symbol = "AIR.PA",
+                    DisplayName = "Airbus",
+                    AssetType = "EQUITY",
+                    CurrencyCode = "EUR"
+                },
+                PortfolioContext = new PortfolioContext
+                {
+                    UserId = "user-1",
+                    InstrumentId = "asset-1",
+                    HoldsInstrument = false,
+                    CurrencyCode = "EUR"
+                }
+            };
+
+            var patternAssessment = new BackPredictFinance.Common.AnalysisV1.PatternAssessment
+            {
+                PatternId = "TRIANGLE",
+                DisplayName = "Triangle",
+                Detection = new PatternDetection
+                {
+                    IsCompatible = true,
+                    Status = PatternStatus.Forming,
+                    CurrentPhaseCode = "FORMING",
+                    CurrentPhaseLabel = "Formation"
+                },
+                Scoring = new PatternScoring
+                {
+                    ConfidenceScore = 0.55m,
+                    ConfidenceLabel = "MEDIUM",
+                    IsCredible = true
+                },
+                RiskHints = new PatternRiskHints(),
+                Invalidation = new PatternInvalidation()
+            };
+
+            var exception = Assert.Throws<InvalidOperationException>(() => service.EvaluateAnalysis(
+                request,
+                [patternAssessment],
+                AnalysisOutcome.CrediblePatternFound));
+
+            Assert.Equal("Le runtime V1 actif ne prend pas en charge la recommandation pour le pattern TRIANGLE.", exception.Message);
+        }
+
+        private static IServiceProvider BuildServiceProviderForLegacyCompatibility()
+        {
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+            services.AddSingleton<IHttpContextAccessor>(BuildHttpContextAccessor());
+            services.AddDbContext<FinanceDbContext>(options =>
+                options.UseInMemoryDatabase($"PredictFinanceLegacyCompatibility_{Guid.NewGuid()}"));
+
+            var mapperConfiguration = new MapperConfiguration(cfg =>
+            {
+                cfg.AddMaps(typeof(AnalysisResultViewModelProfile).Assembly);
+            }, NullLoggerFactory.Instance);
+
+            services.AddSingleton<IMapper>(mapperConfiguration.CreateMapper());
+            services.AddSingleton(Mock.Of<IStringLocalizer<Messages>>());
+            services.AddSingleton(CreateUserManagerMock().Object);
+            services.AddSingleton(CreateRoleManagerMock().Object);
+            services.AddSingleton(sp => CreateSignInManagerMock(sp.GetRequiredService<UserManager<User>>(), sp.GetRequiredService<IHttpContextAccessor>()).Object);
+            services.AddSingleton(Mock.Of<ILogService>());
+
+            return services.BuildServiceProvider();
         }
 
         [Fact]

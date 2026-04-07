@@ -1,5 +1,5 @@
 using BackPredictFinance.Common.enums;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
+using BackPredictFinance.Common.AnalysisV1;
 
 namespace BackPredictFinance.Contracts.Analysis
 {

@@ -1,10 +1,18 @@
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IPortfolioContextLoader
+{
+    Task<PortfolioContext?> TryLoadAsync(string userId, string instrumentId, DateOnly? asOfDate, CancellationToken ct = default);
+}
+
+
     public sealed class PortfolioContextLoader : IPortfolioContextLoader
     {
         private readonly FinanceDbContext _financeDbContext;

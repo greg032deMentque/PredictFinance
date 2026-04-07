@@ -1,8 +1,16 @@
 using BackPredictFinance.Contracts.Analysis;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IAnalysisExecutionService
+{
+    Task<AnalysisExecutionArtifact> ExecuteAsync(AnalysisRequest request, ResolvedAnalysisPattern pattern, CancellationToken ct = default);
+}
+
+
     public sealed class DeterministicAnalysisExecutionService : IAnalysisExecutionService
     {
         private readonly IAnalysisPatternRegistry _patternRegistry;

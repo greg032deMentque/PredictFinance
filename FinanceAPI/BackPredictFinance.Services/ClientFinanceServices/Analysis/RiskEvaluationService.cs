@@ -1,8 +1,16 @@
 using BackPredictFinance.Contracts.Analysis;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IRiskEvaluationService
+{
+    PatternRiskHints EvaluatePrimaryRisk(AnalysisExecutionArtifact executionArtifact, PatternAssessment patternAssessment);
+}
+
+
     public sealed class RiskEvaluationService : IRiskEvaluationService
     {
         public PatternRiskHints EvaluatePrimaryRisk(AnalysisExecutionArtifact executionArtifact, PatternAssessment patternAssessment)

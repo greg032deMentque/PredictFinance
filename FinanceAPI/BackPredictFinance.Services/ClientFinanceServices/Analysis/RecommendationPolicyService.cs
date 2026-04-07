@@ -1,8 +1,16 @@
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IRecommendationPolicyService
+{
+    AnalysisRecommendation EvaluateAnalysis(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisOutcome outcome);
+}
+
+
     public sealed class RecommendationPolicyService : IRecommendationPolicyService
     {
         private readonly ITradingRecommendationService _tradingRecommendationService;
@@ -12,7 +20,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             _tradingRecommendationService = tradingRecommendationService;
         }
 
-        public Recommendation EvaluateAnalysis(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisOutcome outcome)
+        public AnalysisRecommendation EvaluateAnalysis(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisOutcome outcome)
         {
             ArgumentNullException.ThrowIfNull(request);
             ArgumentNullException.ThrowIfNull(compatiblePatterns);
@@ -26,7 +34,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 
             if (compatiblePatterns.Count == 0 || outcome == AnalysisOutcome.NoCrediblePattern)
             {
-                return new Recommendation
+                return new AnalysisRecommendation
                 {
                     RecommendationId = Guid.NewGuid().ToString("N"),
                     Kind = RecommendationKind.Wait,
@@ -46,7 +54,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 
             if (primaryPattern == null)
             {
-                return new Recommendation
+                return new AnalysisRecommendation
                 {
                     RecommendationId = Guid.NewGuid().ToString("N"),
                     Kind = RecommendationKind.Wait,
@@ -66,7 +74,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 
             var kind = ResolveRecommendationKind(request.PortfolioContext.HoldsInstrument, primaryPattern, legacyResult.Action);
 
-            return new Recommendation
+            return new AnalysisRecommendation
             {
                 RecommendationId = Guid.NewGuid().ToString("N"),
                 Kind = kind,
@@ -83,14 +91,11 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 
         private static TradingPatternEnum MapPattern(string? patternId)
         {
-            return (patternId ?? string.Empty).Trim().ToUpperInvariant() switch
+            var normalizedPatternId = (patternId ?? string.Empty).Trim().ToUpperInvariant();
+            return normalizedPatternId switch
             {
-                "HEAD_AND_SHOULDERS" => TradingPatternEnum.HeadAndShoulders,
                 "DOUBLE_TOP" => TradingPatternEnum.DoubleTop,
-                "DOUBLE_BOTTOM" => TradingPatternEnum.DoubleBottom,
-                "CUP_AND_HANDLE" => TradingPatternEnum.CupAndHandle,
-                "TRIANGLE" => TradingPatternEnum.Triangle,
-                _ => TradingPatternEnum.DoubleTop
+                _ => throw new InvalidOperationException($"Le runtime V1 actif ne prend pas en charge la recommandation pour le pattern {normalizedPatternId}.")
             };
         }
 

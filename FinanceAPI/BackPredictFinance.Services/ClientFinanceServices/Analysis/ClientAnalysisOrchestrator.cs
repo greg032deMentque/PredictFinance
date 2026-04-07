@@ -1,11 +1,20 @@
-using BackPredictFinance.Contracts.Analysis;
 using BackPredictFinance.Common;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Contracts.Analysis;
+using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using System.Net;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+    public interface IAnalysisOrchestrator
+    {
+        Task<AnalysisResponseViewModel> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default);
+    }
+
+
     public sealed class ClientAnalysisOrchestrator : IAnalysisOrchestrator
     {
         private readonly IAnalysisPatternRegistry _patternRegistry;
@@ -31,7 +40,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             _snapshotPersistenceService = snapshotPersistenceService;
         }
 
-        public async Task<AnalysisResponse> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default)
+        public async Task<AnalysisResponseViewModel> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(request);
 
@@ -65,16 +74,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 executedPattern.ContractAssessment.RiskHints = _riskEvaluationService.EvaluatePrimaryRisk(executionArtifact, executedPattern.ContractAssessment);
             }
 
-            var orderedPatterns = executionArtifact.Patterns
-                .OrderByDescending(pattern => pattern.IsPrimary)
-                .ThenByDescending(pattern => pattern.Confidence)
-                .ThenByDescending(pattern => pattern.Probability)
-                .ToList();
-
-            var compatiblePatterns = orderedPatterns
-                .Select(pattern => pattern.ContractAssessment)
-                .Where(pattern => pattern.Detection.IsCompatible)
-                .ToList();
+            var orderedPatterns = executionArtifact.GetOrderedPatterns();
+            var compatiblePatterns = executionArtifact.GetCompatiblePatternAssessments();
 
             var outcome = compatiblePatterns.Count switch
             {
@@ -109,30 +110,22 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             return BuildAnalysisResponse(request, persisted, resolvedPattern, executionArtifact, recommendation, outcome, pedagogicalSummary);
         }
 
-        private static AnalysisResponse BuildAnalysisResponse(
+        private static AnalysisResponseViewModel BuildAnalysisResponse(
             AnalysisRequest request,
             PersistedAnalysisRecord persisted,
             ResolvedAnalysisPattern resolvedPattern,
             AnalysisExecutionArtifact executionArtifact,
-            Recommendation recommendation,
+            AnalysisRecommendation recommendation,
             AnalysisOutcome outcome,
             string pedagogicalSummary)
         {
-            var orderedPatterns = executionArtifact.Patterns
-                .OrderByDescending(pattern => pattern.IsPrimary)
-                .ThenByDescending(pattern => pattern.Confidence)
-                .ThenByDescending(pattern => pattern.Probability)
-                .ToList();
-
-            var compatiblePatterns = orderedPatterns
-                .Select(pattern => pattern.ContractAssessment)
-                .Where(pattern => pattern.Detection.IsCompatible)
-                .ToList();
+            var orderedPatterns = executionArtifact.GetOrderedPatterns();
+            var compatiblePatterns = executionArtifact.GetCompatiblePatternAssessments();
 
             var mainPattern = compatiblePatterns.FirstOrDefault();
             var alternativePatterns = compatiblePatterns.Skip(1).ToList();
 
-            return new AnalysisResponse
+            return new AnalysisResponseViewModel
             {
                 AnalysisId = persisted.PublicId,
                 GeneratedAtUtc = executionArtifact.GeneratedAtUtc,
@@ -153,7 +146,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                     Summary = persisted.Summary
                 },
                 RequestedPatternIds = request.RequestedPatternIds,
-                ExecutedPatternIds = [resolvedPattern.PatternId],
+                ExecutedPatternIds = executionArtifact.GetExecutedPatternIds(resolvedPattern.PatternId),
                 MainPattern = mainPattern,
                 AlternativePatterns = alternativePatterns,
                 Recommendation = recommendation,
@@ -164,12 +157,14 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 Trace = new AnalysisResponseTrace
                 {
                     TraceId = persisted.PublicId,
-                    AnalysisEngineVersion = executionArtifact.ModelVersion,
-                    RuleSetVersion = resolvedPattern.ModelVersion
+                    AnalysisEngineVersion = executionArtifact.ResolveAnalysisEngineVersion(resolvedPattern.ModelVersion),
+                    RuleSetVersion = executionArtifact.ResolveRuleSetVersion(resolvedPattern.ModelVersion)
                 },
                 Warnings = executionArtifact.ModelStatus == ModelStatusEnum.Go
                     ? []
-                    : [string.IsNullOrWhiteSpace(executionArtifact.ModelMessage) ? "Le modele legacy n'est pas pleinement valide." : executionArtifact.ModelMessage]
+                    : [string.IsNullOrWhiteSpace(executionArtifact.ModelMessage) ? "Le modele legacy n'est pas pleinement valide." : executionArtifact.ModelMessage],
+                ModelStatus = executionArtifact.ModelStatus,
+                ModelMessage = string.IsNullOrWhiteSpace(executionArtifact.ModelMessage) ? string.Empty : executionArtifact.ModelMessage.Trim()
             };
         }
     }

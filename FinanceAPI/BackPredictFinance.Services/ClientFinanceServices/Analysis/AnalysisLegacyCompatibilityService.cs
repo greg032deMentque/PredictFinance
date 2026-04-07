@@ -1,3 +1,4 @@
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
@@ -5,6 +6,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IAnalysisLegacyCompatibilityService
+{
+    AnalysisResultViewModel MapRunResult(AnalysisResponseViewModel response);
+    Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(string userId, int take, CancellationToken ct = default);
+}
+
+
     public sealed class AnalysisLegacyCompatibilityService : BaseService, IAnalysisLegacyCompatibilityService
     {
         public AnalysisLegacyCompatibilityService(IServiceProvider serviceProvider)
@@ -12,7 +21,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
         {
         }
 
-        public AnalysisResultViewModel MapRunResult(AnalysisResponse response)
+        public AnalysisResultViewModel MapRunResult(AnalysisResponseViewModel response)
         {
             ArgumentNullException.ThrowIfNull(response);
 
@@ -27,7 +36,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 Id = response.AnalysisId,
                 Symbol = response.Instrument.Symbol,
                 CompanyName = response.Instrument.DisplayName,
-                Pattern = MapPatternId(primaryPattern?.PatternId),
+                Pattern = MapPatternId(primaryPattern?.PatternId ?? response.ExecutedPatternIds.FirstOrDefault()),
                 Phase = primaryPattern?.Detection.CurrentPhaseCode ?? string.Empty,
                 Probability = confidence,
                 RecommendationAction = recommendationAction,
@@ -36,8 +45,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 RecommendationHorizonDays = recommendation?.ReviewHorizonDays ?? 0,
                 PredictedAt = response.GeneratedAtUtc,
                 IsActionable = isActionable,
-                ModelStatus = ModelStatusEnum.NoGo,
-                ModelMessage = string.Join(" ", response.Warnings),
+                ModelStatus = response.ModelStatus,
+                ModelMessage = string.IsNullOrWhiteSpace(response.ModelMessage) ? string.Join(" ", response.Warnings) : response.ModelMessage,
                 CurrentPrice = primaryPattern?.Detection.CurrentPrice ?? 0m,
                 NecklinePrice = null,
                 TargetPrice = primaryPattern?.RiskHints.SuggestedTakeProfit,
@@ -62,7 +71,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 
             if (analysisRuns.Count > 0)
             {
-                return _mapper.Map<List<AnalysisResultViewModel>>(analysisRuns);
+                return analysisRuns
+                    .Select(MapAnalysisRunResult)
+                    .ToList();
             }
 
             var recommendations = await _financeDbContext.Set<BackPredictFinance.Datas.Entities.Recommendation>()
@@ -90,16 +101,50 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             }).ToList();
         }
 
+
+        private static AnalysisResultViewModel MapAnalysisRunResult(BackPredictFinance.Datas.Entities.AnalysisRun analysisRun)
+        {
+            var primaryPattern = analysisRun.PatternAssessments
+                .OrderByDescending(pattern => pattern.IsPrimary)
+                .ThenByDescending(pattern => pattern.Confidence)
+                .ThenByDescending(pattern => pattern.Probability)
+                .FirstOrDefault();
+
+            var recommendationAction = analysisRun.DecisionSignal?.Action ?? RecommendationActionEnum.Hold;
+            var isActionable = analysisRun.DecisionSignal?.IsActionable ?? false;
+            var modelStatus = analysisRun.ModelSnapshot?.ModelStatus ?? ModelStatusEnum.NoGo;
+            var modelMessage = analysisRun.ModelSnapshot?.ModelMessage ?? string.Empty;
+
+            return new AnalysisResultViewModel
+            {
+                Id = analysisRun.Id,
+                Symbol = analysisRun.Asset.Symbol,
+                CompanyName = analysisRun.Asset.Name ?? analysisRun.Asset.Symbol,
+                Pattern = primaryPattern?.Pattern ?? analysisRun.RequestedPattern,
+                Phase = primaryPattern?.Phase ?? string.Empty,
+                Probability = primaryPattern?.Confidence ?? analysisRun.DecisionSignal?.Confidence ?? 0m,
+                RecommendationAction = recommendationAction,
+                RecommendationReason = analysisRun.DecisionSignal?.Reason ?? "Aucune justification",
+                RiskLevel = InferRiskLevel(primaryPattern?.Confidence ?? analysisRun.DecisionSignal?.Confidence ?? 0m, isActionable),
+                RecommendationHorizonDays = analysisRun.DecisionSignal?.HorizonDays ?? 0,
+                PredictedAt = analysisRun.CompletedAtUtc ?? analysisRun.StartedAtUtc,
+                IsActionable = isActionable,
+                ModelStatus = modelStatus,
+                ModelMessage = modelMessage,
+                CurrentPrice = primaryPattern?.CurrentPrice ?? 0m,
+                NecklinePrice = primaryPattern?.NecklinePrice,
+                TargetPrice = primaryPattern?.TargetPrice,
+                InvalidationPrice = primaryPattern?.InvalidationPrice
+            };
+        }
+
         private static TradingPatternEnum MapPatternId(string? patternId)
         {
-            return (patternId ?? string.Empty).Trim().ToUpperInvariant() switch
+            var normalizedPatternId = (patternId ?? string.Empty).Trim().ToUpperInvariant();
+            return normalizedPatternId switch
             {
-                "HEAD_AND_SHOULDERS" => TradingPatternEnum.HeadAndShoulders,
                 "DOUBLE_TOP" => TradingPatternEnum.DoubleTop,
-                "DOUBLE_BOTTOM" => TradingPatternEnum.DoubleBottom,
-                "CUP_AND_HANDLE" => TradingPatternEnum.CupAndHandle,
-                "TRIANGLE" => TradingPatternEnum.Triangle,
-                _ => TradingPatternEnum.DoubleTop
+                _ => throw new InvalidOperationException($"Le runtime V1 actif ne prend pas en charge le pattern {normalizedPatternId}.")
             };
         }
 

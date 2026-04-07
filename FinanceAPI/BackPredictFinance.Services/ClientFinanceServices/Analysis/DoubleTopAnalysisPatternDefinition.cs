@@ -2,12 +2,24 @@ using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Contracts.Analysis;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Services.TwelveDataServices;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using System.Globalization;
 using System.Text.Json;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IAnalysisPatternDefinition
+{
+    string PatternId { get; }
+    string ModelVersion { get; }
+    int HistoryLookbackMonths { get; }
+    ResolvedAnalysisPattern BuildResolvedPattern();
+    Task<AnalysisExecutionArtifact> ExecuteAsync(AnalysisRequest request, CancellationToken ct = default);
+}
+
+
     public sealed class DoubleTopAnalysisPatternDefinition : IAnalysisPatternDefinition
     {
         private const string SupportedPatternId = "DOUBLE_TOP";

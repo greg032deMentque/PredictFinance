@@ -1,6 +1,15 @@
 using BackPredictFinance.Contracts.Analysis;
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IAnalysisPatternRegistry
+{
+    ResolvedAnalysisPattern ResolveRequestedPattern(string? requestedPattern);
+    IAnalysisPatternDefinition ResolveDefinition(string? requestedPattern);
+    IReadOnlyList<ResolvedAnalysisPattern> GetEnabledPatterns();
+}
+
+
     public sealed class AnalysisPatternRegistry : IAnalysisPatternRegistry
     {
         private readonly IReadOnlyDictionary<string, IAnalysisPatternDefinition> _definitions;

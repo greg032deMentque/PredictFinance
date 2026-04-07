@@ -1,7 +1,18 @@
+using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IPedagogicalExplanationService
+{
+    string PolicyVersion { get; }
+    PatternExplanation BuildPatternExplanation(PatternAssessment patternAssessment, bool hasMultipleCompatiblePatterns, bool hasModelWarning);
+    string BuildAnalysisSummary(AnalysisOutcome outcome, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisRecommendation? recommendation, PortfolioContext? portfolioContext);
+}
+
+
     public sealed class PedagogicalExplanationService : IPedagogicalExplanationService
     {
         public string PolicyVersion => "analysis-v1-explanation@prompt5";
@@ -23,7 +34,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             };
         }
 
-        public string BuildAnalysisSummary(AnalysisOutcome outcome, IReadOnlyList<PatternAssessment> compatiblePatterns, Recommendation? recommendation, PortfolioContext? portfolioContext)
+        public string BuildAnalysisSummary(AnalysisOutcome outcome, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisRecommendation? recommendation, PortfolioContext? portfolioContext)
         {
             var holdingSentence = portfolioContext?.HoldsInstrument == true
                 ? "Vous detenez deja cette valeur."
@@ -60,7 +71,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             return $"{patternAssessment.DisplayName} en phase {patternAssessment.Detection.CurrentPhaseLabel.ToLowerInvariant()} avec une confiance {confidenceLabel}. {patternAssessment.Detection.StatusReason}";
         }
 
-        private static string BuildMultiplePatternSummary(IReadOnlyList<PatternAssessment> compatiblePatterns, Recommendation? recommendation, string holdingSentence)
+        private static string BuildMultiplePatternSummary(IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisRecommendation? recommendation, string holdingSentence)
         {
             var patternNames = compatiblePatterns
                 .Select(x => x.DisplayName)
@@ -75,7 +86,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             return $"{holdingSentence} Plusieurs scenarios restent compatibles ({listedPatterns}). La recommandation {FormatRecommendationKind(recommendation?.Kind)} conserve une lecture prudente et ne remplace pas la coexistence des patterns.";
         }
 
-        private static string BuildSinglePatternSummary(PatternAssessment? patternAssessment, Recommendation? recommendation, string holdingSentence)
+        private static string BuildSinglePatternSummary(PatternAssessment? patternAssessment, AnalysisRecommendation? recommendation, string holdingSentence)
         {
             if (patternAssessment == null)
             {

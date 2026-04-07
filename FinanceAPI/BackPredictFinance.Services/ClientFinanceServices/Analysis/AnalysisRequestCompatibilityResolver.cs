@@ -5,11 +5,19 @@ using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
+
+public interface IAnalysisRequestCompatibilityResolver
+{
+    Task<AnalysisRequest> ResolveAsync(AnalysisRunRequestViewModel request, string userId, CancellationToken ct = default);
+}
+
+
     public sealed class AnalysisRequestCompatibilityResolver : IAnalysisRequestCompatibilityResolver
     {
         private readonly FinanceDbContext _financeDbContext;
