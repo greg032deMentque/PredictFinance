@@ -1,4 +1,3 @@
-﻿using System;
 using AutoMapper;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
@@ -36,4 +35,6 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
                         2)));
         }
     }
+
 }
+

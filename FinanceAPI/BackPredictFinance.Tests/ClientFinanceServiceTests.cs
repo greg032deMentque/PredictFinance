@@ -6,12 +6,9 @@ using BackPredictFinance.Common.enums;
 using BackPredictFinance.API.Controllers;
 using BackPredictFinance.Services;
 using BackPredictFinance.Services.ClientFinanceServices;
-using BackPredictFinance.Services.ClientFinanceServices.AnalysisV1;
-using BackPredictFinance.Services.PythonServices;
-using BackPredictFinance.Services.PythonServices.Models;
+using BackPredictFinance.Services.ClientFinanceServices.Analysis;
 using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -27,6 +24,10 @@ using Moq;
 using System.Reflection;
 using System.Text.Json;
 using System.Security.Claims;
+using BackPredictFinance.Contracts.MarketData;
+using BackPredictFinance.Contracts.Analysis;
+using BackPredictFinance.Contracts.Common;
+using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 
 namespace BackPredictFinance.Tests
 {
@@ -61,25 +62,14 @@ namespace BackPredictFinance.Tests
             var scopedProvider = scope.ServiceProvider;
             var dbContext = scopedProvider.GetRequiredService<FinanceDbContext>();
 
-            var pythonEnvelope = new PythonCliErrorEnvelope
-            {
-                SchemaVersion = "1.0",
-                Source = "cli",
-                Operation = "predict",
-                ErrorCode = "artifact_missing",
-                ErrorType = "FileNotFoundError",
-                Message = "Model file not found: artifacts/double_top/model.joblib",
-                UserMessage = "Le modèle IA est indisponible pour le moment.",
-                Ticker = "AAPL",
-                Pattern = "DOUBLE_TOP",
-                LoggedAtUtc = DateTime.UtcNow
-            };
-            var pythonException = PythonCliErrorHandling.CreateCustomException("predict", "AAPL", "DOUBLE_TOP", pythonEnvelope);
+            var executionException = new CustomException(
+                "Deterministic execution failed.",
+                "Le moteur d'analyse est indisponible pour le moment.");
 
             var executionService = new Mock<IAnalysisExecutionService>();
             executionService
-                .Setup(service => service.ExecuteAsync(It.IsAny<AnalysisRequest>(), It.IsAny<CancellationToken>()))
-                .ThrowsAsync(pythonException);
+                .Setup(service => service.ExecuteAsync(It.IsAny<AnalysisRequest>(), It.IsAny<ResolvedAnalysisPattern>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(executionException);
             var riskEvaluationService = new Mock<IRiskEvaluationService>();
             var recommendationPolicyService = new Mock<IRecommendationPolicyService>();
             var pedagogicalExplanationService = new Mock<IPedagogicalExplanationService>();
@@ -108,7 +98,7 @@ namespace BackPredictFinance.Tests
                 {
                     InstrumentId = "asset-1",
                     UserId = "user-1",
-                    Instrument = new BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.Instrument
+                    Instrument = new Instrument
                     {
                         InstrumentId = "asset-1",
                         Symbol = "AAPL",
@@ -129,11 +119,11 @@ namespace BackPredictFinance.Tests
                     HistoryEndDate = new DateOnly(2025, 1, 31)
                 }));
 
-            Assert.Equal("Le modèle IA est indisponible pour le moment.", exception.FrontMessage);
+            Assert.Equal("Le moteur d'analyse est indisponible pour le moment.", exception.FrontMessage);
 
             var analysisRun = await dbContext.AnalysisRuns.SingleAsync();
             Assert.Equal("Failed", analysisRun.Status);
-            Assert.Equal("Le modèle IA est indisponible pour le moment.", analysisRun.ErrorMessage);
+            Assert.Equal("Le moteur d'analyse est indisponible pour le moment.", analysisRun.ErrorMessage);
             Assert.Contains("\"error_code\":\"artifact_missing\"", analysisRun.RawPayload, StringComparison.Ordinal);
             Assert.Equal(0, await dbContext.DecisionSignals.CountAsync());
             Assert.Equal(0, await dbContext.ModelSnapshots.CountAsync());
@@ -333,7 +323,7 @@ namespace BackPredictFinance.Tests
                 RequestedPatternIds = ["DOUBLE_TOP"],
                 AsOfDate = new DateOnly(2025, 1, 31),
                 UserId = "user-1",
-                Instrument = new BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.Instrument
+                Instrument = new Instrument
                 {
                     InstrumentId = "asset-1",
                     Symbol = "AIR.PA",
@@ -711,13 +701,9 @@ namespace BackPredictFinance.Tests
             var service = new ClientFinanceService(
                 provider,
                 tickerService.Object,
-                Mock.Of<IPythonApiService>(),
-                Mock.Of<ITradingRecommendationService>(),
-                Mock.Of<IPatternCatalogService>(),
                 Mock.Of<IAnalysisRequestCompatibilityResolver>(),
                 Mock.Of<IAnalysisLegacyCompatibilityService>(),
-                Mock.Of<IAnalysisOrchestrator>(),
-                Options.Create(new PythonCliOptions()));
+                Mock.Of<IAnalysisOrchestrator>());
 
             var results = await service.SearchAssetsAsync("AIR");
 
@@ -765,13 +751,9 @@ namespace BackPredictFinance.Tests
             var service = new ClientFinanceService(
                 provider,
                 tickerService.Object,
-                Mock.Of<IPythonApiService>(),
-                Mock.Of<ITradingRecommendationService>(),
-                Mock.Of<IPatternCatalogService>(),
                 Mock.Of<IAnalysisRequestCompatibilityResolver>(),
                 Mock.Of<IAnalysisLegacyCompatibilityService>(),
-                Mock.Of<IAnalysisOrchestrator>(),
-                Options.Create(new PythonCliOptions()));
+                Mock.Of<IAnalysisOrchestrator>());
 
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.AddToWatchlistAsync(
                 new WatchlistUpsertRequestViewModel
@@ -784,67 +766,6 @@ namespace BackPredictFinance.Tests
             Assert.Equal(0, await dbContext.Assets.CountAsync());
             Assert.Equal(0, await dbContext.UserAssets.CountAsync());
             tickerService.Verify(service => service.GetQuoteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task ClientFinanceService_RunSimulationAsync_RejectsNonFrenchInstrumentBeforePythonFlow()
-        {
-            var services = new ServiceCollection();
-            services.AddLogging();
-            services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
-
-            var httpContextAccessor = BuildHttpContextAccessor();
-            services.AddSingleton<IHttpContextAccessor>(httpContextAccessor);
-            services.AddDbContext<FinanceDbContext>(options =>
-                options.UseInMemoryDatabase($"PredictFinanceSimulationScope_{Guid.NewGuid()}"));
-
-            var mapperConfiguration = new MapperConfiguration(cfg =>
-            {
-                cfg.AddMaps(typeof(AnalysisResultViewModelProfile).Assembly);
-            }, NullLoggerFactory.Instance);
-            services.AddSingleton<IMapper>(mapperConfiguration.CreateMapper());
-
-            services.AddSingleton(Mock.Of<IStringLocalizer<Messages>>());
-            services.AddSingleton(CreateUserManagerMock().Object);
-            services.AddSingleton(CreateRoleManagerMock().Object);
-            services.AddSingleton(sp => CreateSignInManagerMock(sp.GetRequiredService<UserManager<User>>(), httpContextAccessor).Object);
-            services.AddSingleton(Mock.Of<ILogService>());
-
-            var tickerService = new Mock<ITickerService>();
-            tickerService
-                .Setup(service => service.GetAssetProfileAsync("AAPL", It.IsAny<CancellationToken>()))
-                .ThrowsAsync(new InvalidOperationException(BuildV1ScopeMessage("AAPL")));
-
-            var pythonApiService = new Mock<IPythonApiService>();
-            var tradingRecommendationService = new Mock<ITradingRecommendationService>();
-            var patternCatalogService = new Mock<IPatternCatalogService>();
-
-            await using var provider = services.BuildServiceProvider();
-
-            var service = new ClientFinanceService(
-                provider,
-                tickerService.Object,
-                pythonApiService.Object,
-                tradingRecommendationService.Object,
-                patternCatalogService.Object,
-                Mock.Of<IAnalysisRequestCompatibilityResolver>(),
-                Mock.Of<IAnalysisLegacyCompatibilityService>(),
-                Mock.Of<IAnalysisOrchestrator>(),
-                Options.Create(new PythonCliOptions()));
-
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.RunSimulationAsync(
-                new SimulationRequestViewModel
-                {
-                    Symbol = "AAPL",
-                    Pattern = "DOUBLE_TOP",
-                    InvestmentAmount = 1000m,
-                    HorizonDays = 30
-                }));
-
-            Assert.Equal(BuildV1ScopeMessage("AAPL"), exception.Message);
-            pythonApiService.Verify(service => service.SimulateAsync(It.IsAny<PythonSimulationRequest>()), Times.Never);
-            tradingRecommendationService.Verify(service => service.EvaluateSimulation(It.IsAny<SimulationOut>()), Times.Never);
-            patternCatalogService.Verify(service => service.Resolve(It.IsAny<string?>()), Times.Never);
         }
 
         [Fact]
@@ -882,7 +803,83 @@ namespace BackPredictFinance.Tests
         }
 
         [Fact]
-        public async Task DeterministicAnalysisExecutionService_ExecuteAsync_ProducesDoubleTopAssessmentWithoutPython()
+        public void AnalysisPatternRegistry_ResolveRequestedPattern_ReturnsApiOwnedDoubleTopOnly()
+        {
+            var registry = new AnalysisPatternRegistry([new DoubleTopAnalysisPatternDefinition(Mock.Of<ITickerService>())]);
+
+            var resolved = registry.ResolveRequestedPattern(null);
+            var enabled = Assert.Single(registry.GetEnabledPatterns());
+
+            Assert.Equal("DOUBLE_TOP", resolved.PatternId);
+            Assert.Equal("analysis-v1-deterministic-double-top@prompt7", resolved.ModelVersion);
+            Assert.Equal(6, resolved.HistoryLookbackMonths);
+            Assert.Equal("DOUBLE_TOP", enabled.PatternId);
+        }
+
+        [Fact]
+        public async Task AnalysisPatternRegistry_ResolveRequestedPattern_RejectsPatternsOutsideActiveV1Scope()
+        {
+            var registry = new AnalysisPatternRegistry([new DoubleTopAnalysisPatternDefinition(Mock.Of<ITickerService>())]);
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => Task.FromResult(registry.ResolveRequestedPattern("TRIANGLE")));
+
+            Assert.Equal("Le runtime V1 actif ne prend pas en charge le pattern TRIANGLE.", exception.Message);
+        }
+
+        [Fact]
+        public async Task AnalysisRequestCompatibilityResolver_ResolveAsync_UsesApiOwnedPatternWindow()
+        {
+            var options = new DbContextOptionsBuilder<FinanceDbContext>()
+                .UseInMemoryDatabase($"PredictFinanceAnalysisResolver_{Guid.NewGuid()}")
+                .Options;
+
+            await using var dbContext = new FinanceDbContext(options, new HttpContextAccessor());
+            var tickerService = new Mock<ITickerService>();
+            tickerService
+                .Setup(service => service.GetQuoteAsync("AIR.PA", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new MarketQuoteData
+                {
+                    Symbol = "AIR.PA",
+                    AssetType = AssetTypeEnum.Stock,
+                    LastPrice = 145m,
+                    DayVariationPct = 0.5m,
+                    AsOfUtc = new DateTime(2025, 3, 31, 16, 0, 0, DateTimeKind.Utc)
+                });
+
+            tickerService
+                .Setup(service => service.GetAssetProfileAsync("AIR.PA", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new MarketAssetProfileData
+                {
+                    Symbol = "AIR.PA",
+                    ProviderSymbol = "AIR.PA",
+                    CompanyName = "Airbus",
+                    Exchange = "PAR",
+                    Currency = "EUR",
+                    Country = "FR",
+                    AssetType = AssetTypeEnum.Stock,
+                    LastPrice = 145m,
+                    DayVariationPct = 0.5m,
+                    AsOfUtc = new DateTime(2025, 3, 31, 16, 0, 0, DateTimeKind.Utc)
+                });
+
+            var resolver = new AnalysisRequestCompatibilityResolver(
+                dbContext,
+                new AnalysisPatternRegistry([new DoubleTopAnalysisPatternDefinition(tickerService.Object)]),
+                Mock.Of<IPortfolioContextLoader>(),
+                tickerService.Object);
+
+            var result = await resolver.ResolveAsync(new AnalysisRunRequestViewModel
+            {
+                Symbol = "AIR.PA"
+            }, "user-1");
+
+            Assert.Equal(new DateOnly(2025, 3, 31), result.HistoryEndDate);
+            Assert.Equal(new DateOnly(2024, 9, 30), result.HistoryStartDate);
+            Assert.Equal("DOUBLE_TOP", Assert.Single(result.ResolvedPatternIds));
+        }
+
+        [Fact]
+        public async Task DeterministicAnalysisExecutionService_ExecuteAsync_ProducesDoubleTopAssessment()
         {
             var tickerService = new Mock<ITickerService>();
             tickerService
@@ -895,12 +892,14 @@ namespace BackPredictFinance.Tests
                     Candles = BuildDoubleTopCandles()
                 });
 
-            var service = new DeterministicAnalysisExecutionService(tickerService.Object);
-            var result = await service.ExecuteAsync(new AnalysisRequest
+            var patternDefinition = new DoubleTopAnalysisPatternDefinition(tickerService.Object);
+            var registry = new AnalysisPatternRegistry([patternDefinition]);
+            var service = new DeterministicAnalysisExecutionService(registry);
+            var request = new AnalysisRequest
             {
                 InstrumentId = "asset-1",
                 UserId = "user-1",
-                Instrument = new BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.Instrument
+                Instrument = new Instrument
                 {
                     InstrumentId = "asset-1",
                     Symbol = "AIR.PA",
@@ -920,7 +919,9 @@ namespace BackPredictFinance.Tests
                 ResolvedPatternIds = ["DOUBLE_TOP"],
                 HistoryStartDate = new DateOnly(2025, 1, 1),
                 HistoryEndDate = new DateOnly(2025, 3, 31)
-            });
+            };
+
+            var result = await service.ExecuteAsync(request, registry.ResolveRequestedPattern("DOUBLE_TOP"));
 
             Assert.Equal("AIR.PA", result.Symbol);
             Assert.Equal(ModelStatusEnum.Go, result.ModelStatus);
@@ -939,39 +940,59 @@ namespace BackPredictFinance.Tests
         }
 
         [Fact]
-        public async Task DeterministicAnalysisExecutionService_ExecuteAsync_RejectsPatternsOutsideCurrentV1RuntimeScope()
+        public void AnalysisPatternRegistry_CanResolveExplicitPatternAmongMultipleDefinitionsWithoutClaimingRuntimeBreadth()
         {
+            var registry = new AnalysisPatternRegistry(
+            [
+                new DoubleTopAnalysisPatternDefinition(Mock.Of<ITickerService>()),
+                new TestAnalysisPatternDefinition("HEAD_AND_SHOULDERS", "analysis-v1-deterministic-head-and-shoulders@test", 9)
+            ]);
+
+            var resolved = registry.ResolveRequestedPattern("HEAD_AND_SHOULDERS");
+            var enabled = registry.GetEnabledPatterns();
+
+            Assert.Equal("HEAD_AND_SHOULDERS", resolved.PatternId);
+            Assert.Equal("analysis-v1-deterministic-head-and-shoulders@test", resolved.ModelVersion);
+            Assert.Equal(9, resolved.HistoryLookbackMonths);
+            Assert.Equal(2, enabled.Count);
+        }
+
+        [Fact]
+        public async Task AnalysisRequestCompatibilityResolver_ResolveAsync_RequiresExplicitPatternWhenMultipleDefinitionsAreActive()
+        {
+            var options = new DbContextOptionsBuilder<FinanceDbContext>()
+                .UseInMemoryDatabase($"PredictFinanceAnalysisResolverMulti_{Guid.NewGuid()}")
+                .Options;
+
+            await using var dbContext = new FinanceDbContext(options, new HttpContextAccessor());
             var tickerService = new Mock<ITickerService>();
-            var service = new DeterministicAnalysisExecutionService(tickerService.Object);
-
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ExecuteAsync(new AnalysisRequest
-            {
-                InstrumentId = "asset-1",
-                UserId = "user-1",
-                Instrument = new BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1.Instrument
+            tickerService
+                .Setup(service => service.GetQuoteAsync("AIR.PA", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new MarketQuoteData
                 {
-                    InstrumentId = "asset-1",
                     Symbol = "AIR.PA",
-                    DisplayName = "Airbus",
-                    AssetType = "EQUITY",
-                    CurrencyCode = "EUR"
-                },
-                PortfolioContext = new PortfolioContext
-                {
-                    UserId = "user-1",
-                    InstrumentId = "asset-1",
-                    HoldsInstrument = false,
-                    CurrencyCode = "EUR"
-                },
-                CandleInterval = "1d",
-                RequestedPatternIds = ["DOUBLE_TOP", "TRIANGLE"],
-                ResolvedPatternIds = ["DOUBLE_TOP", "TRIANGLE"],
-                HistoryStartDate = new DateOnly(2025, 1, 1),
-                HistoryEndDate = new DateOnly(2025, 3, 31)
-            }));
+                    AssetType = AssetTypeEnum.Stock,
+                    LastPrice = 145m,
+                    DayVariationPct = 0.5m,
+                    AsOfUtc = new DateTime(2025, 3, 31, 16, 0, 0, DateTimeKind.Utc)
+                });
 
-            Assert.Equal("Le moteur d'analyse V1 actif prend en charge uniquement le pattern DOUBLE_TOP.", exception.Message);
-            tickerService.Verify(service => service.GetTimeSeriesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+            var resolver = new AnalysisRequestCompatibilityResolver(
+                dbContext,
+                new AnalysisPatternRegistry(
+                [
+                    new DoubleTopAnalysisPatternDefinition(tickerService.Object),
+                    new TestAnalysisPatternDefinition("HEAD_AND_SHOULDERS", "analysis-v1-deterministic-head-and-shoulders@test", 9)
+                ]),
+                Mock.Of<IPortfolioContextLoader>(),
+                tickerService.Object);
+
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.ResolveAsync(new AnalysisRunRequestViewModel
+            {
+                Symbol = "AIR.PA"
+            }, "user-1"));
+
+            Assert.Equal("Le runtime V1 actif requiert un pattern explicite tant que plusieurs definitions de patterns sont actives.", exception.Message);
         }
 
         [Fact]
@@ -1077,6 +1098,34 @@ namespace BackPredictFinance.Tests
                     Volume = 1000m + index
                 })
                 .ToList();
+        }
+        private sealed class TestAnalysisPatternDefinition : IAnalysisPatternDefinition
+        {
+            public TestAnalysisPatternDefinition(string patternId, string modelVersion, int historyLookbackMonths)
+            {
+                PatternId = patternId;
+                ModelVersion = modelVersion;
+                HistoryLookbackMonths = historyLookbackMonths;
+            }
+
+            public string PatternId { get; }
+            public string ModelVersion { get; }
+            public int HistoryLookbackMonths { get; }
+
+            public ResolvedAnalysisPattern BuildResolvedPattern()
+            {
+                return new ResolvedAnalysisPattern
+                {
+                    PatternId = PatternId,
+                    ModelVersion = ModelVersion,
+                    HistoryLookbackMonths = HistoryLookbackMonths
+                };
+            }
+
+            public Task<AnalysisExecutionArtifact> ExecuteAsync(AnalysisRequest request, CancellationToken ct = default)
+            {
+                throw new NotSupportedException();
+            }
         }
     }
 }

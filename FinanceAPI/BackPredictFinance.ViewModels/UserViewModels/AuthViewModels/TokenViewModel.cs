@@ -1,4 +1,4 @@
-﻿namespace BackPredictFinance.ViewModels.UserViewModels.AuthViewModels
+namespace BackPredictFinance.ViewModels.UserViewModels.AuthViewModels
 {
     public class TokenViewModel
     {

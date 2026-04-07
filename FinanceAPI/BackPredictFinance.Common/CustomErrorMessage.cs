@@ -1,4 +1,4 @@
-﻿namespace BackPredictFinance.Common
+namespace BackPredictFinance.Common
 {
     public class CustomErrorMessage
     {

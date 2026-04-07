@@ -33,7 +33,7 @@ Main observed areas in this repository:
 - `BackPredictFinance.Common`
 - `BackPredictFinance.Tests`
 - `FinanceFront`
-- Python analysis/test area provided separately with:
+- legacy or experimental Python analysis/test area provided separately with:
   - `main.py`
   - `run_tests.py`
   - `pyproject.toml`
@@ -49,6 +49,8 @@ When working in this repository, always identify first which layer is being chan
 - Keep changes scoped to the current task.
 - Preserve repository consistency at all times.
 - After each meaningful change, validate using the relevant build/tests for the touched area.
+- Never claim completion without repository proof.
+- Never present an architectural target as already implemented without proof.
 
 ## Mandatory workflow for complex tasks
 
@@ -77,6 +79,21 @@ If the task is localized, still inspect surrounding files before changing anythi
 - All user-facing analysis outputs must be explainable, traceable, and auditable.
 - If no credible pattern is detected, the system must explicitly say so.
 - Do not force probabilities to sum to 100% if the business meaning would become false or misleading.
+
+## V1 runtime decoupling rules
+
+For the current V1 target, the repository must satisfy all of the following:
+
+- The API is the sole runtime source of truth for V1 analysis.
+- No V1 on-demand analysis request may require Python availability.
+- No V1 compatibility resolver may depend on Python options or Python catalogs.
+- No enabled V1 pattern registry may depend on Python services.
+- No mandatory recommendation, scoring, risk, or explanation output may come from Python.
+- No configuration required only for Python may remain mandatory for V1 startup or V1 execution.
+- No active API endpoint may expose Python as business truth for V1.
+- No runtime-reachable service required by V1 may call Python directly or indirectly.
+
+A repository is not considered V1-clean if any direct or indirect runtime dependency on Python remains on the active V1 path.
 
 ## V1 business scope
 
@@ -126,6 +143,7 @@ The business architecture must separate:
 
 - market data ingestion
 - market data normalization
+- market eligibility
 - pattern detection
 - pattern validation / invalidation
 - confidence/scoring
@@ -145,6 +163,20 @@ The architecture must stay open for later addition of:
 - new scoring rules
 - new recommendation policies
 - optional AI explanation features
+
+## Market data truth rules
+
+For V1, market data must be controlled by explicit business eligibility rules.
+
+- Provider payload is evidence, not business truth by itself.
+- V1 analyzable instruments must be accepted only if eligibility is explicitly proven in API-owned logic.
+- V1 enabled instruments are restricted to active French listed equities only, unless a later written decision changes the scope.
+- Eligibility must not be inferred through hidden fallbacks.
+- Missing or ambiguous provider fields must lead to explicit rejection or explicit unresolved status, never silent acceptance.
+- Market data ingestion, normalization, eligibility, and persistence must remain separated concerns.
+- Analysis requests must not proceed when instrument eligibility is not proven.
+- Eligibility rules must be centrally enforceable and testable.
+- Persistence of an asset record does not by itself prove V1 analyzability.
 
 ## Pattern engine rules
 
@@ -167,6 +199,26 @@ Each pattern should be modeled through an explicit contract or equivalent extens
 
 The analysis window depends on the pattern.
 Do not hardcode one universal historical window if the domain requires per-pattern depth.
+
+## Pattern correctness proof rules
+
+Any claim that a V1 pattern implementation is correct must be backed by explicit repository proof.
+
+Minimum proof expected:
+- executable pattern contract identified in the real code
+- deterministic detection logic identified in the real code
+- explicit validation rules identified in the real code
+- explicit invalidation rules identified in the real code
+- explicit scoring/confidence logic identified in the real code
+- explicit recommendation boundary identified in the real code
+- targeted tests covering nominal path, edge cases, and no-credible-pattern path
+- persisted snapshot proof showing traceability of the produced assessment
+
+Forbidden:
+- claiming a pattern is correct because a legacy or Python implementation exists somewhere else
+- claiming multi-pattern readiness if the active runtime only supports one pattern
+- hiding a temporary mono-pattern limitation behind generic architecture wording
+- claiming explainability if the final output cannot be traced to API-owned rules
 
 ## History and versioning rules
 
@@ -224,19 +276,21 @@ Avoid:
 This layer is responsible for:
 - application/business services
 - orchestration of use cases
+- market eligibility workflows
 - pattern detection workflows
 - recommendation workflows
 - risk calculation workflows
-- optional adapters toward Python/AI if they exist
+- optional legacy adapters kept outside the active V1 runtime path where strictly necessary during transition
 
 This layer should become the main place for business orchestration.
 Keep responsibilities explicit.
 Do not turn service classes into god-objects.
 
 If existing Python-related services exist:
-- keep them optional in V1
-- isolate them behind explicit interfaces if needed
-- do not make them mandatory for core business truth
+- they must not be required by the active V1 path
+- they must be isolated behind explicit boundaries
+- they must be classified as legacy, experimental, test-only, or removal-target
+- they must never be presented as core business truth for V1
 
 ### BackPredictFinance.Datas
 
@@ -276,6 +330,8 @@ When changing .NET behavior:
 - prefer targeted tests over broad noisy test changes
 - keep tests aligned with actual business rules
 - never fake expected behavior that the product rules do not support
+- prove runtime-path claims with focused tests when possible
+- prove negative paths as well as positive paths when they matter for V1 truth
 
 ### FinanceFront
 
@@ -302,18 +358,30 @@ Do not introduce architectural divergence between legacy Angular style and curre
 
 ### Python analysis area
 
-The Python area is optional for V1.
-Treat it as:
-- experimental
-- peripheral
-- replaceable
-- never the sole source of truth for core business outputs
+Python is not part of the V1 runtime truth.
 
-If modifying Python code:
-- keep interfaces explicit
-- avoid hidden coupling with .NET internals
-- avoid making API behavior depend on opaque model behavior for mandatory outputs
-- ensure testability and reproducibility where possible
+For this repository:
+- V1 runtime must not depend on Python.
+- Python must not be required to execute any V1 API analysis use case.
+- Python must not be required to resolve enabled V1 patterns.
+- Python must not be required to compute V1 analysis windows.
+- Python must not be required to produce mandatory V1 outputs.
+- Python may remain only as:
+  - archived legacy code
+  - explicit non-V1 experimental tooling
+  - temporary migration material scheduled for removal
+
+Forbidden for V1:
+- mandatory DI registrations toward Python services
+- runtime analysis paths that call Python directly or indirectly
+- V1 contracts whose resolution depends on Python configuration
+- API endpoints that expose Python as business truth
+- hidden coupling between V1 orchestration and Python-specific models/options
+
+If Python code still exists in the repository:
+- classify it explicitly as legacy, experimental, test-only, or removal-target
+- prove whether it is runtime-reachable or not
+- never present a repository as V1-clean while Python runtime dependencies still exist
 
 ## Refactor discipline
 
@@ -352,11 +420,28 @@ Avoid:
 - No dead code introduced
 - No broad rewrite outside the scope actually needed
 - No comments inside code unless repository conventions or the specific task explicitly require them
+- No claim of compliance without repository proof
+- No mixing of audit facts and proposals without explicit labeling
 
 When information is missing:
 - stop
 - identify the exact missing element
 - ask only the minimum blocking question
+
+## Evidence classification rules
+
+For any significant audit or refactor response, always classify statements using these buckets:
+
+- PROVEN: directly supported by repository code, configuration, tests, or contract documents
+- DECIDED: explicitly mandated by AGENTS.md or contract documents
+- PROPOSED: recommendation not yet implemented nor contractually frozen
+- DEROGATION: conscious deviation from contract or target
+- REMAINING TO ARBITRATE: unresolved point requiring a written decision
+
+Do not merge these categories.
+Do not present a proposal as if it were already proven or decided.
+Do not present a derogation as contract compliant.
+Do not present an unresolved point as closed.
 
 ## Security and quality rules
 
@@ -376,6 +461,30 @@ Avoid:
 - architecture leakage across layers
 - provider-specific logic embedded in core domain contracts
 - UI concerns embedded in core business analysis
+- weak validation on business-critical inputs
+- ambiguous error handling on business-critical paths
+- configuration sprawl that obscures the true runtime path
+
+## Minimum proof requirements for V1 audit and corrective work
+
+Any serious V1 audit or corrective delivery must include:
+
+- current runtime-path audit
+- dependency-injection audit
+- active configuration audit
+- market-data eligibility audit
+- pattern-engine audit
+- recommendation-boundary audit
+- snapshot/history audit
+- targeted test audit
+- anti-drift matrix
+
+If implementation is performed, also include:
+- exact files changed
+- exact reason for each change
+- validation commands executed
+- explicit residual risks
+- ZIP delivery of changed files when requested by the task contract
 
 ## Validation commands and expectations
 
@@ -401,6 +510,8 @@ Prefer relevant commands such as:
 - environment setup consistent with `pyproject.toml` or `requirements.txt`
 - `pytest`
 
+Python validation is never sufficient to prove V1 runtime correctness.
+
 ## Output expectations
 
 For significant tasks, structure responses in this order:
@@ -413,6 +524,18 @@ For significant tasks, structure responses in this order:
 6. Validation report
 7. Remaining issues / next step
 
+## Refusal criteria
+
+Refuse to present the repository as V1-ready if any of the following remains true:
+
+- an active V1 runtime path still depends on Python
+- enabled V1 patterns are still resolved through Python-specific services or options
+- market eligibility remains distributed, implicit, or unproven
+- mandatory analysis outputs are not traceable to API-owned logic
+- snapshot persistence omits required trace/version/context fields
+- tests do not prove the claimed corrective behavior
+- a response mixes proven facts with assumptions without explicit classification
+
 ## Scope control
 
 Prioritize V1 delivery.
@@ -421,6 +544,8 @@ Do not drift into V2/V3 unless the task explicitly asks for it.
 V1 priorities are:
 - API as source of truth
 - deterministic and explainable pattern analysis
+- full runtime decoupling from Python
+- explicit market eligibility enforcement
 - separation of business layers
 - portfolio-aware recommendation wording
 - analysis history foundation

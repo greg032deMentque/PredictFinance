@@ -1,4 +1,4 @@
-﻿using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 

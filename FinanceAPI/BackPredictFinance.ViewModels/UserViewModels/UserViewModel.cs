@@ -1,9 +1,9 @@
-﻿using AutoMapper;
+using AutoMapper;
 using BackPredictFinance.Datas.Entities;
 
 namespace BackPredictFinance.ViewModels.UserViewModels
 {
-        public class UserViewModel
+    public class UserViewModel
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string UserName => $"{FirstName} {LastName}";
@@ -43,4 +43,6 @@ namespace BackPredictFinance.ViewModels.UserViewModels
                 .ForMember(dest => dest.UserName, opt => opt.Ignore());
         }
     }
+
 }
+

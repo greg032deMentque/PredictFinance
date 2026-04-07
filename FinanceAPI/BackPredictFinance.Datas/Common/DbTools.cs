@@ -1,4 +1,4 @@
-﻿using BackPredictFinance.Datas.Context;
+using BackPredictFinance.Datas.Context;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;

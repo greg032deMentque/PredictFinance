@@ -1,4 +1,4 @@
-﻿using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.enums;
 
 namespace BackPredictFinance.ViewModels.UserViewModels
 {

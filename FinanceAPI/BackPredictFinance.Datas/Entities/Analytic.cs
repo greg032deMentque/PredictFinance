@@ -1,4 +1,4 @@
-﻿namespace BackPredictFinance.Datas.Entities
+namespace BackPredictFinance.Datas.Entities
 {
     public class Analytic
     {

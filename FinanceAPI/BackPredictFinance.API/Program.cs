@@ -8,13 +8,6 @@ using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.Jwt;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
-using BackPredictFinance.Services;
-using BackPredictFinance.Services.AuthServices;
-using BackPredictFinance.Services.ClientFinanceServices;
-using BackPredictFinance.Services.PythonServices;
-using BackPredictFinance.Services.TwelveDataServices;
-using BackPredictFinance.Services.UserServices;
-using BackPredictFinance.ViewModels.UserViewModels;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -126,13 +119,12 @@ ProgramServiceDeclarator.ServicesDeclarator(builder.Services);
 
 var mapperConfiguration = new MapperConfiguration(cfg =>
 {
-    cfg.AddMaps(typeof(UserViewModelProfile).Assembly);
+    cfg.AddMaps(typeof(BackPredictFinance.ViewModels.UserViewModels.UserViewModelProfile).Assembly);
 }, NullLoggerFactory.Instance);
 
 builder.Services.AddSingleton<IMapper>(mapperConfiguration.CreateMapper());
 
 builder.Services.Configure<EmailServiceConfiguration>(configuration.GetSection("EmailService"));
-builder.Services.Configure<PythonCliOptions>(configuration.GetSection("PythonCli"));
 builder.Services.Configure<MarketDataOptions>(configuration.GetSection("MarketData"));
 
 builder.Services.AddControllers()
@@ -195,4 +187,3 @@ app.MapControllers();
 await DatabaseUpdater.RunDatabaseUpdate(app);
 
 app.Run();
-

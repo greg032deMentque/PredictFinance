@@ -1,4 +1,4 @@
-﻿using BackPredictFinance.Services;
+using BackPredictFinance.Services;
 using Serilog.Context;
 
 namespace BackPredictFinance.API.Middleware

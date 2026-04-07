@@ -1,12 +1,11 @@
+using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
-using BackPredictFinance.Services.ClientFinanceServices.AnalysisV1;
-using BackPredictFinance.Services.PythonServices;
-using BackPredictFinance.Services.PythonServices.Models;
+using BackPredictFinance.Services.ClientFinanceServices.Analysis;
 using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BackPredictFinance.Services.ClientFinanceServices
 {
@@ -29,34 +28,22 @@ namespace BackPredictFinance.Services.ClientFinanceServices
     public class ClientFinanceService : BaseService, IClientFinanceService
     {
         private readonly ITickerService _tickerService;
-        private readonly IPythonApiService _pythonApiService;
-        private readonly ITradingRecommendationService _tradingRecommendationService;
-        private readonly IPatternCatalogService _patternCatalogService;
         private readonly IAnalysisRequestCompatibilityResolver _analysisRequestCompatibilityResolver;
         private readonly IAnalysisLegacyCompatibilityService _analysisLegacyCompatibilityService;
         private readonly IAnalysisOrchestrator _analysisOrchestrator;
-        private readonly PythonCliOptions _pythonOptions;
 
         public ClientFinanceService(
             IServiceProvider serviceProvider,
             ITickerService tickerService,
-            IPythonApiService pythonApiService,
-            ITradingRecommendationService tradingRecommendationService,
-            IPatternCatalogService patternCatalogService,
             IAnalysisRequestCompatibilityResolver analysisRequestCompatibilityResolver,
             IAnalysisLegacyCompatibilityService analysisLegacyCompatibilityService,
-            IAnalysisOrchestrator analysisOrchestrator,
-            IOptions<PythonCliOptions> pythonOptions)
+            IAnalysisOrchestrator analysisOrchestrator)
             : base(serviceProvider)
         {
             _tickerService = tickerService;
-            _pythonApiService = pythonApiService;
-            _tradingRecommendationService = tradingRecommendationService;
-            _patternCatalogService = patternCatalogService;
             _analysisRequestCompatibilityResolver = analysisRequestCompatibilityResolver;
             _analysisLegacyCompatibilityService = analysisLegacyCompatibilityService;
             _analysisOrchestrator = analysisOrchestrator;
-            _pythonOptions = pythonOptions.Value;
         }
 
         public async Task<ClientDashboardViewModel> GetDashboardAsync(CancellationToken ct = default)
@@ -438,13 +425,20 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
         public async Task<SimulationResultViewModel> RunSimulationAsync(SimulationRequestViewModel request, CancellationToken ct = default)
         {
+            ArgumentNullException.ThrowIfNull(request);
+
             if (request.InvestmentAmount <= 0m)
             {
                 throw new ArgumentException("Le montant d investissement doit etre strictement positif.", nameof(request.InvestmentAmount));
             }
 
             var normalizedPattern = (request.Pattern ?? string.Empty).Trim().ToUpperInvariant();
-            if (!string.IsNullOrWhiteSpace(normalizedPattern) && normalizedPattern != "DOUBLE_TOP")
+            if (string.IsNullOrWhiteSpace(normalizedPattern))
+            {
+                normalizedPattern = "DOUBLE_TOP";
+            }
+
+            if (normalizedPattern != "DOUBLE_TOP")
             {
                 throw new ArgumentException("Le pattern supporte est uniquement DOUBLE_TOP.", nameof(request.Pattern));
             }
@@ -454,41 +448,92 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
             }
-            await EnsureFrenchEquityEligibilityAsync(symbol, ct);
 
-            var horizonDays = Math.Clamp(request.HorizonDays, 1, 365);
-            var simulation = await _pythonApiService.SimulateAsync(
-                new PythonSimulationRequest
+            await EnsureAssetAsync(symbol, null, ct);
+
+            var analysisRequest = await _analysisRequestCompatibilityResolver.ResolveAsync(
+                new AnalysisRunRequestViewModel
                 {
                     Symbol = symbol,
-                    Pattern = normalizedPattern,
-                    ModelDir = _patternCatalogService.Resolve(normalizedPattern).ModelDir,
-                    Period = _pythonOptions.Period,
-                    InvestmentAmount = request.InvestmentAmount,
-                    HorizonDays = horizonDays
-                });
-            var recommendation = _tradingRecommendationService.EvaluateSimulation(simulation);
+                    RequestedPattern = normalizedPattern
+                },
+                GetRequiredCurrentUserId(),
+                ct);
+
+            var analysisResponse = await _analysisOrchestrator.RunAnalysisAsync(analysisRequest, ct);
+            var mainPattern = analysisResponse.MainPattern;
+            var targetPrice = mainPattern?.RiskHints.SuggestedTakeProfit;
+            var invalidationPrice = mainPattern?.Invalidation.InvalidationLevel;
+            var currentPrice = mainPattern?.Detection.CurrentPrice ?? 0m;
+            var probability = mainPattern?.Scoring.ConfidenceScore ?? 0m;
+            var horizonDays = Math.Clamp(request.HorizonDays, 1, 365);
+
+            var recommendation = _serviceProvider
+                .GetRequiredService<ITradingRecommendationService>()
+                .EvaluateAnalysis(
+                    MapPatternForSimulation(mainPattern?.PatternId),
+                    mainPattern?.Detection.CurrentPhaseCode ?? string.Empty,
+                    probability,
+                    targetPrice,
+                    invalidationPrice);
+
+            var estimatedReturnPct = BuildSimulationReturnPct(currentPrice, targetPrice);
+            var estimatedReturnAmount = decimal.Round(request.InvestmentAmount * estimatedReturnPct, 2);
+            var estimatedFinalAmount = decimal.Round(request.InvestmentAmount + estimatedReturnAmount, 2);
 
             return new SimulationResultViewModel
             {
                 Symbol = symbol,
-                Pattern = simulation.Pattern,
-                Phase = simulation.Phase,
-                InvestmentAmount = decimal.Round(simulation.InvestmentAmount, 2),
-                HorizonDays = simulation.HorizonDays,
-                EstimatedReturnAmount = decimal.Round(simulation.EstimatedReturnAmount, 2),
-                EstimatedReturnPct = decimal.Round(simulation.EstimatedReturnPct, 4),
-                EstimatedFinalAmount = decimal.Round(simulation.EstimatedFinalAmount, 2),
-                Assumption = simulation.Assumption,
-                CurrentPrice = simulation.CurrentPrice,
-                Probability = simulation.LastProbability,
+                Pattern = MapPatternForSimulation(mainPattern?.PatternId),
+                Phase = mainPattern?.Detection.CurrentPhaseCode ?? string.Empty,
+                InvestmentAmount = decimal.Round(request.InvestmentAmount, 2),
+                HorizonDays = horizonDays,
+                EstimatedReturnAmount = estimatedReturnAmount,
+                EstimatedReturnPct = decimal.Round(estimatedReturnPct, 4),
+                EstimatedFinalAmount = estimatedFinalAmount,
+                Assumption = BuildSimulationAssumption(symbol, currentPrice, targetPrice, horizonDays),
+                CurrentPrice = currentPrice,
+                Probability = probability,
                 RecommendationAction = recommendation.Action,
                 RecommendationReason = recommendation.Reason,
                 RiskLevel = recommendation.RiskLevel,
                 IsActionable = recommendation.IsActionable,
-                TargetPrice = simulation.TargetPrice,
-                InvalidationPrice = simulation.InvalidationPrice
+                TargetPrice = targetPrice,
+                InvalidationPrice = invalidationPrice
             };
+        }
+
+        private static TradingPatternEnum MapPatternForSimulation(string? patternId)
+        {
+            return (patternId ?? string.Empty).Trim().ToUpperInvariant() switch
+            {
+                "HEAD_AND_SHOULDERS" => TradingPatternEnum.HeadAndShoulders,
+                "DOUBLE_TOP" => TradingPatternEnum.DoubleTop,
+                "DOUBLE_BOTTOM" => TradingPatternEnum.DoubleBottom,
+                "CUP_AND_HANDLE" => TradingPatternEnum.CupAndHandle,
+                "TRIANGLE" => TradingPatternEnum.Triangle,
+                _ => TradingPatternEnum.DoubleTop
+            };
+        }
+
+        private static decimal BuildSimulationReturnPct(decimal currentPrice, decimal? targetPrice)
+        {
+            if (currentPrice <= 0m || !targetPrice.HasValue)
+            {
+                return 0m;
+            }
+
+            return decimal.Round((targetPrice.Value - currentPrice) / currentPrice, 6);
+        }
+
+        private static string BuildSimulationAssumption(string symbol, decimal currentPrice, decimal? targetPrice, int horizonDays)
+        {
+            if (currentPrice <= 0m || !targetPrice.HasValue)
+            {
+                return $"Simulation pedagogique API-owned sur {symbol} sans objectif technique exploitable a ce stade.";
+            }
+
+            return $"Simulation pedagogique API-owned sur {symbol} en projetant un passage du prix courant {currentPrice:0.####} vers l'objectif technique {targetPrice.Value:0.####} sur un horizon indicatif de {horizonDays} jours.";
         }
 
         private async Task<(decimal LastPrice, decimal DayVariationPct)> BuildQuoteAsync(string symbol, CancellationToken ct)

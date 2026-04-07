@@ -24,7 +24,7 @@ namespace BackPredictFinance.API.Controllers
             {
                 Status = StatusCodes.Status410Gone,
                 Title = "Legacy endpoint retired",
-                Detail = "L'ancien endpoint direct Python n'appartient plus a la surface V1. Utilisez l'analyse client API-owned."
+                Detail = "L'ancien endpoint de prediction directe n'appartient plus a la surface V1. Utilisez l'analyse client API-owned."
             };
 
             return StatusCode(

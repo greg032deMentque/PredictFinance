@@ -1,4 +1,4 @@
-﻿namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
+namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
 {
     public class ClientDashboardViewModel
     {

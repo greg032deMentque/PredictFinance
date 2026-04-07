@@ -86,13 +86,13 @@ namespace BackPredictFinance.Services.UserServices
 
             var currentRoles = (await _userManager.GetRolesAsync(user)).ToList();
 
-            // Ajoute les rôles manquants
+            // Ajoute les rles manquants
             foreach (var role in newRoles.Except(currentRoles))
             {
                 await _userManager.AddToRoleAsync(user, role);
             }
 
-            // Supprime les rôles obsolètes
+            // Supprime les rles obsoltes
             foreach (var role in currentRoles.Except(newRoles))
             {
                 await _userManager.RemoveFromRoleAsync(user, role);
@@ -116,7 +116,7 @@ namespace BackPredictFinance.Services.UserServices
         }
 
         /// <summary>
-        /// créé une liste de role pour un user. Le nom des roles est formatés.
+        /// cr une liste de role pour un user. Le nom des roles est formats.
         /// </summary>
         /// <param name="userId"></param>
         /// <returns></returns>

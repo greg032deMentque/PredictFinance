@@ -11,10 +11,10 @@ using System.Security.Cryptography;
 using System.Text;
 
 
+using BackPredictFinance.Contracts.Auth;
+
 namespace BackPredictFinance.Services.AuthServices
 {
-    public sealed record RefreshTokenResult(string Token, DateTime ExpiresUtc);
-
     public interface IJwtGeneratorService
     {
         public Task<string> GenerateJwtToken(User user);

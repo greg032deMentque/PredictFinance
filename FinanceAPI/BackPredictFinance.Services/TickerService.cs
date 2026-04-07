@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Datas.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -9,43 +10,8 @@ using Microsoft.Extensions.Options;
 
 namespace BackPredictFinance.Services.TwelveDataServices
 {
-    public sealed class MarketAssetDescriptor
-    {
-        public string Symbol { get; set; } = string.Empty;
-        public string ProviderSymbol { get; set; } = string.Empty;
-        public string CompanyName { get; set; } = string.Empty;
-        public string Exchange { get; set; } = string.Empty;
-        public string Currency { get; set; } = string.Empty;
-        public AssetTypeEnum AssetType { get; set; } = AssetTypeEnum.Stock;
-        public decimal LastPrice { get; set; }
-        public decimal DayVariationPct { get; set; }
-    }
 
-    public sealed class MarketQuoteData
-    {
-        public string Symbol { get; set; } = string.Empty;
-        public AssetTypeEnum AssetType { get; set; } = AssetTypeEnum.Stock;
-        public decimal LastPrice { get; set; }
-        public decimal DayVariationPct { get; set; }
-        public DateTime AsOfUtc { get; set; }
-    }
 
-    public sealed class MarketAssetProfileData
-    {
-        public string Symbol { get; set; } = string.Empty;
-        public string ProviderSymbol { get; set; } = string.Empty;
-        public string CompanyName { get; set; } = string.Empty;
-        public AssetTypeEnum AssetType { get; set; } = AssetTypeEnum.Stock;
-        public string Exchange { get; set; } = string.Empty;
-        public string Currency { get; set; } = string.Empty;
-        public string Country { get; set; } = string.Empty;
-        public string Sector { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty;
-        public string Summary { get; set; } = string.Empty;
-        public decimal LastPrice { get; set; }
-        public decimal DayVariationPct { get; set; }
-        public DateTime AsOfUtc { get; set; }
-    }
 
     public interface IMarketCatalogProvider
     {
@@ -592,21 +558,5 @@ namespace BackPredictFinance.Services.TwelveDataServices
         }
     }
 
-    public class TickerTimeSeriesResponse
-    {
-        public string Symbol { get; set; } = string.Empty;
-        public string Interval { get; set; } = string.Empty;
-        public int OutputSize { get; set; }
-        public List<TickerCandle> Candles { get; set; } = [];
-    }
 
-    public class TickerCandle
-    {
-        public DateTime Date { get; set; }
-        public decimal Open { get; set; }
-        public decimal High { get; set; }
-        public decimal Low { get; set; }
-        public decimal Close { get; set; }
-        public decimal Volume { get; set; }
-    }
 }

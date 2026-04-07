@@ -1,4 +1,3 @@
-﻿using System;
 using AutoMapper;
 using BackPredictFinance.Datas.Entities;
 
@@ -10,6 +9,7 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
         public string AssetType { get; set; } = string.Empty;
         public decimal LastPrice { get; set; }
         public decimal DayVariationPct { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
         public DateTime AsOfUtc { get; set; }
     }
 
@@ -26,3 +26,4 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels
         }
     }
 }
+

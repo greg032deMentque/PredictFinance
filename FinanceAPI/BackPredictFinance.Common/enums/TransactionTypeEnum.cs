@@ -1,4 +1,4 @@
-﻿namespace BackPredictFinance.Common.enums
+namespace BackPredictFinance.Common.enums
 {
     public enum TransactionTypeEnum
     {

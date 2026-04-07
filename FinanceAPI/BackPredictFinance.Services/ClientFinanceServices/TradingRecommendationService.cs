@@ -1,12 +1,11 @@
 using BackPredictFinance.Common.enums;
-using BackPredictFinance.Services.PythonServices.Models;
+using BackPredictFinance.Contracts.Trading;
 
 namespace BackPredictFinance.Services.ClientFinanceServices
 {
     public interface ITradingRecommendationService
     {
         TradingRecommendationResult EvaluateAnalysis(TradingPatternEnum pattern, string phase, decimal probability, decimal? targetPrice, decimal? invalidationPrice);
-        TradingRecommendationResult EvaluateSimulation(SimulationOut simulation);
     }
 
     public sealed class TradingRecommendationService : ITradingRecommendationService
@@ -25,18 +24,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 probability,
                 targetPrice,
                 invalidationPrice);
-        }
-
-        public TradingRecommendationResult EvaluateSimulation(SimulationOut simulation)
-        {
-            ArgumentNullException.ThrowIfNull(simulation);
-
-            return Evaluate(
-                simulation.Pattern,
-                simulation.Phase,
-                simulation.LastProbability,
-                simulation.TargetPrice,
-                simulation.InvalidationPrice);
         }
 
         private static TradingRecommendationResult Evaluate(
@@ -143,13 +130,5 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         }
     }
 
-    public sealed class TradingRecommendationResult
-    {
-        public RecommendationActionEnum Action { get; set; } = RecommendationActionEnum.Hold;
-        public bool IsActionable { get; set; }
-        public decimal Confidence { get; set; }
-        public int HorizonDays { get; set; }
-        public string Reason { get; set; } = string.Empty;
-        public RiskLevelEnum RiskLevel { get; set; } = RiskLevelEnum.Information;
-    }
+
 }

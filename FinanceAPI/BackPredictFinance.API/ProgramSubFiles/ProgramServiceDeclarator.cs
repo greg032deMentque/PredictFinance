@@ -1,11 +1,9 @@
 using BackPredictFinance.Services;
 using BackPredictFinance.Services.AuthServices;
 using BackPredictFinance.Services.ClientFinanceServices;
-using BackPredictFinance.Services.ClientFinanceServices.AnalysisV1;
-using BackPredictFinance.Services.PythonServices;
+using BackPredictFinance.Services.ClientFinanceServices.Analysis;
 using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.Services.UserServices;
-
 namespace BackPredictFinance.API.ProgramSubFiles
 {
     public class ProgramServiceDeclarator
@@ -20,9 +18,6 @@ namespace BackPredictFinance.API.ProgramSubFiles
             services.AddScoped<IUserAssetService, UserAssetService>();
             services.AddScoped<IUserRoleDataService, UserRoleDataService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IPatternCatalogService, PatternCatalogService>();
-            services.AddScoped<IPythonApiService, PythonApiService>();
-            services.AddScoped<IIAStatusService, IAStatusService>();
             services.AddScoped<IAssetService, AssetService>();
             services.AddScoped<AnalyticService>();
             services.AddHttpClient<YahooFinanceMarketDataProvider>();
@@ -33,10 +28,10 @@ namespace BackPredictFinance.API.ProgramSubFiles
             services.AddScoped<ITradingRecommendationService, TradingRecommendationService>();
             services.AddScoped<IAnalysisRequestCompatibilityResolver, AnalysisRequestCompatibilityResolver>();
             services.AddScoped<IAnalysisLegacyCompatibilityService, AnalysisLegacyCompatibilityService>();
+            services.AddScoped<IAnalysisPatternDefinition, DoubleTopAnalysisPatternDefinition>();
             services.AddScoped<IAnalysisPatternRegistry, AnalysisPatternRegistry>();
             services.AddScoped<IPortfolioContextLoader, PortfolioContextLoader>();
             services.AddScoped<IAnalysisExecutionService, DeterministicAnalysisExecutionService>();
-            services.AddScoped<IOptionalPythonAnalysisAdapter, PythonAnalysisAdapter>();
             services.AddScoped<IRiskEvaluationService, RiskEvaluationService>();
             services.AddScoped<IRecommendationPolicyService, RecommendationPolicyService>();
             services.AddScoped<IPedagogicalExplanationService, PedagogicalExplanationService>();
