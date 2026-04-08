@@ -1,13 +1,11 @@
 using BackPredictFinance.Contracts.Analysis;
-using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BackPredictFinance.Common.AnalysisV1;
-using AnalysisRecommendation = BackPredictFinance.Common.AnalysisV1.AnalysisRecommendation;
+using BackPredictFinance.Common.Common;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
@@ -19,7 +17,7 @@ public interface IAnalysisSnapshotPersistenceService
         ResolvedAnalysisPattern pattern,
         AnalysisExecutionArtifact executionArtifact,
         AnalysisRecommendation recommendation,
-        AnalysisOutcome outcome,
+        AnalysisOutcomeEnum outcome,
         string pedagogicalSummary,
         string explanationPolicyVersion,
         DateTime startedAtUtc,
@@ -53,7 +51,7 @@ public interface IAnalysisSnapshotPersistenceService
             ResolvedAnalysisPattern pattern,
             AnalysisExecutionArtifact executionArtifact,
             AnalysisRecommendation recommendation,
-            AnalysisOutcome outcome,
+            AnalysisOutcomeEnum outcome,
             string pedagogicalSummary,
             string explanationPolicyVersion,
             DateTime startedAtUtc,
@@ -67,7 +65,7 @@ public interface IAnalysisSnapshotPersistenceService
             var legacyRecommendation = new BackPredictFinance.Datas.Entities.Recommendation
             {
                 UserAssetId = userAsset.Id,
-                Action = MapRecommendationAction(recommendation.Kind),
+                Action = recommendation.RecommendationAction,
                 Confidence = executionArtifact.GetOrderedPatterns()
                     .Select(executedPattern => executedPattern.Confidence)
                     .FirstOrDefault(),
@@ -113,7 +111,7 @@ public interface IAnalysisSnapshotPersistenceService
             ResolvedAnalysisPattern pattern,
             AnalysisExecutionArtifact executionArtifact,
             AnalysisRecommendation recommendation,
-            AnalysisOutcome outcome,
+            AnalysisOutcomeEnum outcome,
             string pedagogicalSummary,
             string explanationPolicyVersion,
             DateTime startedAtUtc,
@@ -154,11 +152,8 @@ public interface IAnalysisSnapshotPersistenceService
                     .ToList(),
                 DecisionSignal = new DecisionSignal
                 {
-                    Action = MapRecommendationAction(recommendation.Kind),
-                    IsActionable = recommendation.Kind is RecommendationKind.Buy
-                        or RecommendationKind.Reinforce
-                        or RecommendationKind.Lighten
-                        or RecommendationKind.Sell,
+                    Action = recommendation.RecommendationAction,
+                    IsActionable = recommendation.Parameters.IsActionable,
                     Confidence = primaryPattern?.Confidence ?? 0m,
                     HorizonDays = recommendation.ReviewHorizonDays ?? 0,
                     Reason = string.IsNullOrWhiteSpace(recommendation.Rationale) ? "Aucune justification" : recommendation.Rationale.Trim()
@@ -273,7 +268,7 @@ public interface IAnalysisSnapshotPersistenceService
             ResolvedAnalysisPattern pattern,
             AnalysisExecutionArtifact executionArtifact,
             AnalysisRecommendation recommendation,
-            AnalysisOutcome outcome,
+            AnalysisOutcomeEnum outcome,
             string pedagogicalSummary,
             string explanationPolicyVersion,
             DateTime startedAtUtc,
@@ -310,7 +305,7 @@ public interface IAnalysisSnapshotPersistenceService
                 patternRow.SnapshotId = snapshotId;
             }
 
-            var recommendationSnapshot = new AnalysisSnapshotRecommendation
+            var recommendationSnapshot = new PersistedAnalysisSnapshotRecommendationPayload
             {
                 SnapshotRecommendationId = recommendation.RecommendationId,
                 SnapshotId = snapshotId,
@@ -567,18 +562,6 @@ public interface IAnalysisSnapshotPersistenceService
             };
         }
 
-        private static RecommendationActionEnum MapRecommendationAction(RecommendationKind kind)
-        {
-            return kind switch
-            {
-                RecommendationKind.Buy => RecommendationActionEnum.Buy,
-                RecommendationKind.Reinforce => RecommendationActionEnum.Buy,
-                RecommendationKind.Lighten => RecommendationActionEnum.Sell,
-                RecommendationKind.Sell => RecommendationActionEnum.Sell,
-                _ => RecommendationActionEnum.Hold
-            };
-        }
-
         private static AssetTypeEnum ParseAssetType(string? assetType)
         {
             return (assetType ?? string.Empty).Trim().ToUpperInvariant() switch
@@ -599,7 +582,7 @@ public interface IAnalysisSnapshotPersistenceService
             public Instrument InstrumentSnapshot { get; set; } = new();
             public List<string> RequestedPatternIds { get; set; } = [];
             public List<string> ExecutedPatternIds { get; set; } = [];
-            public AnalysisOutcome Outcome { get; set; }
+            public AnalysisOutcomeEnum Outcome { get; set; }
             public DateTime RequestedAtUtc { get; set; }
             public DateTime CompletedAtUtc { get; set; }
             public DateOnly AsOfDate { get; set; }
@@ -618,9 +601,17 @@ public interface IAnalysisSnapshotPersistenceService
             public string? MarketNormalizationVersion { get; set; }
             public string PedagogicalSummary { get; set; } = string.Empty;
             public List<AnalysisSnapshotPatternRow> PatternRows { get; set; } = [];
-            public AnalysisSnapshotRecommendation? Recommendation { get; set; }
+            public PersistedAnalysisSnapshotRecommendationPayload? Recommendation { get; set; }
             public PersistedModelSnapshotPayload ModelSnapshot { get; set; } = new();
             public string RawProviderPayloadJson { get; set; } = string.Empty;
+        }
+
+        private sealed class PersistedAnalysisSnapshotRecommendationPayload
+        {
+            public string SnapshotRecommendationId { get; set; } = string.Empty;
+            public string SnapshotId { get; set; } = string.Empty;
+            public AnalysisRecommendation RecommendationPayload { get; set; } = new();
+            public DateTime CreatedAtUtc { get; set; }
         }
 
         private sealed class PersistedModelSnapshotPayload

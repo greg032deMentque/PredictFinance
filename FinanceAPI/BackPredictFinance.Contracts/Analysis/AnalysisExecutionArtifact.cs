@@ -1,4 +1,4 @@
-using BackPredictFinance.Common.AnalysisV1;
+using BackPredictFinance.Contracts.Analysis;
 using BackPredictFinance.Common.enums;
 
 namespace BackPredictFinance.Contracts.Analysis

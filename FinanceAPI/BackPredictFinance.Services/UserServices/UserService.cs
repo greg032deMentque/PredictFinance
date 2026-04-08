@@ -1,4 +1,5 @@
 using BackPredictFinance.Common;
+using BackPredictFinance.Common.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Common;
 using BackPredictFinance.Datas.Entities;

@@ -1,3 +1,4 @@
+using BackPredictFinance.Contracts.Analysis;
 using BackPredictFinance.Services.ClientFinanceServices;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -76,7 +77,7 @@ namespace BackPredictFinance.API.Controllers
         [HttpPost("analysis/run")]
         public async Task<IActionResult> RunAnalysis([FromBody] AnalysisRunRequestViewModel model, CancellationToken ct)
         {
-            return Ok(await _clientFinanceService.RunAnalysisAsync(model, ct));
+            return Ok(await _clientFinanceService.RunAnalysisAsync(MapRequest(model), ct));
         }
 
         [HttpGet("analysis/recent")]
@@ -89,6 +90,17 @@ namespace BackPredictFinance.API.Controllers
         public async Task<IActionResult> RunSimulation([FromBody] SimulationRequestViewModel model, CancellationToken ct)
         {
             return Ok(await _clientFinanceService.RunSimulationAsync(model, ct));
+        }
+
+        private static AnalysisRunRequest MapRequest(AnalysisRunRequestViewModel model)
+        {
+            ArgumentNullException.ThrowIfNull(model);
+
+            return new AnalysisRunRequest
+            {
+                Symbol = model.Symbol,
+                RequestedPattern = model.RequestedPattern
+            };
         }
     }
 }

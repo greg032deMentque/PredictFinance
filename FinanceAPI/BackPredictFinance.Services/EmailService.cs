@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MimeKit;
 using BackPredictFinance.Common.Email;
 using BackPredictFinance.Common;
+using BackPredictFinance.Common.Common;
 
 namespace BackPredictFinance.Services
 {

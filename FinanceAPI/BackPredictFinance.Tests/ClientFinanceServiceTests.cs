@@ -1,5 +1,4 @@
 using AutoMapper;
-using BackPredictFinance.Common;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Common.enums;
@@ -26,8 +25,8 @@ using System.Text.Json;
 using System.Security.Claims;
 using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Contracts.Analysis;
-using BackPredictFinance.Contracts.Common;
-using BackPredictFinance.Common.AnalysisV1;
+using BackPredictFinance.Contracts.Trading;
+using BackPredictFinance.Common.Common;
 
 namespace BackPredictFinance.Tests
 {
@@ -68,7 +67,7 @@ namespace BackPredictFinance.Tests
 
             var executionService = new Mock<IAnalysisExecutionService>();
             executionService
-                .Setup(service => service.ExecuteAsync(It.IsAny<AnalysisRequest>(), It.IsAny<ResolvedAnalysisPattern>(), It.IsAny<CancellationToken>()))
+                .Setup(service => service.ExecuteAsync(It.IsAny<AnalysisRequest>(), It.IsAny<IReadOnlyList<ResolvedAnalysisPattern>>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(executionException);
             var riskEvaluationService = new Mock<IRiskEvaluationService>();
             var recommendationPolicyService = new Mock<IRecommendationPolicyService>();
@@ -366,7 +365,7 @@ namespace BackPredictFinance.Tests
                 HistoryEndDate = new DateOnly(2025, 1, 31)
             };
 
-            var assessment = new BackPredictFinance.Common.AnalysisV1.PatternAssessment
+            var assessment = new BackPredictFinance.Contracts.Analysis.PatternAssessment
             {
                 AssessmentId = "assessment-1",
                 PatternId = "DOUBLE_TOP",
@@ -383,7 +382,7 @@ namespace BackPredictFinance.Tests
                 Detection = new PatternDetection
                 {
                     IsCompatible = true,
-                    Status = PatternStatus.Confirmed,
+                    Status = PatternStatusEnum.Confirmed,
                     CurrentPhaseCode = "CONFIRMED",
                     CurrentPhaseLabel = "Confirme",
                     StatusReason = "La structure reste confirmee autour de 130.",
@@ -467,12 +466,30 @@ namespace BackPredictFinance.Tests
             var recommendation = new AnalysisRecommendation
             {
                 RecommendationId = "rec-1",
-                Kind = RecommendationKind.Hold,
+                SituationCode = RecommendationSituationCode.CompatiblePatternConfirmed,
+                AdviceScenarioCode = AdviceScenarioCode.PrimaryPatternHeldNeutral,
+                RecommendationAction = RecommendationActionEnum.Hold,
+                RecommendationStrength = RecommendationStrengthEnum.Moderate,
+                Parameters = new AnalysisRecommendationParameters
+                {
+                    HoldsInstrument = true,
+                    IsActionable = false,
+                    PrimaryPatternId = "DOUBLE_TOP",
+                    PrimaryPatternDisplayName = "Double sommet",
+                    CurrentPhaseCode = "CONFIRMED",
+                    CurrentPhaseLabel = "Confirme",
+                    ValidationState = "VALIDATED",
+                    InvalidationState = "ACTIVE",
+                    ConfidenceScore = 0.78m,
+                    ConfidenceLabel = "HIGH",
+                    SuggestedTakeProfit = 145m,
+                    InvalidationLevel = 118m
+                },
                 HoldingContext = "HELD",
                 Rationale = "La posture retenue est HOLD.",
                 BasedOnPatternIds = ["DOUBLE_TOP"],
                 ReviewHorizonDays = 20,
-                PolicyVersion = "analysis-v1-policy@prompt3"
+                PolicyVersion = "analysis-v1-policy@prompt8"
             };
 
             var startedAtUtc = new DateTime(2025, 1, 31, 18, 0, 0, DateTimeKind.Utc);
@@ -488,7 +505,7 @@ namespace BackPredictFinance.Tests
                 },
                 executionArtifact,
                 recommendation,
-                AnalysisOutcome.CrediblePatternFound,
+                AnalysisOutcomeEnum.CrediblePatternFound,
                 "Vous detenez deja cette valeur. Le scenario principal retenu est double sommet, actuellement confirme. La recommandation HOLD reste alignee sur cette lecture.",
                 "analysis-v1-explanation@prompt5",
                 startedAtUtc,
@@ -517,8 +534,11 @@ namespace BackPredictFinance.Tests
             Assert.Equal(1, root.GetProperty("portfolioContextUsed").GetProperty("openLines").GetArrayLength());
             Assert.Equal("DOUBLE_TOP", root.GetProperty("primaryPatternId").GetString());
             Assert.Equal("rec-1", root.GetProperty("recommendationId").GetString());
+            Assert.Equal("COMPATIBLE_PATTERN_CONFIRMED", root.GetProperty("recommendation").GetProperty("recommendationPayload").GetProperty("situationCode").GetString());
+            Assert.Equal("PRIMARY_PATTERN_HELD_NEUTRAL", root.GetProperty("recommendation").GetProperty("recommendationPayload").GetProperty("adviceScenarioCode").GetString());
+            Assert.Equal("Hold", root.GetProperty("recommendation").GetProperty("recommendationPayload").GetProperty("recommendationAction").GetString());
             Assert.Equal("double_top@v1", root.GetProperty("analysisEngineVersion").GetString());
-            Assert.Equal("analysis-v1-policy@prompt3", root.GetProperty("recommendationPolicyVersion").GetString());
+            Assert.Equal("analysis-v1-policy@prompt8", root.GetProperty("recommendationPolicyVersion").GetString());
             Assert.Equal("analysis-v1-explanation@prompt5", root.GetProperty("explanationPolicyVersion").GetString());
             Assert.Equal("Vous detenez deja cette valeur. Le scenario principal retenu est double sommet, actuellement confirme. La recommandation HOLD reste alignee sur cette lecture.", root.GetProperty("pedagogicalSummary").GetString());
             Assert.Equal("DOUBLE_TOP", root.GetProperty("patternRows")[0].GetProperty("patternId").GetString());
@@ -868,7 +888,7 @@ namespace BackPredictFinance.Tests
                 Mock.Of<IPortfolioContextLoader>(),
                 tickerService.Object);
 
-            var result = await resolver.ResolveAsync(new AnalysisRunRequestViewModel
+            var result = await resolver.ResolveAsync(new AnalysisRunRequest
             {
                 Symbol = "AIR.PA"
             }, "user-1");
@@ -921,7 +941,7 @@ namespace BackPredictFinance.Tests
                 HistoryEndDate = new DateOnly(2025, 3, 31)
             };
 
-            var result = await service.ExecuteAsync(request, registry.ResolveRequestedPattern("DOUBLE_TOP"));
+            var result = await service.ExecuteAsync(request, [registry.ResolveRequestedPattern("DOUBLE_TOP")]);
 
             Assert.Equal("AIR.PA", result.Symbol);
             Assert.Equal(ModelStatusEnum.Go, result.ModelStatus);
@@ -931,7 +951,7 @@ namespace BackPredictFinance.Tests
             Assert.Equal(TradingPatternEnum.DoubleTop, pattern.Pattern);
             Assert.Equal("neckline_break_confirmed", pattern.Phase);
             Assert.True(pattern.ContractAssessment.Detection.IsCompatible);
-            Assert.Equal(PatternStatus.Confirmed, pattern.ContractAssessment.Detection.Status);
+            Assert.Equal(PatternStatusEnum.Confirmed, pattern.ContractAssessment.Detection.Status);
             Assert.True(pattern.ContractAssessment.Scoring.ConfidenceScore >= 0.74m);
             Assert.NotNull(pattern.NecklinePrice);
             Assert.NotNull(pattern.TargetPrice);
@@ -987,7 +1007,7 @@ namespace BackPredictFinance.Tests
                 Mock.Of<IPortfolioContextLoader>(),
                 tickerService.Object);
 
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.ResolveAsync(new AnalysisRunRequestViewModel
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => resolver.ResolveAsync(new AnalysisRunRequest
             {
                 Symbol = "AIR.PA"
             }, "user-1"));
@@ -1000,12 +1020,12 @@ namespace BackPredictFinance.Tests
         public void AnalysisLegacyCompatibilityService_MapRunResult_PreservesModelTruthFromActiveResponse()
         {
             var service = new AnalysisLegacyCompatibilityService(BuildServiceProviderForLegacyCompatibility());
-            var response = new AnalysisResponseViewModel
+            var response = new AnalysisResponse
             {
                 AnalysisId = "analysis-1",
                 GeneratedAtUtc = new DateTime(2025, 4, 1, 12, 0, 0, DateTimeKind.Utc),
                 AsOfDate = new DateOnly(2025, 4, 1),
-                Outcome = AnalysisOutcome.NoCrediblePattern,
+                AnalysisOutcome = AnalysisOutcomeEnum.NoCrediblePattern,
                 Instrument = new Instrument
                 {
                     InstrumentId = "asset-1",
@@ -1026,9 +1046,101 @@ namespace BackPredictFinance.Tests
         }
 
         [Fact]
+        public void RecommendationPolicyService_EvaluateAnalysis_ProducesStructuredAdviceTruth()
+        {
+            var tradingRecommendationService = new Mock<ITradingRecommendationService>();
+            tradingRecommendationService
+                .Setup(x => x.EvaluateAnalysis(
+                    TradingPatternEnum.DoubleTop,
+                    "CONFIRMED",
+                    0.78m,
+                    145m,
+                    118m))
+                .Returns(new TradingRecommendationResult
+                {
+                    Action = RecommendationActionEnum.Buy,
+                    Reason = "legacy",
+                    HorizonDays = 20,
+                    IsActionable = true,
+                    RiskLevel = RiskLevelEnum.Low
+                });
+
+            var service = new RecommendationPolicyService();
+            var request = new AnalysisRequest
+            {
+                InstrumentId = "asset-1",
+                UserId = "user-1",
+                Instrument = new Instrument
+                {
+                    InstrumentId = "asset-1",
+                    Symbol = "AIR.PA",
+                    DisplayName = "Airbus",
+                    AssetType = "EQUITY",
+                    CurrencyCode = "EUR"
+                },
+                PortfolioContext = new PortfolioContext
+                {
+                    UserId = "user-1",
+                    InstrumentId = "asset-1",
+                    HoldsInstrument = true,
+                    CurrencyCode = "EUR"
+                }
+            };
+
+            var patternAssessment = new BackPredictFinance.Contracts.Analysis.PatternAssessment
+            {
+                PatternId = "DOUBLE_TOP",
+                DisplayName = "Double sommet",
+                Detection = new PatternDetection
+                {
+                    IsCompatible = true,
+                    Status = PatternStatusEnum.Confirmed,
+                    CurrentPhaseCode = "CONFIRMED",
+                    CurrentPhaseLabel = "Confirme"
+                },
+                Validation = new PatternValidation
+                {
+                    State = "VALIDATED"
+                },
+                Scoring = new PatternScoring
+                {
+                    ConfidenceScore = 0.78m,
+                    ConfidenceLabel = "HIGH",
+                    IsCredible = true
+                },
+                RiskHints = new PatternRiskHints
+                {
+                    HasRiskPlan = true,
+                    SuggestedTakeProfit = 145m,
+                    RiskRewardRatio = 1.8m
+                },
+                Invalidation = new PatternInvalidation
+                {
+                    State = "ACTIVE",
+                    InvalidationLevel = 118m
+                }
+            };
+
+            var recommendation = service.EvaluateAnalysis(
+                request,
+                [patternAssessment],
+                AnalysisOutcomeEnum.CrediblePatternFound);
+
+            Assert.Equal(RecommendationSituationCode.CompatiblePatternConfirmed, recommendation.SituationCode);
+            Assert.Equal(AdviceScenarioCode.PrimaryPatternHeldBullish, recommendation.AdviceScenarioCode);
+            Assert.Equal(RecommendationActionEnum.Buy, recommendation.RecommendationAction);
+            Assert.Equal(RecommendationStrengthEnum.High, recommendation.RecommendationStrength);
+            Assert.True(recommendation.Parameters.HoldsInstrument);
+            Assert.True(recommendation.Parameters.IsActionable);
+            Assert.Equal("DOUBLE_TOP", recommendation.Parameters.PrimaryPatternId);
+            Assert.Equal("VALIDATED", recommendation.Parameters.ValidationState);
+            Assert.Equal(20, recommendation.ReviewHorizonDays);
+        }
+
+        [Fact]
         public void RecommendationPolicyService_EvaluateAnalysis_RejectsUnsupportedPatternId()
         {
-            var service = new RecommendationPolicyService(Mock.Of<ITradingRecommendationService>());
+            var service = new RecommendationPolicyService();
             var request = new AnalysisRequest
             {
                 InstrumentId = "asset-1",
@@ -1050,14 +1162,14 @@ namespace BackPredictFinance.Tests
                 }
             };
 
-            var patternAssessment = new BackPredictFinance.Common.AnalysisV1.PatternAssessment
+            var patternAssessment = new BackPredictFinance.Contracts.Analysis.PatternAssessment
             {
                 PatternId = "TRIANGLE",
                 DisplayName = "Triangle",
                 Detection = new PatternDetection
                 {
                     IsCompatible = true,
-                    Status = PatternStatus.Forming,
+                    Status = PatternStatusEnum.Forming,
                     CurrentPhaseCode = "FORMING",
                     CurrentPhaseLabel = "Formation"
                 },
@@ -1074,7 +1186,7 @@ namespace BackPredictFinance.Tests
             var exception = Assert.Throws<InvalidOperationException>(() => service.EvaluateAnalysis(
                 request,
                 [patternAssessment],
-                AnalysisOutcome.CrediblePatternFound));
+                AnalysisOutcomeEnum.CrediblePatternFound));
 
             Assert.Equal("Le runtime V1 actif ne prend pas en charge la recommandation pour le pattern TRIANGLE.", exception.Message);
         }
@@ -1217,8 +1329,12 @@ namespace BackPredictFinance.Tests
             }
 
             public string PatternId { get; }
+            public string DisplayName => PatternId;
+            public string FamilyId => "TEST_FAMILY";
+            public string BiasCode => "NEUTRAL";
             public string ModelVersion { get; }
             public int HistoryLookbackMonths { get; }
+            public int MinimumRequiredCandles => 20;
 
             public ResolvedAnalysisPattern BuildResolvedPattern()
             {

@@ -1,4 +1,18 @@
-# AGENTS.md
+## Contract authority
+
+This file is the binding working contract for any agent operating on this repository.
+
+It is not guidance.
+It is not a style suggestion.
+It is not optional.
+
+If repository reality contradicts an assumption, repository reality wins.
+If this contract contradicts a generic habit, this contract wins.
+If a task request contradicts this contract, the contradiction must be stated explicitly and resolved before any broad implementation.
+
+An agent must never silently reconcile contradictions.
+An agent must never treat a proposal as if it were already implemented.
+An agent must never use convenience as a reason to break project boundaries.
 
 ## Repository purpose
 
@@ -21,81 +35,34 @@ This product is:
 - not a bank-account integration
 - not a real-time tick-by-tick trading platform
 
-## Repository structure
+## Current repository perimeter
 
-Main observed areas in this repository:
-
+Main observed projects:
 - `BackPredictFinance.sln`
 - `BackPredictFinance.API`
 - `BackPredictFinance.Services`
 - `BackPredictFinance.Datas`
 - `BackPredictFinance.ViewModels`
+- `BackPredictFinance.Contracts`
 - `BackPredictFinance.Common`
 - `BackPredictFinance.Tests`
 - `FinanceFront`
-- legacy or experimental Python analysis/test area provided separately with:
-  - `main.py`
-  - `run_tests.py`
-  - `pyproject.toml`
-  - `tests/`
 
-When working in this repository, always identify first which layer is being changed.
+A new project is forbidden by default.
+It may be added only under the explicit rule defined later in this file.
 
-## Global working mode
-
-- For any non-trivial task, start with an audit and a written plan before editing code.
-- Do not start broad refactors immediately.
-- Work in small verified increments.
-- Keep changes scoped to the current task.
-- Preserve repository consistency at all times.
-- After each meaningful change, validate using the relevant build/tests for the touched area.
-- Never claim completion without repository proof.
-- Never present an architectural target as already implemented without proof.
-
-## Mandatory workflow for complex tasks
-
-For any major refactor, follow this order:
-
-1. Audit current repository state
-2. Identify mismatches against the requested target
-3. Design the target grounded in the real codebase
-4. Produce an ordered implementation plan
-5. Implement incrementally
-6. Validate after each meaningful increment
-7. Report unresolved items explicitly
-
-If the task is localized, still inspect surrounding files before changing anything.
-
-## Product rules that are non-negotiable
+## Non-negotiable product rules
 
 - The API is the source of truth for business analysis.
 - V1 must work without AI.
-- AI, if present, must remain optional and peripheral in V1.
-- AI must never be the sole source of:
-  - pattern detection
-  - confidence/scoring
-  - recommendation
-  - risk outputs
+- AI, if present later, must remain optional and peripheral.
 - All user-facing analysis outputs must be explainable, traceable, and auditable.
 - If no credible pattern is detected, the system must explicitly say so.
-- Do not force probabilities to sum to 100% if the business meaning would become false or misleading.
+- Do not force probabilities to sum to 100% if doing so would create false meaning.
+- Recommendation wording must depend on portfolio context.
+- Backend business truth must not be duplicated in the frontend.
 
-## V1 runtime decoupling rules
-
-For the current V1 target, the repository must satisfy all of the following:
-
-- The API is the sole runtime source of truth for V1 analysis.
-- No V1 on-demand analysis request may require Python availability.
-- No V1 compatibility resolver may depend on Python options or Python catalogs.
-- No enabled V1 pattern registry may depend on Python services.
-- No mandatory recommendation, scoring, risk, or explanation output may come from Python.
-- No configuration required only for Python may remain mandatory for V1 startup or V1 execution.
-- No active API endpoint may expose Python as business truth for V1.
-- No runtime-reachable service required by V1 may call Python directly or indirectly.
-
-A repository is not considered V1-clean if any direct or indirect runtime dependency on Python remains on the active V1 path.
-
-## V1 business scope
+## V1 scope lock
 
 Target user:
 - beginner retail investor
@@ -137,57 +104,387 @@ Recommendation wording must depend on portfolio context:
 - if the user does not hold the asset: monitor / buy / wait
 - if the user holds the asset: hold / reinforce / lighten / sell / wait
 
-## Architectural rules
+## Mandatory working method
 
-The business architecture must separate:
+For any non-trivial task, the agent must do all of the following before broad code changes:
+1. identify the exact touched runtime path
+2. inspect surrounding files in the real repository
+3. classify current state as PROVEN / DECIDED / PROPOSED / DEROGATION / REMAINING TO ARBITRATE
+4. state the smallest safe target
+5. implement in narrow increments
+6. validate after each meaningful increment
+7. report residual risks explicitly
 
+Forbidden:
+- broad rewrite before audit
+- repository-wide cosmetic movement
+- convenience refactor outside scope
+- invented missing semantics
+- fake completion claims
+
+## Evidence classification is mandatory
+
+Every significant audit or refactor response must classify statements using only these buckets:
+- PROVEN
+- DECIDED
+- PROPOSED
+- DEROGATION
+- REMAINING TO ARBITRATE
+
+Rules:
+- do not merge categories
+- do not present PROPOSED as PROVEN
+- do not present DEROGATION as compliant
+- do not present unresolved points as closed
+
+## Architecture target
+
+The business architecture must separate all of the following concerns:
 - market data ingestion
 - market data normalization
 - market eligibility
 - pattern detection
 - pattern validation / invalidation
-- confidence/scoring
+- confidence / scoring
 - risk evaluation
-- recommendation generation
-- pedagogical explanation
+- situation classification
+- recommendation decision
+- pedagogical explanation rendering
 - portfolio contextualization
 - persistence and analysis snapshot history
 
-Do not collapse these responsibilities into one opaque service.
+These responsibilities must not be collapsed into one opaque service.
 
-The architecture must stay open for later addition of:
-- new financial instruments
-- new asset classes
-- new market data providers
-- new chart patterns
-- new scoring rules
-- new recommendation policies
-- optional AI explanation features
+## Project contract
 
-## Market data truth rules
+### BackPredictFinance.API
 
-For V1, market data must be controlled by explicit business eligibility rules.
+This project is the HTTP delivery layer only.
 
-- Provider payload is evidence, not business truth by itself.
-- V1 analyzable instruments must be accepted only if eligibility is explicitly proven in API-owned logic.
-- V1 enabled instruments are restricted to active French listed equities only, unless a later written decision changes the scope.
-- Eligibility must not be inferred through hidden fallbacks.
-- Missing or ambiguous provider fields must lead to explicit rejection or explicit unresolved status, never silent acceptance.
-- Market data ingestion, normalization, eligibility, and persistence must remain separated concerns.
-- Analysis requests must not proceed when instrument eligibility is not proven.
-- Eligibility rules must be centrally enforceable and testable.
-- Persistence of an asset record does not by itself prove V1 analyzability.
+Allowed responsibilities:
+- route declaration
+- authorization attributes
+- request binding
+- response return
+- protocol translation
+- middleware registration
+- dependency injection registration
+- application bootstrap
 
-## Pattern engine rules
+Forbidden responsibilities:
+- business rules
+- market eligibility logic
+- pattern detection logic
+- scoring logic
+- risk logic
+- recommendation logic
+- persistence query logic in controllers
+- direct `FinanceDbContext` use in controllers
+- direct exposure of `Datas` entities to the frontend
+- service location through `IServiceProvider`
+- ad hoc mapping logic duplicated in controllers
 
-Pattern detection is core business logic.
+Mandatory rules:
+- controllers depend on service interfaces from backend service projects only
+- public payloads are `BackPredictFinance.ViewModels` types or simple framework primitives when repository-proven
+- `Program.cs` and bootstrap files contain bootstrap only
+- middleware remains cross-cutting and must not own domain decisions
+- controllers must not return backend contracts directly
 
-It must be deterministic where business rules require determinism.
+Refusal rule:
+- if a controller contains business branching that changes business truth, the change is architecturally invalid
 
-Each pattern should be modeled through an explicit contract or equivalent extension mechanism and should be able to declare:
+### BackPredictFinance.Services
+
+This project contains business services and application orchestration.
+
+Allowed responsibilities:
+- use-case orchestration
+- market-data workflows
+- eligibility workflows
+- deterministic pattern detection workflows
+- validation / invalidation workflows
+- scoring workflows
+- risk workflows
+- situation classification workflows
+- recommendation workflows
+- pedagogical explanation rendering workflows
+- persistence orchestration
+- history orchestration
+
+Mandatory rules:
+- services and their interfaces belong here unless a separately justified backend analysis project is explicitly created
+- the interface stays in the same file as its implementing service by default
+- create a separate interface file only when the same interface is implemented by multiple services or when a strong repository-proven reason requires it
+- keep services organized by capability, not by convenience
+- keep controllers thin and keep business orchestration in services
+- use `BaseService` only when it reduces duplication without artificial inheritance
+- no service may depend on `BackPredictFinance.ViewModels`
+- no service may return EF entities as business truth
+- no service may use frontend concerns as inputs or outputs to internal domain logic
+
+Required internal capability boundaries:
+- `Analysis/Application`
+- `Analysis/MarketData`
+- `Analysis/Eligibility`
+- `Analysis/Patterns`
+- `Analysis/Scoring`
+- `Analysis/Risk`
+- `Analysis/Advice`
+- `Analysis/Persistence`
+- `Analysis/History`
+
+Dependency discipline inside Services:
+- `Application` may orchestrate the other capabilities
+- `Advice` depends on facts/contracts, not on controller concerns
+- `Risk` depends on facts/contracts, not on UI concerns
+- `Persistence` maps contracts to persistence, but must not recalculate business truth
+- `Patterns` produces analytical facts and traces, but must not generate final frontend wording
+- `History` persists or retrieves prior outputs, but must not reinterpret analytical truth
+- cyclic dependencies between capabilities are forbidden
+
+Refusal rules:
+- if one service becomes the default place for unrelated decisions, split by capability before extending it further
+- if a capability depends on `ViewModels`, the design is invalid
+- if recommendation logic is copied into pattern definitions, the design is invalid
+
+### BackPredictFinance.Contracts
+
+This project contains backend business-core contracts that are not frontend transport models and not database entities.
+
+Allowed content:
+- backend domain enums used by the analysis engine
+- analysis result contracts
+- advice contracts
+- trace contracts
+- history snapshot contracts
+- family-specific artifact contracts
+- value objects used by backend services
+- structured payloads for recommendation and explanation
+
+Mandatory rules:
+- no service implementation
+- no service interface
+- no EF entity
+- no HTTP/controller concern
+- no frontend transport concern
+- no business logic methods beyond trivial value-object safety when repository-proven
+- contracts must remain serializable and stable enough for backend boundaries
+
+Recommended internal structure:
+- `Analysis/Common`
+- `Analysis/Families/HorizontalBreakout`
+- `Analysis/Families/TriangleContinuation`
+- `Analysis/Families/PoleContinuation`
+- `Analysis/Advice`
+- `Analysis/History`
+
+Refusal rule:
+- if a type is placed in `Contracts` only because it is shared but it is actually a service concern, persistence concern, or frontend DTO, the placement is invalid
+
+### BackPredictFinance.Datas
+
+This project contains persistence-only code.
+
+Allowed content:
+- EF Core entities
+- `DbContext`
+- migrations
+- persistence configuration
+- database access concerns tied to persistence
+
+Forbidden content:
+- frontend transport models
+- controller code
+- pattern detection logic
+- recommendation logic
+- scoring logic
+- explanation logic
+- business reinterpretation of persisted facts
+
+Mandatory persistence rules for V1:
+- normalize all common queryable fields that are cross-pattern business facts
+- store family-specific detailed artifacts in versioned JSON only when they are not stable universal fields
+- keep situation codes and recommendation scenario codes queryable when they are part of business history and auditability
+- persist rule version and analysis timestamp when a snapshot is part of business truth
+
+Refusal rules:
+- if persistence code recalculates recommendation, the design is invalid
+- if the schema stores only opaque JSON where common history fields should be queryable, the design is invalid
+
+### BackPredictFinance.ViewModels
+
+This project contains frontend transport/view models only.
+
+Allowed content:
+- request models
+- response models
+- API-facing paging/list shapes
+- AutoMapper profiles related to transport mapping
+
+Forbidden content:
+- business-core contracts
+- service logic
+- persistence entities
+- backend engine objects exposed by convenience
+- reusable backend shared objects added only to save time
+
+Mandatory rules:
+- one class per file
+- expose a stable frontend projection, not backend internal truth objects
+- do not leak EF entities or backend contracts directly to the frontend
+- if the frontend needs a new shape, create or update a ViewModel rather than exposing an internal contract
+
+Refusal rule:
+- if a ViewModel exists only as a mirror of an internal backend contract with no frontend projection purpose, the design is invalid
+
+### BackPredictFinance.Common
+
+This project must remain very small.
+
+Allowed content:
+- genuinely shared cross-project classes with broad reuse
+- ultra-generic helpers
+- enums that are truly shared across multiple projects and not specific to the analysis domain
+
+Forbidden content:
+- analysis-engine contracts that belong in `BackPredictFinance.Contracts`
+- service logic
+- persistence entities
+- frontend transport models
+- dumping-ground shared types created only to avoid choosing the right project
+
+Mandatory rule:
+- if a type is specific to the analysis domain, prefer `BackPredictFinance.Contracts` over `BackPredictFinance.Common`
+
+Refusal rule:
+- if `Common` grows because classification is avoided, the architecture is degrading and must be corrected
+
+### BackPredictFinance.Tests
+
+This project provides behavior proof.
+
+Required test categories for backend analysis work:
+- unit tests for pattern detection / validation / invalidation / scoring
+- unit tests for situation classification
+- unit tests for recommendation policy behavior
+- unit tests for persistence mapping
+- targeted integration tests for end-to-end analysis execution
+- targeted integration tests for history snapshot persistence
+- targeted API tests for request/response projection when the API surface changes
+
+Mandatory rules:
+- tests must prove business behavior, not implementation trivia alone
+- tests must cover negative paths when the business risk of silent failure is meaningful
+- tests must verify that no-credible-pattern output is explicit when appropriate
+- tests must verify portfolio-context-sensitive recommendation when recommendation behavior changes
+
+Refusal rule:
+- passing tests do not justify duplicated business truth or misplaced architecture
+
+### FinanceFront
+
+This is the frontend presentation layer.
+
+Allowed responsibilities:
+- watchlist UI
+- portfolio UI
+- analysis display
+- explanation display
+- history comparison display
+- filters and presentation-only derived state
+
+Forbidden responsibilities:
+- core pattern detection logic
+- recommendation truth
+- scoring truth
+- hidden reimplementation of backend business rules
+
+Mandatory rule:
+- frontend computed display state must stay presentation-focused and must not become a second source of truth
+
+Refusal rule:
+- if a frontend transformation changes business meaning rather than presentation only, the design is invalid
+
+## Optional new project rule
+
+Do not add a new project by default.
+
+A new project is allowed only if all of the following are true:
+- the current project boundaries would otherwise become materially less maintainable
+- the new project has a single clear responsibility
+- the dependency direction remains simpler after the split
+- the split removes real coupling rather than cosmetic size
+- the need is explained explicitly with repository evidence
+
+If a new backend project becomes necessary, the only preferred addition is:
+- `BackPredictFinance.Analysis`
+
+Purpose of this optional project:
+- isolate deterministic analysis-domain services when `BackPredictFinance.Services` would otherwise become a high-coupling monolith
+
+If this project is added:
+- `BackPredictFinance.Analysis` may contain analysis-domain services only
+- service interfaces still remain with their implementing services by default
+- `BackPredictFinance.API` depends on backend services through interfaces only
+- `BackPredictFinance.Analysis` depends on `BackPredictFinance.Contracts`, `BackPredictFinance.Common`, and `BackPredictFinance.Datas` only as justified by real code
+- do not create this project for cosmetic reorganization only
+
+## Layer placement decision rule
+
+When a type is created or moved, choose its project using this order:
+1. Is it a frontend input/output transport model? -> `BackPredictFinance.ViewModels`
+2. Is it a database entity or persistence concern? -> `BackPredictFinance.Datas`
+3. Is it a backend business-core contract not meant for the frontend? -> `BackPredictFinance.Contracts`
+4. Is it a genuinely common shared class or enum reused broadly across projects and not domain-specific? -> `BackPredictFinance.Common`
+5. Is it service logic or a service interface? -> `BackPredictFinance.Services` or `BackPredictFinance.Analysis` if that optional project has been explicitly justified and created
+
+If classification is ambiguous, stop and state the ambiguity explicitly instead of guessing.
+
+## Architecture validity lock
+
+The repository architecture must remain valid after every change.
+
+Mandatory rules:
+- do not move a type to another project unless the destination project is explicitly justified by the layer-placement decision rule
+- do not leave a project with types that violate its contractual role
+- do not solve a local compile issue by placing a type in the wrong project
+- do not introduce a new shared type in `ViewModels`
+- do not introduce a new frontend transport type in `Contracts` or `Common`
+- do not introduce a new business-core backend contract in `ViewModels`
+- do not introduce a new persistence entity outside `BackPredictFinance.Datas`
+- do not split or move files for cosmetic reasons only
+- after each architectural change, explicitly verify that `API`, `ViewModels`, `Services`, `Datas`, `Contracts`, and `Common` still respect their contractual boundaries
+
+Before creating a new type, classify it explicitly as one of:
+- frontend transport model
+- service or service interface
+- persistence entity or persistence concern
+- backend business-core contract
+- genuinely shared common type or enum
+
+If the classification is ambiguous, stop and ask the minimum blocking question.
+
+## Pattern-engine contract
+
+Pattern detection is core business logic and must remain deterministic where business rules require determinism.
+
+The active V1 architecture must support a small real multi-pattern scope without speculative over-engineering.
+
+Current continuation-pattern target:
+- `RectangleContinuation`
+- `SymmetricalTriangleContinuation`
+- `BullFlagContinuation`
+- `BearFlagContinuation`
+
+Pattern family rule:
+- use families only when they carry a real shared artifact shape or real shared business invariants
+- do not introduce family hierarchies for naming symmetry only
+
+Each pattern definition must be able to declare:
 - unique identifier
 - display name
-- pedagogical description
+- family identifier
 - minimum historical depth
 - required inputs
 - detection rules
@@ -200,31 +497,50 @@ Each pattern should be modeled through an explicit contract or equivalent extens
 The analysis window depends on the pattern.
 Do not hardcode one universal historical window if the domain requires per-pattern depth.
 
-## Pattern correctness proof rules
+Rectangle business rule:
+- `RectangleContinuation` is strictly a continuation pattern in this repository
+- it requires a proven prior trend
+- it validates only on breakout in the direction of that prior trend
+- an opposite breakout does not validate the pattern
 
-Any claim that a V1 pattern implementation is correct must be backed by explicit repository proof.
+## Advice and recommendation contract
 
-Minimum proof expected:
-- executable pattern contract identified in the real code
-- deterministic detection logic identified in the real code
-- explicit validation rules identified in the real code
-- explicit invalidation rules identified in the real code
-- explicit scoring/confidence logic identified in the real code
-- explicit recommendation boundary identified in the real code
-- targeted tests covering nominal path, edge cases, and no-credible-pattern path
-- persisted snapshot proof showing traceability of the produced assessment
+Do not treat recommendation as raw text attached directly to the pattern implementation.
 
-Forbidden:
-- claiming a pattern is correct because a legacy or Python implementation exists somewhere else
-- claiming multi-pattern readiness if the active runtime only supports one pattern
-- hiding a temporary mono-pattern limitation behind generic architecture wording
-- claiming explainability if the final output cannot be traced to API-owned rules
+The architecture must separate:
+- analytical facts produced by the pattern engine
+- situation classification
+- recommendation decision
+- pedagogical explanation rendering
 
-## History and versioning rules
+Mandatory advice truth rule:
+- the source of truth is structured data, not rendered wording
+
+Minimum structured advice truth expected:
+- `SituationCode`
+- `AdviceScenarioCode`
+- `RecommendationAction`
+- `RecommendationStrength`
+- structured recommendation parameters
+
+Rendered wording may be persisted for audit/history, but it is not the primary truth.
+
+Recommendation must depend on:
+- pattern situation
+- portfolio context
+- risk metrics
+- confidence / validation state
+
+Do not make recommendation depend only on pattern name.
+
+Refusal rule:
+- if recommendation truth is primarily embedded in text templates or duplicated inside pattern implementations, the design is invalid
+
+## Persistence and history contract
 
 The system must support analysis snapshots over time.
 
-The architecture should be able to preserve:
+The persisted history should preserve:
 - analysis timestamp
 - analyzed asset
 - market data range used
@@ -235,180 +551,108 @@ The architecture should be able to preserve:
 - risk outputs
 - explanation outputs
 - portfolio context used
+- situation code
+- advice scenario code
 
 Do not implement fake history or fake versioning.
-If full V1 history is not present yet, create a clean path toward it.
 
-## Ex post evaluation rules
+## API contract rules
 
-The architecture should prepare for later evaluation of signal performance with a stable protocol, such as:
-- performance at J+5
-- performance at J+20
-- maximum drawdown after signal
-- invalidation reached or not
-- target hit or not
+Public API contracts must remain stable frontend-facing projections.
 
-Do not overbuild beyond task scope.
-Prepare clean extension points instead.
+Mandatory rules:
+- controllers return `ViewModels`, not backend contracts
+- controllers never expose `Datas` entities directly
+- backend analysis contracts may evolve independently from frontend projection contracts
+- if a new UI payload shape is needed, create or update a `ViewModel`
 
-## Layer-specific rules
+Do not use backend contracts as API shortcuts.
 
-### BackPredictFinance.API
+## Mapping rules
 
-This layer is responsible for:
-- HTTP endpoints
-- authentication/authorization wiring
-- orchestration entry points
-- request/response handling
-- middleware registration
-- dependency injection registration
-- exposure of business use cases
+Mapping boundaries must be explicit.
 
-This layer must not own core pattern logic, provider-specific parsing logic, or UI concerns.
+Mandatory mapping boundaries:
+- `Contracts` <-> `Datas` through dedicated persistence mapping owned by backend application services
+- `Contracts` <-> `ViewModels` through dedicated API mapping or AutoMapper profiles
+- no ad hoc duplication of mapping logic across controllers, services, and persistence code
 
-Avoid:
-- embedding domain rules directly in controllers
-- placing pattern calculations inside controllers
-- mixing persistence details into endpoint logic
+Refusal rules:
+- entity-to-view-model mapping inside controllers is invalid
+- contract-to-entity mapping scattered across unrelated services is invalid
 
-### BackPredictFinance.Services
+## Naming and vocabulary rules
 
-This layer is responsible for:
-- application/business services
-- orchestration of use cases
-- market eligibility workflows
-- pattern detection workflows
-- recommendation workflows
-- risk calculation workflows
-- optional legacy adapters kept outside the active V1 runtime path where strictly necessary during transition
+Naming must be explicit, precise, and in English in code.
 
-This layer should become the main place for business orchestration.
-Keep responsibilities explicit.
-Do not turn service classes into god-objects.
+Mandatory rules:
+- use English for variable names, parameter names, property names, method names, class names, and file names
+- prefer explicit names over short or vague names
+- avoid names like `data`, `info`, `value`, `item`, `obj`, `result2`, `tmp`, `misc`, or other low-information names unless the scope is extremely local and the meaning is still explicit
+- use precise business vocabulary consistently for the same concept across projects
+- do not use two different names for the same business concept in the same active path unless compatibility requires it and the reason is explicit
+- avoid ambiguous abbreviations unless they are standard, well known in the repository, and still explicit
+- keep user-facing texts in the language required by the product, but keep code identifiers in English
 
-If existing Python-related services exist:
-- they must not be required by the active V1 path
-- they must be isolated behind explicit boundaries
-- they must be classified as legacy, experimental, test-only, or removal-target
-- they must never be presented as core business truth for V1
+When renaming for clarity:
+- do not perform broad cosmetic renaming out of scope
+- rename only when the current naming creates real ambiguity, contradiction, or maintenance cost
+- preserve architectural consistency across the touched path
 
-### BackPredictFinance.Datas
+## Anti-duplication rules
 
-This layer is responsible for:
-- EF Core persistence
-- entities
-- DbContext
-- migrations
-- persistence mapping/configuration
-- repository-style persistence concerns if present
+The agent must actively avoid code duplication and duplicated business truth.
 
-This layer must not contain:
-- UI rules
-- controller concerns
-- provider-specific HTTP logic
-- opaque business recommendation logic
+Mandatory rules:
+- one business rule should have one active source of truth in the touched scope
+- do not duplicate the same decision logic in controller, service, mapper, persistence projection, and tests
+- do not duplicate mapping logic when one reusable mapper or helper can own it cleanly
+- do not duplicate constants, policy versions, error messages, pattern identifiers, or fallback rules across unrelated files when a single repository-grounded location can own them
+- do not duplicate runtime truth between response shaping and persistence shaping when one shared contract or helper can keep them aligned
+- do not duplicate validation rules across layers unless the duplication is explicitly required and justified
+- do not introduce copy-paste variants of existing logic to make one scenario pass quickly
 
-Database changes must be intentional and minimal.
-Do not introduce schema changes without explaining their business purpose.
+If duplication is found, the agent must do one of the following:
+- remove it now when it is in scope and safe
+- isolate it and classify it explicitly as a compatibility constraint
+- stop and state why removing it would exceed the current scope
 
-### BackPredictFinance.ViewModels
+The agent must never present duplicated logic as acceptable just because tests pass.
 
-This layer should stay limited to transport/view contracts.
-Do not leak persistence entities directly into API outputs if dedicated view models exist or are required.
+## Security and code quality contract
 
-Avoid turning view models into domain truth.
+All code changes must aim for high rigor, maintainability, and security.
 
-### BackPredictFinance.Common
+Mandatory secure-development rules:
+- validate all external inputs at trust boundaries
+- encode or sanitize outputs according to the sink when applicable
+- enforce authentication and authorization explicitly
+- keep session and token handling explicit and minimal
+- protect secrets and sensitive data from source code, logs, and error messages
+- use approved cryptographic primitives through platform libraries only
+- prefer parameterized data access over dynamic query construction
+- keep error handling explicit without leaking sensitive internals
+- log for diagnosis and audit without logging secrets or unnecessary personal data
+- prefer secure defaults in configuration
+- use least privilege for infrastructure and data access
+- keep dependencies minimal and justified
+- preserve trust boundaries explicitly in design and implementation
+- avoid insecure fallback behavior that silently broadens access or weakens validation
 
-Use only for genuinely shared cross-cutting primitives.
-Do not move business logic into `Common` just to avoid choosing the correct layer.
+Mandatory maintainability rules:
+- keep methods focused and cohesive
+- keep side effects explicit
+- avoid hidden temporal coupling
+- avoid dead code
+- avoid unreachable branches
+- keep nullability and invariants explicit
+- use types, names, and contracts that reduce ambiguity
+- keep complexity bounded and justified
+- make quality-gate failures blocking until explicitly arbitrated
+- do not keep code that only exists as speculative extension with no active use
 
-### BackPredictFinance.Tests
-
-When changing .NET behavior:
-- update or add tests when justified
-- prefer targeted tests over broad noisy test changes
-- keep tests aligned with actual business rules
-- never fake expected behavior that the product rules do not support
-- prove runtime-path claims with focused tests when possible
-- prove negative paths as well as positive paths when they matter for V1 truth
-
-### FinanceFront
-
-This is the Angular frontend.
-
-Frontend responsibilities include:
-- watchlist UI
-- portfolio UI
-- analysis display
-- explanation display
-- history comparison display
-- alerts display
-- user workflow and presentation
-
-Do not place core financial pattern logic in Angular.
-Do not duplicate API truth in frontend business code unless there is a justified UI-only derivation.
-
-If UI needs computed display states:
-- keep them presentation-focused
-- do not create a second source of truth for pattern analysis
-
-Respect the existing Angular setup and repository conventions.
-Do not introduce architectural divergence between legacy Angular style and current project structure without explicit task need.
-
-### Python analysis area
-
-Python is not part of the V1 runtime truth.
-
-For this repository:
-- V1 runtime must not depend on Python.
-- Python must not be required to execute any V1 API analysis use case.
-- Python must not be required to resolve enabled V1 patterns.
-- Python must not be required to compute V1 analysis windows.
-- Python must not be required to produce mandatory V1 outputs.
-- Python may remain only as:
-  - archived legacy code
-  - explicit non-V1 experimental tooling
-  - temporary migration material scheduled for removal
-
-Forbidden for V1:
-- mandatory DI registrations toward Python services
-- runtime analysis paths that call Python directly or indirectly
-- V1 contracts whose resolution depends on Python configuration
-- API endpoints that expose Python as business truth
-- hidden coupling between V1 orchestration and Python-specific models/options
-
-If Python code still exists in the repository:
-- classify it explicitly as legacy, experimental, test-only, or removal-target
-- prove whether it is runtime-reachable or not
-- never present a repository as V1-clean while Python runtime dependencies still exist
-
-## Refactor discipline
-
-Before changing architecture:
-- identify what exists
-- identify what is reusable
-- identify what is misplaced
-- identify what must be moved
-- identify what must be rewritten
-- identify what should be deferred beyond V1
-
-Never assume the current repository already matches the target architecture.
-
-Prefer:
-- explicit contracts
-- real extension points
-- maintainable naming
-- small safe increments
-- narrow, testable changes
-
-Avoid:
-- speculative frameworks
-- generic abstractions with no real use
-- dead extension points
-- hidden coupling
-- silent behavior changes
-- large rewrites without validation checkpoints
+Mandatory quality-gate rule:
+- a change is not complete if it knowingly leaves unresolved critical security, reliability, or maintainability regressions in the touched scope without explicit arbitration
 
 ## Engineering rigor rules
 
@@ -428,63 +672,25 @@ When information is missing:
 - identify the exact missing element
 - ask only the minimum blocking question
 
-## Evidence classification rules
+## Minimum proof requirements for serious analysis work
 
-For any significant audit or refactor response, always classify statements using these buckets:
-
-- PROVEN: directly supported by repository code, configuration, tests, or contract documents
-- DECIDED: explicitly mandated by AGENTS.md or contract documents
-- PROPOSED: recommendation not yet implemented nor contractually frozen
-- DEROGATION: conscious deviation from contract or target
-- REMAINING TO ARBITRATE: unresolved point requiring a written decision
-
-Do not merge these categories.
-Do not present a proposal as if it were already proven or decided.
-Do not present a derogation as contract compliant.
-Do not present an unresolved point as closed.
-
-## Security and quality rules
-
-All code changes must aim for high rigor, maintainability, and security.
-
-Prefer code that is:
-- explicit
-- testable
-- auditable
-- maintainable
-- static-analysis-friendly
-- OWASP-minded where applicable
-
-Avoid:
-- hidden coupling
-- magic behavior
-- architecture leakage across layers
-- provider-specific logic embedded in core domain contracts
-- UI concerns embedded in core business analysis
-- weak validation on business-critical inputs
-- ambiguous error handling on business-critical paths
-- configuration sprawl that obscures the true runtime path
-
-## Minimum proof requirements for V1 audit and corrective work
-
-Any serious V1 audit or corrective delivery must include:
-
+Any serious analysis-engine audit or corrective delivery must include:
 - current runtime-path audit
-- dependency-injection audit
-- active configuration audit
-- market-data eligibility audit
+- dependency direction audit in the touched scope
+- active configuration audit in the touched scope
 - pattern-engine audit
 - recommendation-boundary audit
 - snapshot/history audit
 - targeted test audit
-- anti-drift matrix
+- anti-duplication audit in the touched scope
+- security-impact review in the touched scope
 
 If implementation is performed, also include:
 - exact files changed
 - exact reason for each change
 - validation commands executed
 - explicit residual risks
-- ZIP delivery of changed files when requested by the task contract
+- explicit statement of any deferred issue
 
 ## Validation commands and expectations
 
@@ -497,25 +703,19 @@ Prefer relevant commands such as:
 - `dotnet build BackPredictFinance.sln`
 - `dotnet test BackPredictFinance.Tests/BackPredictFinance.Tests.csproj`
 
-### For Angular changes
+### For frontend changes
 
 Prefer relevant commands such as:
-- `npm install`
-- `npm run build`
-- `npm test` if configured
+- install command appropriate for the frontend package manager in the repository
+- build command appropriate for the frontend package manager in the repository
+- test command when configured
 
-### For Python changes
+Do not claim runtime-path correctness without repository proof.
+Do not claim security improvement without pointing to the concrete touched trust boundary or risk reduction.
 
-Prefer relevant commands such as:
-- environment setup consistent with `pyproject.toml` or `requirements.txt`
-- `pytest`
-
-Python validation is never sufficient to prove V1 runtime correctness.
-
-## Output expectations
+## Output contract for significant tasks
 
 For significant tasks, structure responses in this order:
-
 1. Current state audit
 2. Gap analysis versus target
 3. Target design
@@ -527,27 +727,27 @@ For significant tasks, structure responses in this order:
 ## Refusal criteria
 
 Refuse to present the repository as V1-ready if any of the following remains true:
-
-- an active V1 runtime path still depends on Python
-- enabled V1 patterns are still resolved through Python-specific services or options
+- mandatory analysis outputs are not traceable to backend-owned logic
+- recommendation truth is still primarily text-based or duplicated across layers
 - market eligibility remains distributed, implicit, or unproven
-- mandatory analysis outputs are not traceable to API-owned logic
 - snapshot persistence omits required trace/version/context fields
 - tests do not prove the claimed corrective behavior
 - a response mixes proven facts with assumptions without explicit classification
+- the touched code introduces avoidable security weaknesses or unresolved quality-gate regressions without explicit arbitration
+- a project boundary is broken for convenience
+- a new project was added without meeting the explicit rule of this contract
 
 ## Scope control
 
 Prioritize V1 delivery.
-Do not drift into V2/V3 unless the task explicitly asks for it.
+Do not drift into later phases unless the task explicitly asks for it.
 
 V1 priorities are:
 - API as source of truth
 - deterministic and explainable pattern analysis
-- full runtime decoupling from Python
 - explicit market eligibility enforcement
 - separation of business layers
 - portfolio-aware recommendation wording
 - analysis history foundation
 - extensibility for assets, providers, and patterns
-- AI optional, not central
+- strong maintainability and secure-by-default implementation

@@ -28,7 +28,10 @@ namespace BackPredictFinance.API.ProgramSubFiles
             services.AddScoped<ITradingRecommendationService, TradingRecommendationService>();
             services.AddScoped<IAnalysisRequestCompatibilityResolver, AnalysisRequestCompatibilityResolver>();
             services.AddScoped<IAnalysisLegacyCompatibilityService, AnalysisLegacyCompatibilityService>();
-            services.AddScoped<IAnalysisPatternDefinition, DoubleTopAnalysisPatternDefinition>();
+            services.AddScoped<IAnalysisPatternDefinition, RectangleContinuationPatternDefinition>();
+            services.AddScoped<IAnalysisPatternDefinition, SymmetricalTriangleContinuationPatternDefinition>();
+            services.AddScoped<IAnalysisPatternDefinition, BullFlagContinuationPatternDefinition>();
+            services.AddScoped<IAnalysisPatternDefinition, BearFlagContinuationPatternDefinition>();
             services.AddScoped<IAnalysisPatternRegistry, AnalysisPatternRegistry>();
             services.AddScoped<IPortfolioContextLoader, PortfolioContextLoader>();
             services.AddScoped<IAnalysisExecutionService, DeterministicAnalysisExecutionService>();

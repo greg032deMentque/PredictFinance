@@ -9,10 +9,6 @@ using System.Security;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-
-
-using BackPredictFinance.Contracts.Auth;
-
 namespace BackPredictFinance.Services.AuthServices
 {
     public interface IJwtGeneratorService
@@ -201,5 +197,4 @@ namespace BackPredictFinance.Services.AuthServices
     }
 
 }
-
 

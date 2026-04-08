@@ -1,5 +1,5 @@
 using AutoMapper;
-using BackPredictFinance.Contracts.Common;
+using BackPredictFinance.Common.Jwt;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using Microsoft.AspNetCore.Http;

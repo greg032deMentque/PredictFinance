@@ -1,150 +1,239 @@
 using BackPredictFinance.Common.enums;
-using BackPredictFinance.Common.AnalysisV1;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
+using BackPredictFinance.Contracts.Analysis;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
-
-public interface IRecommendationPolicyService
-{
-    AnalysisRecommendation EvaluateAnalysis(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisOutcome outcome);
-}
-
+    public interface IRecommendationPolicyService
+    {
+        AnalysisRecommendation EvaluateAnalysis(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisOutcomeEnum outcome);
+    }
 
     public sealed class RecommendationPolicyService : IRecommendationPolicyService
     {
-        private readonly ITradingRecommendationService _tradingRecommendationService;
+        private const string PolicyVersion = "analysis-v1-policy@prompt10";
 
-        public RecommendationPolicyService(ITradingRecommendationService tradingRecommendationService)
-        {
-            _tradingRecommendationService = tradingRecommendationService;
-        }
-
-        public AnalysisRecommendation EvaluateAnalysis(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisOutcome outcome)
+        public AnalysisRecommendation EvaluateAnalysis(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisOutcomeEnum outcome)
         {
             ArgumentNullException.ThrowIfNull(request);
             ArgumentNullException.ThrowIfNull(compatiblePatterns);
 
             var holdingContext = request.PortfolioContext.HoldsInstrument ? "HELD" : "NOT_HELD";
-            var basedOnPatternIds = compatiblePatterns
-                .Select(x => x.PatternId)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (compatiblePatterns.Count == 0 || outcome == AnalysisOutcome.NoCrediblePattern)
+            var basedOnPatternIds = compatiblePatterns.Select(x => x.PatternId).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (compatiblePatterns.Count == 0 || outcome == AnalysisOutcomeEnum.NoCrediblePattern)
             {
-                return new AnalysisRecommendation
-                {
-                    RecommendationId = Guid.NewGuid().ToString("N"),
-                    Kind = RecommendationKind.Wait,
-                    HoldingContext = holdingContext,
-                    Rationale = request.PortfolioContext.HoldsInstrument
-                        ? "Aucun pattern credible n'impose de modifier votre position a ce stade."
-                        : "Aucun pattern credible ne justifie une prise de position immediate.",
-                    BasedOnPatternIds = basedOnPatternIds,
-                    PolicyVersion = "analysis-v1-policy@prompt3"
-                };
+                return BuildNoCrediblePatternRecommendation(request, holdingContext, basedOnPatternIds);
             }
 
             var primaryPattern = compatiblePatterns
                 .OrderByDescending(x => x.Trace.IsPrimaryDisplayCandidate)
                 .ThenByDescending(x => x.Scoring.ConfidenceScore)
-                .FirstOrDefault();
+                .First();
 
-            if (primaryPattern == null)
-            {
-                return new AnalysisRecommendation
-                {
-                    RecommendationId = Guid.NewGuid().ToString("N"),
-                    Kind = RecommendationKind.Wait,
-                    HoldingContext = holdingContext,
-                    Rationale = "Aucun signal exploitable n'a ete conserve pour formuler une recommandation.",
-                    BasedOnPatternIds = [],
-                    PolicyVersion = "analysis-v1-policy@prompt3"
-                };
-            }
-
-            var legacyResult = _tradingRecommendationService.EvaluateAnalysis(
-                MapPattern(primaryPattern.PatternId),
-                primaryPattern.Detection.CurrentPhaseCode,
-                primaryPattern.Scoring.ConfidenceScore,
-                primaryPattern.RiskHints.SuggestedTakeProfit,
-                primaryPattern.Invalidation.InvalidationLevel);
-
-            var kind = ResolveRecommendationKind(request.PortfolioContext.HoldsInstrument, primaryPattern, legacyResult.Action);
+            var action = ResolveRecommendationAction(request.PortfolioContext.HoldsInstrument, primaryPattern);
+            var situationCode = ResolveSituationCode(primaryPattern, outcome);
+            var scenarioCode = ResolveAdviceScenarioCode(request.PortfolioContext.HoldsInstrument, primaryPattern, action);
+            var parameters = BuildParameters(request, compatiblePatterns, primaryPattern, action);
+            var strength = ResolveRecommendationStrength(primaryPattern, parameters, action);
 
             return new AnalysisRecommendation
             {
                 RecommendationId = Guid.NewGuid().ToString("N"),
-                Kind = kind,
+                SituationCode = situationCode,
+                AdviceScenarioCode = scenarioCode,
+                RecommendationAction = action,
+                RecommendationStrength = strength,
+                Parameters = parameters,
                 HoldingContext = holdingContext,
-                Rationale = BuildRationale(kind, primaryPattern, request.PortfolioContext.HoldsInstrument),
+                Rationale = BuildRationale(scenarioCode, strength, parameters),
                 BasedOnPatternIds = basedOnPatternIds,
-                ReviewHorizonDays = legacyResult.HorizonDays > 0 ? legacyResult.HorizonDays : null,
-                PolicyVersion = "analysis-v1-policy@prompt3",
-                WarningText = compatiblePatterns.Count > 1
-                    ? "Plusieurs patterns restent compatibles; la recommandation conserve toutes les lectures compatibles et reste prudente."
-                    : null
+                ReviewHorizonDays = primaryPattern.Detection.Status == PatternStatusEnum.Confirmed ? 20 : 10,
+                PolicyVersion = PolicyVersion,
+                WarningText = compatiblePatterns.Count > 1 ? "Plusieurs scenarios compatibles restent actifs." : null
             };
         }
 
-        private static TradingPatternEnum MapPattern(string? patternId)
+        private static AnalysisRecommendation BuildNoCrediblePatternRecommendation(AnalysisRequest request, string holdingContext, List<string> basedOnPatternIds)
         {
-            var normalizedPatternId = (patternId ?? string.Empty).Trim().ToUpperInvariant();
-            return normalizedPatternId switch
+            var action = request.PortfolioContext.HoldsInstrument ? RecommendationActionEnum.Hold : RecommendationActionEnum.Wait;
+            return new AnalysisRecommendation
             {
-                "DOUBLE_TOP" => TradingPatternEnum.DoubleTop,
-                _ => throw new InvalidOperationException($"Le runtime V1 actif ne prend pas en charge la recommandation pour le pattern {normalizedPatternId}.")
+                RecommendationId = Guid.NewGuid().ToString("N"),
+                SituationCode = RecommendationSituationCode.NoCrediblePattern,
+                AdviceScenarioCode = request.PortfolioContext.HoldsInstrument ? AdviceScenarioCode.NoCrediblePatternHeld : AdviceScenarioCode.NoCrediblePatternNotHeld,
+                RecommendationAction = action,
+                RecommendationStrength = RecommendationStrengthEnum.Low,
+                Parameters = new AnalysisRecommendationParameters
+                {
+                    HoldsInstrument = request.PortfolioContext.HoldsInstrument,
+                    IsActionable = false,
+                    HasMultipleCompatiblePatterns = false,
+                    HasRiskPlan = false
+                },
+                HoldingContext = holdingContext,
+                Rationale = request.PortfolioContext.HoldsInstrument ? "Aucun pattern credible n'impose de modifier votre position a ce stade." : "Aucun pattern credible ne justifie une prise de position immediate.",
+                BasedOnPatternIds = basedOnPatternIds,
+                ReviewHorizonDays = 5,
+                PolicyVersion = PolicyVersion
             };
         }
 
-        private static RecommendationKind ResolveRecommendationKind(bool holdsInstrument, PatternAssessment primaryPattern, RecommendationActionEnum action)
+        private static RecommendationActionEnum ResolveRecommendationAction(bool holdsInstrument, PatternAssessment primaryPattern)
         {
-            if (!primaryPattern.Detection.IsCompatible)
+            var isBearish = string.Equals(primaryPattern.BiasCode, "BEARISH", StringComparison.OrdinalIgnoreCase);
+            var isValidated = string.Equals(primaryPattern.Validation.State, "VALIDATED", StringComparison.OrdinalIgnoreCase) || primaryPattern.Detection.Status == PatternStatusEnum.Confirmed;
+            var highConfidence = primaryPattern.Scoring.ConfidenceScore >= 0.75m;
+            var moderateConfidence = primaryPattern.Scoring.ConfidenceScore >= 0.45m;
+            var hasRiskPlan = primaryPattern.RiskHints.HasRiskPlan;
+
+            if (!primaryPattern.Detection.IsCompatible || primaryPattern.Detection.Status == PatternStatusEnum.Invalidated)
             {
-                return RecommendationKind.Wait;
+                return holdsInstrument ? RecommendationActionEnum.Wait : RecommendationActionEnum.Wait;
             }
 
+            if (isBearish)
+            {
+                if (!holdsInstrument)
+                {
+                    return isValidated && highConfidence ? RecommendationActionEnum.Monitor : RecommendationActionEnum.Wait;
+                }
+
+                if (isValidated && highConfidence && hasRiskPlan)
+                {
+                    return RecommendationActionEnum.Sell;
+                }
+
+                if ((isValidated && moderateConfidence) || primaryPattern.Invalidation.InvalidationLevel.HasValue)
+                {
+                    return RecommendationActionEnum.Lighten;
+                }
+
+                return RecommendationActionEnum.Wait;
+            }
+
+            if (!holdsInstrument)
+            {
+                if (isValidated && moderateConfidence)
+                {
+                    return RecommendationActionEnum.Buy;
+                }
+
+                return primaryPattern.Detection.Status is PatternStatusEnum.Forming or PatternStatusEnum.Confirmed
+                    ? RecommendationActionEnum.Monitor
+                    : RecommendationActionEnum.Wait;
+            }
+
+            if (isValidated && highConfidence && hasRiskPlan)
+            {
+                return RecommendationActionEnum.Reinforce;
+            }
+
+            return primaryPattern.Detection.IsCompatible ? RecommendationActionEnum.Hold : RecommendationActionEnum.Wait;
+        }
+
+        private static string ResolveSituationCode(PatternAssessment primaryPattern, AnalysisOutcomeEnum outcome)
+        {
+            if (outcome == AnalysisOutcomeEnum.NoCrediblePattern || !primaryPattern.Detection.IsCompatible)
+            {
+                return RecommendationSituationCode.NoCrediblePattern;
+            }
+
+            return primaryPattern.Detection.Status switch
+            {
+                PatternStatusEnum.Forming => RecommendationSituationCode.CompatiblePatternForming,
+                PatternStatusEnum.Monitoring => RecommendationSituationCode.CompatiblePatternMonitoring,
+                PatternStatusEnum.Confirmed => RecommendationSituationCode.CompatiblePatternConfirmed,
+                PatternStatusEnum.Completed => RecommendationSituationCode.CompatiblePatternCompleted,
+                PatternStatusEnum.Invalidated => RecommendationSituationCode.CompatiblePatternInvalidated,
+                _ => RecommendationSituationCode.NoCrediblePattern
+            };
+        }
+
+        private static string ResolveAdviceScenarioCode(bool holdsInstrument, PatternAssessment primaryPattern, RecommendationActionEnum action)
+        {
+            var isBearish = string.Equals(primaryPattern.BiasCode, "BEARISH", StringComparison.OrdinalIgnoreCase);
             if (holdsInstrument)
             {
-                return action switch
+                if (isBearish)
                 {
-                    RecommendationActionEnum.Buy => RecommendationKind.Reinforce,
-                    RecommendationActionEnum.Sell => RecommendationKind.Sell,
-                    _ => primaryPattern.Detection.Status is PatternStatus.Invalidated or PatternStatus.Completed
-                        ? RecommendationKind.Wait
-                        : RecommendationKind.Hold
-                };
+                    return AdviceScenarioCode.PrimaryPatternHeldAdverse;
+                }
+
+                return action == RecommendationActionEnum.Reinforce ? AdviceScenarioCode.PrimaryPatternHeldBullish : AdviceScenarioCode.PrimaryPatternHeldNeutral;
             }
 
-            return action switch
+            if (isBearish)
             {
-                RecommendationActionEnum.Buy => RecommendationKind.Buy,
-                RecommendationActionEnum.Sell => RecommendationKind.Monitor,
-                _ => primaryPattern.Detection.Status is PatternStatus.Forming or PatternStatus.Monitoring or PatternStatus.Confirmed
-                    ? RecommendationKind.Monitor
-                    : RecommendationKind.Wait
+                return action == RecommendationActionEnum.Monitor ? AdviceScenarioCode.PrimaryPatternNotHeldAdverse : AdviceScenarioCode.PrimaryPatternNotHeldNeutral;
+            }
+
+            return action == RecommendationActionEnum.Buy ? AdviceScenarioCode.PrimaryPatternNotHeldBullish : AdviceScenarioCode.PrimaryPatternNotHeldNeutral;
+        }
+
+        private static AnalysisRecommendationParameters BuildParameters(AnalysisRequest request, IReadOnlyList<PatternAssessment> compatiblePatterns, PatternAssessment primaryPattern, RecommendationActionEnum action)
+        {
+            return new AnalysisRecommendationParameters
+            {
+                HoldsInstrument = request.PortfolioContext.HoldsInstrument,
+                IsActionable = action is RecommendationActionEnum.Buy or RecommendationActionEnum.Reinforce or RecommendationActionEnum.Lighten or RecommendationActionEnum.Sell,
+                HasMultipleCompatiblePatterns = compatiblePatterns.Count > 1,
+                HasRiskPlan = primaryPattern.RiskHints.HasRiskPlan,
+                PrimaryPatternId = primaryPattern.PatternId,
+                PrimaryPatternDisplayName = primaryPattern.DisplayName,
+                PatternFamilyId = primaryPattern.FamilyId,
+                BiasCode = primaryPattern.BiasCode,
+                CurrentPhaseCode = primaryPattern.Detection.CurrentPhaseCode,
+                CurrentPhaseLabel = primaryPattern.Detection.CurrentPhaseLabel,
+                ValidationState = primaryPattern.Validation.State,
+                InvalidationState = primaryPattern.Invalidation.State,
+                ConfidenceScore = primaryPattern.Scoring.ConfidenceScore,
+                ConfidenceLabel = primaryPattern.Scoring.ConfidenceLabel,
+                SuggestedStopLoss = primaryPattern.RiskHints.SuggestedStopLoss,
+                SuggestedTakeProfit = primaryPattern.RiskHints.SuggestedTakeProfit,
+                InvalidationLevel = primaryPattern.Invalidation.InvalidationLevel,
+                RiskRewardRatio = primaryPattern.RiskHints.RiskRewardRatio
             };
         }
 
-        private static string BuildRationale(RecommendationKind kind, PatternAssessment patternAssessment, bool holdsInstrument)
+        private static RecommendationStrengthEnum ResolveRecommendationStrength(PatternAssessment primaryPattern, AnalysisRecommendationParameters parameters, RecommendationActionEnum action)
         {
-            var patternName = string.IsNullOrWhiteSpace(patternAssessment.DisplayName) ? "le scenario principal" : patternAssessment.DisplayName;
-            var phaseLabel = string.IsNullOrWhiteSpace(patternAssessment.Detection.CurrentPhaseLabel) ? "en cours" : patternAssessment.Detection.CurrentPhaseLabel.ToLowerInvariant();
-            var confidenceLabel = string.IsNullOrWhiteSpace(patternAssessment.Scoring.ConfidenceLabel) ? "non classee" : patternAssessment.Scoring.ConfidenceLabel.ToLowerInvariant();
-
-            return kind switch
+            if (!parameters.IsActionable)
             {
-                RecommendationKind.Buy => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. La posture retenue est BUY pour une entree pedagogique.",
-                RecommendationKind.Monitor => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. La posture retenue est MONITOR en attendant un signal plus net.",
-                RecommendationKind.Hold => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. Comme vous etes deja expose, la posture retenue est HOLD.",
-                RecommendationKind.Reinforce => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. Comme vous detenez deja cette valeur, la posture retenue est REINFORCE.",
-                RecommendationKind.Sell => $"{patternName} indique un scenario adverse {phaseLabel} avec une confiance {confidenceLabel}. Comme vous detenez deja cette valeur, la posture retenue est SELL.",
-                RecommendationKind.Lighten => $"{patternName} conduit a une posture LIGHTEN pour reduire partiellement l'exposition actuelle.",
-                _ => holdsInstrument
-                    ? "Aucun changement de posture n'est recommande sur votre position actuelle."
-                    : "Aucune prise de position immediate n'est recommandee."
+                return RecommendationStrengthEnum.Low;
+            }
+
+            var highConfidence = primaryPattern.Scoring.ConfidenceScore >= 0.75m;
+            var moderateConfidence = primaryPattern.Scoring.ConfidenceScore >= 0.45m;
+            var hasPositiveRiskReward = !parameters.RiskRewardRatio.HasValue || parameters.RiskRewardRatio.Value >= 1.2m;
+            if ((action is RecommendationActionEnum.Buy or RecommendationActionEnum.Reinforce or RecommendationActionEnum.Sell) && highConfidence && hasPositiveRiskReward)
+            {
+                return RecommendationStrengthEnum.High;
+            }
+
+            if (moderateConfidence)
+            {
+                return RecommendationStrengthEnum.Moderate;
+            }
+
+            return RecommendationStrengthEnum.Low;
+        }
+
+        private static string BuildRationale(string adviceScenarioCode, RecommendationStrengthEnum RecommendationStrengthEnum, AnalysisRecommendationParameters parameters)
+        {
+            var patternName = string.IsNullOrWhiteSpace(parameters.PrimaryPatternDisplayName) ? "le scenario principal" : parameters.PrimaryPatternDisplayName;
+            var phaseLabel = string.IsNullOrWhiteSpace(parameters.CurrentPhaseLabel) ? "en cours" : parameters.CurrentPhaseLabel.ToLowerInvariant();
+            var confidenceLabel = string.IsNullOrWhiteSpace(parameters.ConfidenceLabel) ? "non classee" : parameters.ConfidenceLabel.ToLowerInvariant();
+            var strengthLabel = RecommendationStrengthEnum.ToString().ToUpperInvariant();
+            return adviceScenarioCode switch
+            {
+                AdviceScenarioCode.PrimaryPatternHeldBullish => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. La posture retenue est un renforcement prudent d'intensite {strengthLabel}.",
+                AdviceScenarioCode.PrimaryPatternHeldAdverse => $"{patternName} indique un scenario adverse {phaseLabel} avec une confiance {confidenceLabel}. La posture retenue est de reduire l'exposition avec une intensite {strengthLabel}.",
+                AdviceScenarioCode.PrimaryPatternHeldNeutral => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. La posture retenue est de conserver une lecture prudente.",
+                AdviceScenarioCode.PrimaryPatternNotHeldBullish => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. Une entree pedagogique peut etre envisagee avec une intensite {strengthLabel}.",
+                AdviceScenarioCode.PrimaryPatternNotHeldAdverse => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. Le scenario reste baissier et la posture est de surveiller sans entrer.",
+                AdviceScenarioCode.PrimaryPatternNotHeldNeutral => $"{patternName} reste {phaseLabel} avec une confiance {confidenceLabel}. La posture retenue reste d'attendre un signal plus net.",
+                AdviceScenarioCode.NoCrediblePatternHeld => "Aucun pattern credible n'impose de modifier votre position a ce stade.",
+                AdviceScenarioCode.NoCrediblePatternNotHeld => "Aucun pattern credible ne justifie une prise de position immediate.",
+                _ => "Aucune prise de position immediate n'est recommandee."
             };
         }
     }

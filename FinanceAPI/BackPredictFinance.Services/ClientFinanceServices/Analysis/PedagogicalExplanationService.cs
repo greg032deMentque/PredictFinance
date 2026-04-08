@@ -1,21 +1,18 @@
 using BackPredictFinance.Common.enums;
-using BackPredictFinance.Common.AnalysisV1;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
+using BackPredictFinance.Contracts.Analysis;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
-
-public interface IPedagogicalExplanationService
-{
-    string PolicyVersion { get; }
-    PatternExplanation BuildPatternExplanation(PatternAssessment patternAssessment, bool hasMultipleCompatiblePatterns, bool hasModelWarning);
-    string BuildAnalysisSummary(AnalysisOutcome outcome, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisRecommendation? recommendation, PortfolioContext? portfolioContext);
-}
-
+    public interface IPedagogicalExplanationService
+    {
+        string PolicyVersion { get; }
+        PatternExplanation BuildPatternExplanation(PatternAssessment patternAssessment, bool hasMultipleCompatiblePatterns, bool hasModelWarning);
+        string BuildAnalysisSummary(AnalysisOutcomeEnum outcome, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisRecommendation? recommendation, PortfolioContext? portfolioContext);
+    }
 
     public sealed class PedagogicalExplanationService : IPedagogicalExplanationService
     {
-        public string PolicyVersion => "analysis-v1-explanation@prompt5";
+        public string PolicyVersion => "analysis-v1-explanation@prompt8";
 
         public PatternExplanation BuildPatternExplanation(PatternAssessment patternAssessment, bool hasMultipleCompatiblePatterns, bool hasModelWarning)
         {
@@ -34,7 +31,7 @@ public interface IPedagogicalExplanationService
             };
         }
 
-        public string BuildAnalysisSummary(AnalysisOutcome outcome, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisRecommendation? recommendation, PortfolioContext? portfolioContext)
+        public string BuildAnalysisSummary(AnalysisOutcomeEnum outcome, IReadOnlyList<PatternAssessment> compatiblePatterns, AnalysisRecommendation? recommendation, PortfolioContext? portfolioContext)
         {
             var holdingSentence = portfolioContext?.HoldsInstrument == true
                 ? "Vous detenez deja cette valeur."
@@ -42,12 +39,12 @@ public interface IPedagogicalExplanationService
 
             return outcome switch
             {
-                AnalysisOutcome.NoCrediblePattern => $"{holdingSentence} Aucun pattern credible n'est retenu sur la fenetre analysee. La posture recommandee reste {FormatRecommendationKind(recommendation?.Kind)}.",
-                AnalysisOutcome.MultipleCompatiblePatterns => BuildMultiplePatternSummary(compatiblePatterns, recommendation, holdingSentence),
-                AnalysisOutcome.CrediblePatternFound => BuildSinglePatternSummary(compatiblePatterns.FirstOrDefault(), recommendation, holdingSentence),
-                AnalysisOutcome.InsufficientData => $"{holdingSentence} Les donnees disponibles ne suffisent pas pour produire une analyse exploitable.",
-                AnalysisOutcome.UnsupportedInstrument => "L'instrument demande ne fait pas partie du perimetre V1 actuellement pris en charge.",
-                AnalysisOutcome.UnsupportedContext => "Le contexte portefeuille fourni ne permet pas encore de formuler une recommandation exploitable.",
+                AnalysisOutcomeEnum.NoCrediblePattern => $"{holdingSentence} Aucun pattern credible n'est retenu sur la fenetre analysee. La posture recommandee reste {FormatRecommendationAction(recommendation?.RecommendationAction)}.",
+                AnalysisOutcomeEnum.MultipleCompatiblePatterns => BuildMultiplePatternSummary(compatiblePatterns, recommendation, holdingSentence),
+                AnalysisOutcomeEnum.CrediblePatternFound => BuildSinglePatternSummary(compatiblePatterns.FirstOrDefault(), recommendation, holdingSentence),
+                AnalysisOutcomeEnum.InsufficientData => $"{holdingSentence} Les donnees disponibles ne suffisent pas pour produire une analyse exploitable.",
+                AnalysisOutcomeEnum.UnsupportedInstrument => "L'instrument demande ne fait pas partie du perimetre V1 actuellement pris en charge.",
+                AnalysisOutcomeEnum.UnsupportedContext => "Le contexte portefeuille fourni ne permet pas encore de formuler une recommandation exploitable.",
                 _ => $"{holdingSentence} L'analyse a ete produite avec une lecture prudente."
             };
         }
@@ -83,7 +80,7 @@ public interface IPedagogicalExplanationService
                 ? "plusieurs scenarios"
                 : string.Join(", ", patternNames);
 
-            return $"{holdingSentence} Plusieurs scenarios restent compatibles ({listedPatterns}). La recommandation {FormatRecommendationKind(recommendation?.Kind)} conserve une lecture prudente et ne remplace pas la coexistence des patterns.";
+            return $"{holdingSentence} Plusieurs scenarios restent compatibles ({listedPatterns}). La recommandation {FormatRecommendationAction(recommendation?.RecommendationAction)} conserve une lecture prudente et ne remplace pas la coexistence des patterns.";
         }
 
         private static string BuildSinglePatternSummary(PatternAssessment? patternAssessment, AnalysisRecommendation? recommendation, string holdingSentence)
@@ -93,20 +90,20 @@ public interface IPedagogicalExplanationService
                 return $"{holdingSentence} Un scenario credible existe mais son detail n'est pas disponible dans la reponse courante.";
             }
 
-            return $"{holdingSentence} Le scenario principal retenu est {patternAssessment.DisplayName.ToLowerInvariant()}, actuellement {patternAssessment.Detection.CurrentPhaseLabel.ToLowerInvariant()}. La recommandation {FormatRecommendationKind(recommendation?.Kind)} reste alignee sur cette lecture.";
+            return $"{holdingSentence} Le scenario principal retenu est {patternAssessment.DisplayName.ToLowerInvariant()}, actuellement {patternAssessment.Detection.CurrentPhaseLabel.ToLowerInvariant()}. La recommandation {FormatRecommendationAction(recommendation?.RecommendationAction)} reste alignee sur cette lecture.";
         }
 
-        private static string FormatRecommendationKind(RecommendationKind? kind)
+        private static string FormatRecommendationAction(RecommendationActionEnum? action)
         {
-            return kind switch
+            return action switch
             {
-                RecommendationKind.Monitor => "MONITOR",
-                RecommendationKind.Buy => "BUY",
-                RecommendationKind.Wait => "WAIT",
-                RecommendationKind.Hold => "HOLD",
-                RecommendationKind.Reinforce => "REINFORCE",
-                RecommendationKind.Lighten => "LIGHTEN",
-                RecommendationKind.Sell => "SELL",
+                RecommendationActionEnum.Buy => "BUY",
+                RecommendationActionEnum.Sell => "SELL",
+                RecommendationActionEnum.Hold => "HOLD",
+                RecommendationActionEnum.Reinforce => "REINFORCE",
+                RecommendationActionEnum.Lighten => "LIGHTEN",
+                RecommendationActionEnum.Monitor => "MONITOR",
+                RecommendationActionEnum.Wait => "WAIT",
                 _ => "WAIT"
             };
         }

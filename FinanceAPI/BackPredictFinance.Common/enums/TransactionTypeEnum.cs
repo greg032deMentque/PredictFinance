@@ -5,6 +5,4 @@ namespace BackPredictFinance.Common.enums
         Buy, Sell
     }
 
-    public enum AlertDirectionEnum { Above, Below }
-
 }

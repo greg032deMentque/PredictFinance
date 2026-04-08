@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using BackPredictFinance.Common;
+using BackPredictFinance.Common.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Datas.Context;

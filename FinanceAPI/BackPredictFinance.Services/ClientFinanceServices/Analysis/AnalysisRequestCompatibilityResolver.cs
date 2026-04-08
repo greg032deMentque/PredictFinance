@@ -1,22 +1,17 @@
-using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Contracts.Analysis;
+using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Services.TwelveDataServices;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels;
-using BackPredictFinance.Common.AnalysisV1;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
-
-public interface IAnalysisRequestCompatibilityResolver
-{
-    Task<AnalysisRequest> ResolveAsync(AnalysisRunRequestViewModel request, string userId, CancellationToken ct = default);
-}
-
+    public interface IAnalysisRequestCompatibilityResolver
+    {
+        Task<AnalysisRequest> ResolveAsync(AnalysisRunRequest request, string userId, CancellationToken ct = default);
+    }
 
     public sealed class AnalysisRequestCompatibilityResolver : IAnalysisRequestCompatibilityResolver
     {
@@ -37,7 +32,7 @@ public interface IAnalysisRequestCompatibilityResolver
             _tickerService = tickerService;
         }
 
-        public async Task<AnalysisRequest> ResolveAsync(AnalysisRunRequestViewModel request, string userId, CancellationToken ct = default)
+        public async Task<AnalysisRequest> ResolveAsync(AnalysisRunRequest request, string userId, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(request);
             ArgumentException.ThrowIfNullOrWhiteSpace(userId);
@@ -94,17 +89,11 @@ public interface IAnalysisRequestCompatibilityResolver
                 return [_patternRegistry.ResolveRequestedPattern(normalized)];
             }
 
-            var enabledPatterns = _patternRegistry.GetEnabledPatterns()
+            return _patternRegistry.GetEnabledPatterns()
                 .GroupBy(x => x.PatternId, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.First())
+                .OrderBy(x => x.PatternId, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-
-            if (enabledPatterns.Count > 1)
-            {
-                throw new InvalidOperationException("Le runtime V1 actif requiert un pattern explicite tant que plusieurs definitions de patterns sont actives.");
-            }
-
-            return enabledPatterns;
         }
 
         private async Task<DateOnly> ResolveAsOfDateAsync(string symbol, CancellationToken ct)
@@ -219,23 +208,17 @@ public interface IAnalysisRequestCompatibilityResolver
                 MarketCode = asset.Exchange,
                 CountryCode = asset.Country ?? string.Empty,
                 CurrencyCode = asset.Currency,
-                AssetType = asset.AssetType == AssetTypeEnum.Stock ? "EQUITY" : asset.AssetType.ToString().ToUpperInvariant(),
+                AssetType = asset.AssetType.ToString(),
                 IsActive = true,
                 LastProfileSyncUtc = asset.LastProfileSyncUtc,
                 Summary = asset.Summary
             };
         }
 
-        private static DateOnly BuildHistoryStartDate(DateOnly historyEndDate, ResolvedAnalysisPattern pattern)
+        private static DateOnly BuildHistoryStartDate(DateOnly asOfDate, ResolvedAnalysisPattern primaryPattern)
         {
-            ArgumentNullException.ThrowIfNull(pattern);
-
-            if (pattern.HistoryLookbackMonths <= 0)
-            {
-                throw new InvalidOperationException($"Le runtime V1 actif ne fournit pas de profondeur historique valide pour le pattern {pattern.PatternId}.");
-            }
-
-            return historyEndDate.AddMonths(-pattern.HistoryLookbackMonths);
+            var lookbackMonths = primaryPattern.HistoryLookbackMonths <= 0 ? 12 : primaryPattern.HistoryLookbackMonths;
+            return asOfDate.AddMonths(-lookbackMonths);
         }
     }
 }

@@ -1,7 +1,6 @@
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Common.enums;
-using BackPredictFinance.Common.AnalysisV1;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
+using BackPredictFinance.Contracts.Analysis;
 using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis

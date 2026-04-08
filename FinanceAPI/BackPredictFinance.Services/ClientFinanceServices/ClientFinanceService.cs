@@ -1,3 +1,4 @@
+using BackPredictFinance.Contracts.Analysis;
 using BackPredictFinance.Contracts.MarketData;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
@@ -20,7 +21,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         Task<TransactionItemViewModel> RegisterTransactionAsync(TransactionCreateRequestViewModel request, CancellationToken ct = default);
         Task<List<TransactionItemViewModel>> GetTransactionsAsync(int take, CancellationToken ct = default);
         Task DeleteTransactionAsync(string transactionId, CancellationToken ct = default);
-        Task<AnalysisResultViewModel> RunAnalysisAsync(AnalysisRunRequestViewModel request, CancellationToken ct = default);
+        Task<AnalysisResultViewModel> RunAnalysisAsync(AnalysisRunRequest request, CancellationToken ct = default);
         Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(int take, CancellationToken ct = default);
         Task<SimulationResultViewModel> RunSimulationAsync(SimulationRequestViewModel request, CancellationToken ct = default);
     }
@@ -399,9 +400,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             await _financeDbContext.SaveChangesAsync(ct);
         }
 
-        public async Task<AnalysisResultViewModel> RunAnalysisAsync(AnalysisRunRequestViewModel request, CancellationToken ct = default)
+        public async Task<AnalysisResultViewModel> RunAnalysisAsync(AnalysisRunRequest request, CancellationToken ct = default)
         {
-            var normalizedRequest = new AnalysisRunRequestViewModel
+            var normalizedRequest = new AnalysisRunRequest
             {
                 Symbol = NormalizeSymbol(request.Symbol),
                 RequestedPattern = request.RequestedPattern
@@ -452,7 +453,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             await EnsureAssetAsync(symbol, null, ct);
 
             var analysisRequest = await _analysisRequestCompatibilityResolver.ResolveAsync(
-                new AnalysisRunRequestViewModel
+                new AnalysisRunRequest
                 {
                     Symbol = symbol,
                     RequestedPattern = normalizedPattern

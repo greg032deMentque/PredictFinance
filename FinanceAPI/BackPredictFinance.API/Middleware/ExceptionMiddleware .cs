@@ -1,4 +1,4 @@
-using BackPredictFinance.Common;
+using BackPredictFinance.Common.Common;
 using BackPredictFinance.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.IdentityModel.Tokens;

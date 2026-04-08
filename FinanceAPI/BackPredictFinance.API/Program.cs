@@ -2,7 +2,7 @@ using AutoMapper;
 using BackPredictFinance.API.Data;
 using BackPredictFinance.API.Middleware;
 using BackPredictFinance.API.ProgramSubFiles;
-using BackPredictFinance.Common;
+using BackPredictFinance.Common.Common;
 using BackPredictFinance.Common.Email;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.Jwt;
@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
 using System.Security.Claims;
@@ -146,18 +146,11 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
+            new OpenApiSecuritySchemeReference("Bearer", null, null),
+            new List<string>()
         }
     });
 });

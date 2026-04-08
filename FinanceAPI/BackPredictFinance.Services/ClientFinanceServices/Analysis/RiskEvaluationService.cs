@@ -1,6 +1,4 @@
 using BackPredictFinance.Contracts.Analysis;
-using BackPredictFinance.Common.AnalysisV1;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {

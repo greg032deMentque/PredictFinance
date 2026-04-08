@@ -1,18 +1,15 @@
-using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Contracts.Analysis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
-
-public interface IAnalysisLegacyCompatibilityService
-{
-    AnalysisResultViewModel MapRunResult(AnalysisResponseViewModel response);
-    Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(string userId, int take, CancellationToken ct = default);
-}
-
+    public interface IAnalysisLegacyCompatibilityService
+    {
+        AnalysisResultViewModel MapRunResult(AnalysisResponse response);
+        Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(string userId, int take, CancellationToken ct = default);
+    }
 
     public sealed class AnalysisLegacyCompatibilityService : BaseService, IAnalysisLegacyCompatibilityService
     {
@@ -21,15 +18,16 @@ public interface IAnalysisLegacyCompatibilityService
         {
         }
 
-        public AnalysisResultViewModel MapRunResult(AnalysisResponseViewModel response)
+        public AnalysisResultViewModel MapRunResult(AnalysisResponse response)
         {
             ArgumentNullException.ThrowIfNull(response);
 
             var primaryPattern = response.MainPattern;
             var recommendation = response.Recommendation;
             var confidence = primaryPattern?.Scoring.ConfidenceScore ?? 0m;
-            var recommendationAction = MapRecommendationKind(recommendation?.Kind);
-            var isActionable = recommendationAction is RecommendationActionEnum.Buy or RecommendationActionEnum.Sell;
+            var structuredAction = recommendation?.RecommendationAction ?? RecommendationActionEnum.Wait;
+            var recommendationAction = MapLegacyAction(structuredAction);
+            var isActionable = structuredAction is RecommendationActionEnum.Buy or RecommendationActionEnum.Reinforce or RecommendationActionEnum.Lighten or RecommendationActionEnum.Sell;
 
             return new AnalysisResultViewModel
             {
@@ -41,7 +39,7 @@ public interface IAnalysisLegacyCompatibilityService
                 Probability = confidence,
                 RecommendationAction = recommendationAction,
                 RecommendationReason = recommendation?.Rationale ?? response.PedagogicalSummary,
-                RiskLevel = InferRiskLevel(confidence, isActionable),
+                RiskLevel = MapRiskLevel(recommendation?.RecommendationStrength, confidence, isActionable),
                 RecommendationHorizonDays = recommendation?.ReviewHorizonDays ?? 0,
                 PredictedAt = response.GeneratedAtUtc,
                 IsActionable = isActionable,
@@ -71,9 +69,7 @@ public interface IAnalysisLegacyCompatibilityService
 
             if (analysisRuns.Count > 0)
             {
-                return analysisRuns
-                    .Select(MapAnalysisRunResult)
-                    .ToList();
+                return analysisRuns.Select(MapAnalysisRunResult).ToList();
             }
 
             var recommendations = await _financeDbContext.Set<BackPredictFinance.Datas.Entities.Recommendation>()
@@ -100,7 +96,6 @@ public interface IAnalysisLegacyCompatibilityService
                 ModelStatus = ModelStatusEnum.NoGo
             }).ToList();
         }
-
 
         private static AnalysisResultViewModel MapAnalysisRunResult(BackPredictFinance.Datas.Entities.AnalysisRun analysisRun)
         {
@@ -143,21 +138,43 @@ public interface IAnalysisLegacyCompatibilityService
             var normalizedPatternId = (patternId ?? string.Empty).Trim().ToUpperInvariant();
             return normalizedPatternId switch
             {
-                "DOUBLE_TOP" => TradingPatternEnum.DoubleTop,
+                "RECTANGLE_CONTINUATION" => TradingPatternEnum.RectangleContinuation,
+                "SYMMETRICAL_TRIANGLE_CONTINUATION" => TradingPatternEnum.SymmetricalTriangleContinuation,
+                "BULL_FLAG_CONTINUATION" => TradingPatternEnum.BullFlagContinuation,
+                "BEAR_FLAG_CONTINUATION" => TradingPatternEnum.BearFlagContinuation,
                 _ => throw new InvalidOperationException($"Le runtime V1 actif ne prend pas en charge le pattern {normalizedPatternId}.")
             };
         }
 
-        private static RecommendationActionEnum MapRecommendationKind(RecommendationKind? kind)
+
+        private static RecommendationActionEnum MapLegacyAction(RecommendationActionEnum action)
         {
-            return kind switch
+            return action switch
             {
-                RecommendationKind.Buy => RecommendationActionEnum.Buy,
-                RecommendationKind.Reinforce => RecommendationActionEnum.Buy,
-                RecommendationKind.Lighten => RecommendationActionEnum.Sell,
-                RecommendationKind.Sell => RecommendationActionEnum.Sell,
-                _ => RecommendationActionEnum.Hold
+                RecommendationActionEnum.Buy => RecommendationActionEnum.Buy,
+                RecommendationActionEnum.Reinforce => RecommendationActionEnum.Buy,
+                RecommendationActionEnum.Lighten => RecommendationActionEnum.Sell,
+                RecommendationActionEnum.Sell => RecommendationActionEnum.Sell,
+                RecommendationActionEnum.Hold => RecommendationActionEnum.Hold,
+                RecommendationActionEnum.Monitor => RecommendationActionEnum.Wait,
+                RecommendationActionEnum.Wait => RecommendationActionEnum.Wait,
+                _ => RecommendationActionEnum.Wait
             };
+        }
+
+        private static RiskLevelEnum MapRiskLevel(RecommendationStrengthEnum? recommendationStrength, decimal confidence, bool actionable)
+        {
+            if (recommendationStrength.HasValue)
+            {
+                return recommendationStrength.Value switch
+                {
+                    RecommendationStrengthEnum.High => RiskLevelEnum.Low,
+                    RecommendationStrengthEnum.Moderate => RiskLevelEnum.Moderate,
+                    _ => actionable ? RiskLevelEnum.High : RiskLevelEnum.Information
+                };
+            }
+
+            return InferRiskLevel(confidence, actionable);
         }
 
         private static RiskLevelEnum InferRiskLevel(decimal confidence, bool actionable)

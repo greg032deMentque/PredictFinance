@@ -1,19 +1,14 @@
-using BackPredictFinance.Common;
-using BackPredictFinance.Common.AnalysisV1;
+using BackPredictFinance.Common.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Contracts.Analysis;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels;
-using BackPredictFinance.ViewModels.ClientFinanceViewModels.AnalysisV1;
 using System.Net;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
-
     public interface IAnalysisOrchestrator
     {
-        Task<AnalysisResponseViewModel> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default);
+        Task<AnalysisResponse> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default);
     }
-
 
     public sealed class ClientAnalysisOrchestrator : IAnalysisOrchestrator
     {
@@ -40,23 +35,28 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             _snapshotPersistenceService = snapshotPersistenceService;
         }
 
-        public async Task<AnalysisResponseViewModel> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default)
+        public async Task<AnalysisResponse> RunAnalysisAsync(AnalysisRequest request, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(request);
 
             var startedAtUtc = DateTime.UtcNow;
-            var resolvedPatternId = request.ResolvedPatternIds.FirstOrDefault();
-            var resolvedPattern = _patternRegistry.ResolveRequestedPattern(resolvedPatternId);
+            var resolvedPatterns = request.ResolvedPatternIds
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => _patternRegistry.ResolveRequestedPattern(x))
+                .GroupBy(x => x.PatternId, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .ToList();
+            var primaryResolvedPattern = resolvedPatterns.FirstOrDefault() ?? throw new InvalidOperationException("Aucun pattern actif n'a ete resolu pour l'analyse.");
 
             AnalysisExecutionArtifact executionArtifact;
             try
             {
-                executionArtifact = await _analysisExecutionService.ExecuteAsync(request, resolvedPattern, ct);
+                executionArtifact = await _analysisExecutionService.ExecuteAsync(request, resolvedPatterns, ct);
             }
             catch (Exception ex)
             {
                 var failedAtUtc = DateTime.UtcNow;
-                await _snapshotPersistenceService.PersistFailedAnalysisAsync(request, resolvedPattern, startedAtUtc, failedAtUtc, ex, ct);
+                await _snapshotPersistenceService.PersistFailedAnalysisAsync(request, primaryResolvedPattern, startedAtUtc, failedAtUtc, ex, ct);
 
                 if (ex is CustomException customException)
                 {
@@ -64,7 +64,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 }
 
                 throw new CustomException(
-                    $"L'analyse V1 a echoue pour {request.Instrument.Symbol} sur le pattern {resolvedPattern.PatternId}: {ex.Message}",
+                    $"L'analyse V1 a echoue pour {request.Instrument.Symbol} sur le pattern {primaryResolvedPattern.PatternId}: {ex.Message}",
                     "L'analyse V1 n'a pas pu etre calculee.",
                     statusCode: HttpStatusCode.InternalServerError);
             }
@@ -79,9 +79,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 
             var outcome = compatiblePatterns.Count switch
             {
-                0 => AnalysisOutcome.NoCrediblePattern,
-                > 1 => AnalysisOutcome.MultipleCompatiblePatterns,
-                _ => AnalysisOutcome.CrediblePatternFound
+                0 => AnalysisOutcomeEnum.NoCrediblePattern,
+                > 1 => AnalysisOutcomeEnum.MultipleCompatiblePatterns,
+                _ => AnalysisOutcomeEnum.CrediblePatternFound
             };
 
             foreach (var patternAssessment in orderedPatterns.Select(x => x.ContractAssessment))
@@ -97,7 +97,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             var completedAtUtc = DateTime.UtcNow;
             var persisted = await _snapshotPersistenceService.PersistSuccessfulAnalysisAsync(
                 request,
-                resolvedPattern,
+                primaryResolvedPattern,
                 executionArtifact,
                 recommendation,
                 outcome,
@@ -107,30 +107,28 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 completedAtUtc,
                 ct);
 
-            return BuildAnalysisResponse(request, persisted, resolvedPattern, executionArtifact, recommendation, outcome, pedagogicalSummary);
+            return BuildAnalysisResponse(request, persisted, primaryResolvedPattern, executionArtifact, recommendation, outcome, pedagogicalSummary);
         }
 
-        private static AnalysisResponseViewModel BuildAnalysisResponse(
+        private static AnalysisResponse BuildAnalysisResponse(
             AnalysisRequest request,
             PersistedAnalysisRecord persisted,
-            ResolvedAnalysisPattern resolvedPattern,
+            ResolvedAnalysisPattern primaryResolvedPattern,
             AnalysisExecutionArtifact executionArtifact,
             AnalysisRecommendation recommendation,
-            AnalysisOutcome outcome,
+            AnalysisOutcomeEnum outcome,
             string pedagogicalSummary)
         {
-            var orderedPatterns = executionArtifact.GetOrderedPatterns();
             var compatiblePatterns = executionArtifact.GetCompatiblePatternAssessments();
-
             var mainPattern = compatiblePatterns.FirstOrDefault();
             var alternativePatterns = compatiblePatterns.Skip(1).ToList();
 
-            return new AnalysisResponseViewModel
+            return new AnalysisResponse
             {
                 AnalysisId = persisted.PublicId,
                 GeneratedAtUtc = executionArtifact.GeneratedAtUtc,
                 AsOfDate = request.HistoryEndDate,
-                Outcome = outcome,
+                AnalysisOutcome = outcome,
                 Instrument = new Instrument
                 {
                     InstrumentId = persisted.InstrumentId,
@@ -146,23 +144,19 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                     Summary = persisted.Summary
                 },
                 RequestedPatternIds = request.RequestedPatternIds,
-                ExecutedPatternIds = executionArtifact.GetExecutedPatternIds(resolvedPattern.PatternId),
+                ExecutedPatternIds = executionArtifact.GetExecutedPatternIds(primaryResolvedPattern.PatternId),
                 MainPattern = mainPattern,
                 AlternativePatterns = alternativePatterns,
                 Recommendation = recommendation,
                 PedagogicalSummary = pedagogicalSummary,
-                NoCrediblePatternReason = outcome == AnalysisOutcome.NoCrediblePattern
-                    ? "Aucun pattern compatible n'a ete identifie."
-                    : null,
+                NoCrediblePatternReason = outcome == AnalysisOutcomeEnum.NoCrediblePattern ? "Aucun pattern compatible n'a ete identifie." : null,
                 Trace = new AnalysisResponseTrace
                 {
                     TraceId = persisted.PublicId,
-                    AnalysisEngineVersion = executionArtifact.ResolveAnalysisEngineVersion(resolvedPattern.ModelVersion),
-                    RuleSetVersion = executionArtifact.ResolveRuleSetVersion(resolvedPattern.ModelVersion)
+                    AnalysisEngineVersion = executionArtifact.ResolveAnalysisEngineVersion(primaryResolvedPattern.ModelVersion),
+                    RuleSetVersion = executionArtifact.ResolveRuleSetVersion(primaryResolvedPattern.ModelVersion)
                 },
-                Warnings = executionArtifact.ModelStatus == ModelStatusEnum.Go
-                    ? []
-                    : [string.IsNullOrWhiteSpace(executionArtifact.ModelMessage) ? "Le modele legacy n'est pas pleinement valide." : executionArtifact.ModelMessage],
+                Warnings = executionArtifact.ModelStatus == ModelStatusEnum.Go ? [] : [string.IsNullOrWhiteSpace(executionArtifact.ModelMessage) ? "Le modele legacy n'est pas pleinement valide." : executionArtifact.ModelMessage],
                 ModelStatus = executionArtifact.ModelStatus,
                 ModelMessage = string.IsNullOrWhiteSpace(executionArtifact.ModelMessage) ? string.Empty : executionArtifact.ModelMessage.Trim()
             };
