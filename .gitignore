@@ -7,13 +7,21 @@
 # Visual Studio
 **/.vs/
 
+# Rapport d'audit securite — local uniquement, ne jamais publier
+SECURITY_AUDIT.md
+
 # Secrets / config locale — NE JAMAIS COMMITER
-# Seuls appsettings.json (placeholders) et les *.example sont versionnes.
-**/appsettings.Development.json
-**/appsettings.Local.json
-**/appsettings.*.Local.json
+# Tous les appsettings specifiques a un environnement (Development, Local, prod,
+# Production, Staging...) sont ignores. Seuls appsettings.json (placeholders) et
+# les *.example sont versionnes.
+**/appsettings.*.json
 .env
+.env.*
 *.pfx
+
+# Les cles privees ne sont PAS filtrees par nom ici : un .gitignore ne protege que
+# contre des noms connus, jamais contre un contenu. Le filet reel est le job gitleaks
+# dans .github/workflows/ci.yml, qui detecte une cle a son contenu quel que soit son nom.
 
 # Toolchain / caches locaux (reconstructibles via dotnet restore)
 **/.dotnet/
