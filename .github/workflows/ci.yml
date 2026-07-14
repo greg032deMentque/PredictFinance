@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Scans the working tree, not history. Detects private keys, tokens and
+      # connection strings by content, whatever the filename. History is not
+      # scanned on purpose: it holds already-revoked development credentials
+      # (see KNOWN_ISSUES.md) and would fail every run for no benefit.
+      - name: gitleaks
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          ./gitleaks detect --no-git --source . --redact --verbose --exit-code 1
+
+  backend:
+    name: Backend — build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore FinanceBack/BackPredictFinance.sln
+
+      - name: Build
+        run: dotnet build FinanceBack/BackPredictFinance.sln --no-restore --configuration Release
+
+      - name: Test
+        run: >
+          dotnet test FinanceBack/BackPredictFinance.Tests/BackPredictFinance.Tests.csproj
+          --no-build --configuration Release --verbosity normal
+
+  frontend:
+    name: Frontend — build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: FinanceFront/package-lock.json
+
+      - name: Install
+        run: npm ci --prefix FinanceFront
+
+      - name: Build
+        run: npm run build --prefix FinanceFront
