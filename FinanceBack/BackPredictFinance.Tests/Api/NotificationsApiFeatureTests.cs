@@ -82,9 +82,15 @@ public sealed class NotificationsApiFeatureTests : IClassFixture<ApiIntegrationT
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
 
-        if (await dbContext.UserNotifications.AnyAsync(x => x.NotificationId == "notif-analysis-1"))
+        // The factory is a class fixture, so every test in this class shares one in-memory
+        // database, and MarkAsRead flips notif-analysis-1 to Read. Seeding only when the rows
+        // are absent would leave that mutation in place and make GetList depend on execution
+        // order. Rebuild the seeded state on every call instead.
+        var seeded = await dbContext.UserNotifications.ToListAsync();
+        if (seeded.Count > 0)
         {
-            return;
+            dbContext.UserNotifications.RemoveRange(seeded);
+            await dbContext.SaveChangesAsync();
         }
 
         await dbContext.UserNotifications.AddRangeAsync(
