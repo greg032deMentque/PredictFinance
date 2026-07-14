@@ -1,0 +1,70 @@
+<section class="d-flex flex-column gap-4">
+
+  <div>
+    <p class="text-uppercase text-secondary fw-semibold small mb-2">Compte</p>
+    <h2 class="h4 mb-1">Export de mes données</h2>
+    <p class="text-secondary mb-0">Exercez votre droit à la portabilité des données (RGPD Art. 20).</p>
+  </div>
+
+  <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+    <i class="bi bi-shield-exclamation flex-shrink-0 mt-1"></i>
+    <div>
+      <strong>Données sensibles</strong>
+      <p class="mb-0 mt-1">L'archive exportée contient vos données personnelles (nom, email, historique d'analyses, transactions). Ne partagez pas ce fichier et conservez-le dans un endroit sécurisé.</p>
+    </div>
+  </div>
+
+  @if (exportStatus() === 'requested') {
+    <div class="card border-0 shadow-sm border-start border-success border-4">
+      <div class="card-body d-flex gap-3 align-items-start">
+        <i class="bi bi-check-circle-fill text-success fs-4 flex-shrink-0"></i>
+        <div>
+          <div class="fw-semibold mb-1">Demande enregistrée</div>
+          <p class="text-secondary mb-0">Votre export est en cours de préparation. Vous recevrez un email contenant le lien de téléchargement dans un délai maximum de 72 heures.</p>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (exportStatus() !== 'requested') {
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column gap-3">
+        <h3 class="h6 fw-semibold mb-0">Contenu de l'export</h3>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item px-0">
+            <i class="bi bi-person me-2 text-secondary"></i>Informations de profil (nom, email, téléphone)
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-graph-up me-2 text-secondary"></i>Historique d'analyses et snapshots
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-currency-euro me-2 text-secondary"></i>Transactions et positions
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-bookmark me-2 text-secondary"></i>Watchlist et préférences
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-check2-square me-2 text-secondary"></i>Consentements et leur historique
+          </li>
+        </ul>
+
+        <div class="d-flex justify-content-end pt-2">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="exportStatus() === 'pending'"
+            (click)="requestExport()"
+          >
+            @if (exportStatus() === 'pending') {
+              <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+              Envoi en cours...
+            } @else {
+              <i class="bi bi-download me-2"></i>Demander l'export
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</section>

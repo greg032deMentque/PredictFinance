@@ -1,41 +1,61 @@
-<div class="login-page d-flex flex-column h-100">
-  <main class="flex-fill d-flex justify-content-center align-items-center px-3">
-    <form [formGroup]="form" class="w-100" style="max-width: 400px;">
-      <h2 class="text-center mb-4">Se connecter</h2>
+<div class="auth-only">
+  <div class="auth-shell w-100">
+    <section class="auth-side">
+      <span class="chip bg-white text-dark mb-3"><i class="bi bi-box-arrow-in-right"></i> Login only entry</span>
+      <h1 class="display-6 fw-bold mb-3">Entrée unique, puis séparation nette entre les parcours</h1>
+      <p class="text-white-50 fs-5 mb-4">
+        Avant connexion, aucun shell applicatif n’est visible. Après connexion, l’espace diverge selon le rôle.
+      </p>
+      <div class="compact-list text-white-50">
+        <div>• aucune navigation interne avant login</div>
+        <div>• deux profils de démo explicitement décrits</div>
+        <div>• deux espaces avec objectifs distincts</div>
+      </div>
+    </section>
 
-      <div class="bg-light p-4 rounded shadow-sm">
-        <div class="mb-3">
-          <label for="email" class="form-label">Email</label>
-          <input id="email" type="email" class="form-control no-autofill" formControlName="Email" />
-          @if (form.get('Email')?.invalid && form.get('Email')?.touched) {
-            <div class="text-danger small mt-1">
-              @if (form.get('Email')?.hasError('required')) { Email requis. }
-              @if (form.get('Email')?.hasError('email')) { Format email invalide. }
-            </div>
+    <form class="auth-card" [formGroup]="form">
+      <div class="mb-4">
+        <span class="chip chip-navy mb-2"><i class="bi bi-person-check"></i> Connexion</span>
+        <h2 class="h3 fw-bold mb-2">Accéder à votre espace PredictFinance</h2>
+        <p class="muted mb-0">Connexion partagée puis redirection automatique vers l’espace client ou admin selon le rôle.</p>
+      </div>
+
+      <div class="mb-3">
+        <label for="email" class="form-label fw-semibold">Email</label>
+        <input id="email" type="email" class="form-control form-control-lg" formControlName="Email" />
+        @if (form.controls.Email.invalid && form.controls.Email.touched) {
+          <div class="text-danger small mt-1">
+            @if (form.controls.Email.hasError('required')) { Email requis. }
+            @if (form.controls.Email.hasError('email')) { Format email invalide. }
+          </div>
+        }
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label fw-semibold">Mot de passe</label>
+        <input id="password" type="password" class="form-control form-control-lg" formControlName="Password" (keyup.enter)="submit()" />
+        @if (form.controls.Password.invalid && form.controls.Password.touched) {
+          <div class="text-danger small mt-1">
+            @if (form.controls.Password.hasError('required')) { Mot de passe requis. }
+            @if (form.controls.Password.hasError('minlength')) { 4 caractères minimum. }
+          </div>
+        }
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-4 gap-3 flex-wrap">
+        <button type="button" class="btn btn-link p-0 text-decoration-none" (click)="openForgotPassword()">Mot de passe oublié ?</button>
+        <a class="btn btn-outline-secondary rounded-pill px-3" [routerLink]="['/', authPaths.Register]">Créer un compte</a>
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="button" class="btn btn-lg btn-primary rounded-4 cta-primary" (click)="submit()" [disabled]="isSubmitting()">
+          @if (isSubmitting()) {
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          } @else {
+            <span>Se connecter</span>
           }
-        </div>
-
-        <div class="mb-3">
-          <label for="password" class="form-label">Mot de passe</label>
-          <input id="password" type="password" class="form-control" formControlName="Password" (keyup.enter)="submit()" />
-          @if (form.get('Password')?.invalid && form.get('Password')?.touched) {
-            <div class="text-danger small mt-1">
-              @if (form.get('Password')?.hasError('required')) { Mot de passe requis. }
-              @if (form.get('Password')?.hasError('minlength')) { 4 caracteres minimum. }
-            </div>
-          }
-        </div>
-
-        <div class="d-grid mb-3 d-flex justify-content-center mt-3">
-          <button type="button" class="btn btn-primary" (click)="submit()" [disabled]="isSubmitting()">
-            @if (isSubmitting()) {
-              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            } @else {
-              <span>Connexion</span>
-            }
-          </button>
-        </div>
+        </button>
       </div>
     </form>
-  </main>
+  </div>
 </div>

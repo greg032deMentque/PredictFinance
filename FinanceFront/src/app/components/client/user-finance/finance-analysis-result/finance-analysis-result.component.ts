@@ -1,25 +1,37 @@
 import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, DestroyRef, Input, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { GlossaryTermDirective } from '../../../../core/directives/glossary-term.directive';
 import {
   ClientAnalysisResult,
   getModelStatusLabel,
-  getPatternLabel,
   getPhaseLabel,
   getRecommendationBadgeClass,
   getRecommendationLabel,
   getRiskLevelLabel
 } from '../../../../Models/client-finance-models/client-finance-models';
+import { PatternCatalogStore } from '../../../../services/pattern-catalog.store';
 
 @Component({
   selector: 'app-finance-analysis-result',
   standalone: true,
-  imports: [CommonModule, PercentPipe, DatePipe],
+  imports: [CommonModule, PercentPipe, DatePipe, GlossaryTermDirective],
   templateUrl: './finance-analysis-result.component.html',
   styleUrl: './finance-analysis-result.component.scss'
 })
 export class FinanceAnalysisResultComponent {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly patternCatalogStore = inject(PatternCatalogStore);
+
   @Input() loading = false;
   @Input() result: ClientAnalysisResult | null = null;
+
+  constructor() {
+    this.patternCatalogStore
+      .ensureLoaded()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+  }
 
   get recommendationLabel(): string {
     return getRecommendationLabel(this.result?.RecommendationAction ?? '');
@@ -34,7 +46,7 @@ export class FinanceAnalysisResultComponent {
   }
 
   get patternLabel(): string {
-    return getPatternLabel(this.result?.Pattern ?? '');
+    return this.patternCatalogStore.labelFor(this.result?.Pattern ?? '');
   }
 
   get phaseLabel(): string {

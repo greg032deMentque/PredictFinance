@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -64,31 +64,51 @@ export class AdminUsersListComponent {
   }
 
   sortIcon(column: string): string {
-    if (this.sortActive() !== column) return 'bi-arrow-down-up';
+    if (this.sortActive() !== column) {
+      return 'bi-arrow-down-up';
+    }
+
     return this.sortDescending() ? 'bi-sort-down' : 'bi-sort-up';
   }
 
+  isPrivilegedRole(roleName: string | null | undefined): boolean {
+    const normalizedRoleName = (roleName ?? '').trim().toUpperCase();
+    return normalizedRoleName === 'ADMIN';
+  }
+
   prev(): void {
-    if (this.pageIndex() <= 0) return;
+    if (this.pageIndex() <= 0) {
+      return;
+    }
+
     this.pageIndex.set(this.pageIndex() - 1);
     this.loadUsers();
   }
 
   next(): void {
-    if (this.pageIndex() >= this.maxPageIndex()) return;
+    if (this.pageIndex() >= this.maxPageIndex()) {
+      return;
+    }
+
     this.pageIndex.set(this.pageIndex() + 1);
     this.loadUsers();
   }
 
   goToCreate(): void {
-    if (this.loading()) return;
+    if (this.loading()) {
+      return;
+    }
+
     void this.router.navigate([AppRoutes.Add], { relativeTo: this.activeRoute });
   }
 
   goToEdit(userId: string): void {
-    const id = (userId ?? '').trim();
-    if (!id || this.loading()) return;
-    void this.router.navigate([AppRoutes.Edit, id], { relativeTo: this.activeRoute });
+    const normalizedUserId = (userId ?? '').trim();
+    if (!normalizedUserId || this.loading()) {
+      return;
+    }
+
+    void this.router.navigate([AppRoutes.Edit, normalizedUserId], { relativeTo: this.activeRoute });
   }
 
   loadUsers(): void {
@@ -103,11 +123,8 @@ export class AdminUsersListComponent {
     this.loading.set(true);
 
     this.http
-      .post<PaginateInterface<User>>(`${environment.apiUrl}User/GetUsersList`, payload)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.loading.set(false))
-      )
+      .post<PaginateInterface<User>>(`${environment.apiUrl}admin/users/search`, payload)
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
       .subscribe({
         next: (response) => {
           this.users.set(response.Items ?? []);
@@ -122,31 +139,32 @@ export class AdminUsersListComponent {
   }
 
   deleteUser(userId: string): void {
-    const normalizedId = (userId ?? '').trim();
-    if (!normalizedId || this.loading()) return;
+    const normalizedUserId = (userId ?? '').trim();
+    if (!normalizedUserId || this.loading()) {
+      return;
+    }
 
     void Swal.fire({
-      title: 'Etes-vous sÃ»r ?',
-      text: "L'utilisateur sera definitivement supprimÃ©.",
+      title: 'Êtes-vous sûr ?',
+      text: "L'utilisateur sera définitivement supprimé.",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Oui',
       cancelButtonText: 'Non',
       reverseButtons: true
     }).then((result: SweetAlertResult<unknown>) => {
-      if (!result.isConfirmed || this.loading()) return;
+      if (!result.isConfirmed || this.loading()) {
+        return;
+      }
 
       this.loading.set(true);
 
       this.http
-        .delete(`${environment.apiUrl}User/DeleteUser?userId=${encodeURIComponent(normalizedId)}`)
-        .pipe(
-          takeUntilDestroyed(this.destroyRef),
-          finalize(() => this.loading.set(false))
-        )
+        .delete(`${environment.apiUrl}admin/users/${encodeURIComponent(normalizedUserId)}`)
+        .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
         .subscribe({
           next: async () => {
-            await Swal.fire('SupprimÃ©', "L'utilisateur a bien Ã©tÃ© supprimÃ©.", 'success');
+            await Swal.fire('Supprimé', "L'utilisateur a bien été supprimé.", 'success');
 
             const isLastItemOnPage = this.users().length === 1 && this.pageIndex() > 0;
             if (isLastItemOnPage) {
@@ -155,8 +173,8 @@ export class AdminUsersListComponent {
 
             this.loadUsers();
           },
-          error: (err: HttpErrorResponse) => {
-            this.toastr.error((err.error as string) || 'Suppression impossible.');
+          error: (errorResponse: HttpErrorResponse) => {
+            this.toastr.error((errorResponse.error as string) || 'Suppression impossible.');
           }
         });
     });

@@ -1,13 +1,7 @@
 export type ClientRecommendationActionCode = 'Buy' | 'Sell' | 'Hold' | 'NonActionable' | '';
 export type ClientRiskLevelCode = 'Information' | 'Low' | 'Moderate' | 'High' | '';
 export type ClientModelStatusCode = 'Go' | 'NoGo' | '';
-export type ClientPatternCode =
-  | 'HeadAndShoulders'
-  | 'DoubleTop'
-  | 'DoubleBottom'
-  | 'CupAndHandle'
-  | 'Triangle'
-  | '';
+export type ClientPatternCode = string;
 
 export function getRecommendationLabel(code: ClientRecommendationActionCode): string {
   switch (code) {
@@ -50,23 +44,6 @@ export function getRiskLevelLabel(code: ClientRiskLevelCode): string {
     case 'Information':
     default:
       return 'Information';
-  }
-}
-
-export function getPatternLabel(code: ClientPatternCode): string {
-  switch (code) {
-    case 'HeadAndShoulders':
-      return 'Head and Shoulders';
-    case 'DoubleTop':
-      return 'Double Top';
-    case 'DoubleBottom':
-      return 'Double Bottom';
-    case 'CupAndHandle':
-      return 'Cup and Handle';
-    case 'Triangle':
-      return 'Triangle';
-    default:
-      return 'Pattern inconnu';
   }
 }
 

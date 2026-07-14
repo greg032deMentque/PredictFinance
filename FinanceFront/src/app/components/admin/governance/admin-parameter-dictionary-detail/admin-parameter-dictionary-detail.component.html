@@ -1,0 +1,58 @@
+<section class="page-shell">
+  <div class="page-heading mb-4 gap-3">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-journal-text"></i> Parameter dictionary</span>
+      <h1 class="h2 fw-bold mb-2">Détail d’un paramètre</h1>
+      <p class="muted mb-0">Lecture détaillée des éléments pédagogiques exposés par l’API de gouvernance.</p>
+    </div>
+    <a class="btn btn-outline-secondary rounded-pill" [routerLink]="toCommands(adminPaths.ParameterDictionary)">Retour à la liste</a>
+  </div>
+
+  @if (loading) {
+    <div class="loading-skeleton-group"><div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div></div>
+  } @else if (error) {
+    <div class="error-panel">{{ error }}</div>
+  } @else if (detail) {
+    <div class="d-flex flex-column gap-4">
+      <section class="page-card">
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+          <h2 class="h4 mb-0">{{ detail.DisplayLabel }}</h2>
+          <span class="chip chip-info">{{ detail.CategoryCode }}</span>
+          <span class="chip" [class.chip-success]="detail.IsActive" [class.chip-warning]="!detail.IsActive">{{ detail.IsActive ? 'Actif' : 'Inactif' }}</span>
+          <span class="chip" [class.chip-success]="detail.IsPublished" [class.chip-warning]="!detail.IsPublished">{{ detail.IsPublished ? 'Publié' : 'Brouillon' }}</span>
+        </div>
+        <dl class="row mb-0">
+          <dt class="col-md-3 muted">ParameterId</dt>
+          <dd class="col-md-9">{{ detail.ParameterId }}</dd>
+          <dt class="col-md-3 muted">Rôle dans la catégorie</dt>
+          <dd class="col-md-9">{{ detail.RoleInCategory || '—' }}</dd>
+        </dl>
+      </section>
+
+      <section class="page-card">
+        <h3 class="h5 mb-3">Définition</h3>
+        <p class="mb-2">{{ detail.SimpleDefinition || '—' }}</p>
+        <h4 class="h6 mt-4">Comment lire</h4>
+        <p class="mb-0">{{ detail.HowToRead || '—' }}</p>
+      </section>
+
+      <section class="page-card">
+        <h3 class="h5 mb-3">Interprétation</h3>
+        <div class="row g-4">
+          <div class="col-lg-6"><h4 class="h6">Pourquoi c’est important</h4><p class="mb-0">{{ detail.WhyItMatters || '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">Limites</h4><p class="mb-0">{{ detail.LimitsOfInterpretation || '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">Ce que cela soutient</h4><p class="mb-0">{{ detail.WhatItSupports || '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">Ce que cela ne prouve pas</h4><p class="mb-0">{{ detail.WhatItDoesNotProve || '—' }}</p></div>
+        </div>
+      </section>
+
+      <section class="page-card">
+        <h3 class="h5 mb-3">Implications utilisateur</h3>
+        <div class="row g-4">
+          <div class="col-lg-6"><h4 class="h6">Sans position</h4><p class="mb-0">{{ detail.ImplicationWithoutPosition || '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">Avec position</h4><p class="mb-0">{{ detail.ImplicationWithPosition || '—' }}</p></div>
+        </div>
+      </section>
+    </div>
+  }
+</section>

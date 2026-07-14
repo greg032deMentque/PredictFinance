@@ -1,0 +1,232 @@
+<section class="container-fluid px-0 d-flex flex-column gap-4">
+
+  <!-- En-tête -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+      <div>
+        <p class="text-uppercase text-muted small mb-1">Client</p>
+        <h1 class="h3 mb-2">Résultat d'analyse</h1>
+        <p class="text-body-secondary mb-0">Lecture détaillée d'une analyse persistée.</p>
+      </div>
+      @if (analysis; as current) {
+        <div class="d-flex gap-2 flex-wrap">
+          <a class="btn btn-outline-secondary" [routerLink]="toCommands(userPaths.History)">Historique</a>
+          <a class="btn btn-primary" [routerLink]="toCommands(userPaths.InstrumentDetail(current.Instrument.Symbol))">Instrument</a>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-muted">Chargement…</div>
+    </div>
+  } @else if (analysis; as current) {
+
+    <!-- Lecture marché + recommandation -->
+    <div class="row g-3">
+      <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex flex-column gap-3">
+            <div>
+              <div class="text-muted small">Instrument</div>
+              <div class="h4 mb-0">{{ current.Instrument.Symbol }} · {{ current.Instrument.DisplayName }}</div>
+              <div class="text-body-secondary">{{ current.GeneratedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+            <div>
+              <div class="fw-semibold">Issue</div>
+              <div>{{ current.OutcomeDisplayLabel }}</div>
+            </div>
+            <div>
+              <div class="fw-semibold" appGlossaryTerm="Pattern">Lecture marché</div>
+              <div>{{ current.MarketReading.PrimaryPatternDisplayName || 'Aucun pattern principal' }}</div>
+              <div class="text-body-secondary">{{ current.MarketReading.ValidationSummary }}</div>
+            </div>
+            <div>
+              <div class="fw-semibold">Synthèse pédagogique</div>
+              <div>{{ current.PedagogicalSummary || current.MarketReading.PedagogicalSummary }}</div>
+            </div>
+            <div>
+              <div class="fw-semibold">Pourquoi cette recommandation</div>
+              <div>{{ current.WhyRecommendation || current.Recommendation.ExplanationSummary }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex flex-column gap-3">
+            <div>
+              <div class="text-muted small" appGlossaryTerm="Recommandation">Recommandation</div>
+              <div class="fw-semibold">{{ current.Recommendation.DisplayLabel || 'n/a' }}</div>
+              <div class="text-body-secondary">{{ current.Recommendation.WarningText || current.Recommendation.ExplanationSummary }}</div>
+            </div>
+            <div>
+              <div class="text-muted small">Support</div>
+              <div>{{ current.SupportReading.AvailabilityDisplayLabel }}</div>
+              <div class="text-body-secondary">{{ current.SupportReading.PeaDisplayLabel }}</div>
+            </div>
+            <div>
+              <div class="text-muted small">Snapshot</div>
+              <div class="font-monospace small">{{ current.SnapshotId }}</div>
+            </div>
+            @if (current.ModelMessage) {
+              <div>
+                <div class="text-muted small">Message modèle</div>
+                <div class="text-body-secondary small">{{ current.ModelMessage }}</div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-08 : Décomposition de la Confiance + C-09 : Plan d'Action -->
+    <div class="row g-3">
+
+      <!-- C-08 : Décomposition de la confiance -->
+      <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex flex-column gap-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fw-semibold" appGlossaryTerm="Confiance">Décomposition de la confiance</div>
+              @if (current.ConfidenceBreakdown.Level) {
+                <span class="badge"
+                  [class.bg-success]="current.ConfidenceBreakdown.Level === 'HIGH'"
+                  [class.bg-warning]="current.ConfidenceBreakdown.Level === 'MEDIUM'"
+                  [class.bg-danger]="current.ConfidenceBreakdown.Level === 'LOW' || current.ConfidenceBreakdown.Level === 'VERY_LOW'"
+                  [class.text-dark]="current.ConfidenceBreakdown.Level === 'MEDIUM'">
+                  {{ current.ConfidenceBreakdown.Level }}
+                </span>
+              }
+            </div>
+            @if (current.ConfidenceBreakdown.Criteria.length > 0) {
+              <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                @for (criterion of current.ConfidenceBreakdown.Criteria; track criterion.Code) {
+                  <li class="d-flex align-items-center gap-2">
+                    <span class="d-inline-block rounded-circle flex-shrink-0"
+                      style="width:10px;height:10px"
+                      [style.background-color]="criterion.State === 'met' ? '#198754' : criterion.State === 'partial' ? '#ffc107' : '#dc3545'">
+                    </span>
+                    <span class="text-body-secondary small">{{ criterion.Label }}</span>
+                    <span class="ms-auto badge rounded-pill"
+                      [class.bg-success-subtle]="criterion.State === 'met'"
+                      [class.bg-warning-subtle]="criterion.State === 'partial'"
+                      [class.bg-danger-subtle]="criterion.State === 'absent'"
+                      [class.text-success-emphasis]="criterion.State === 'met'"
+                      [class.text-warning-emphasis]="criterion.State === 'partial'"
+                      [class.text-danger-emphasis]="criterion.State === 'absent'">
+                      {{ criterion.State === 'met' ? 'Validé' : criterion.State === 'partial' ? 'Partiel' : 'Absent' }}
+                    </span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <div class="text-body-secondary small">Aucun critère disponible pour cette analyse.</div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- C-09 : Plan d'Action -->
+      <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex flex-column gap-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="fw-semibold">Vos prochaines étapes</div>
+              @if (current.ActionPlan.HoldingStatus === 'Held') {
+                <span class="badge bg-primary-subtle text-primary-emphasis">Détenu</span>
+              }
+            </div>
+            @if (current.ActionPlan.Steps.length > 0) {
+              <ol class="list-unstyled mb-0 d-flex flex-column gap-2">
+                @for (step of current.ActionPlan.Steps; track step.Source; let i = $index) {
+                  <li class="d-flex align-items-start gap-2">
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis flex-shrink-0 mt-1">{{ i + 1 }}</span>
+                    <div>
+                      <div class="small fw-semibold">{{ step.Label }}</div>
+                      @if (step.Value) {
+                        <div class="font-monospace small text-body-secondary">{{ step.Value }}</div>
+                      }
+                      @if (step.AlertTrigger === 'LEVEL_CROSSED') {
+                        <div class="text-muted" style="font-size:0.75rem">Alerte : franchissement de niveau</div>
+                      }
+                    </div>
+                  </li>
+                }
+              </ol>
+            } @else {
+              <div class="text-body-secondary small">Aucune étape disponible pour cette analyse.</div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-11 : Évaluation ex post -->
+    @if (current.ExPostEvaluation.Status !== 'NOT_APPLICABLE') {
+      <div class="card border-0 shadow-sm">
+        <div class="card-body d-flex flex-column gap-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="fw-semibold">Évaluation ex post — ce qui s'est passé</div>
+            <span class="badge"
+              [class.bg-secondary]="current.ExPostEvaluation.Status === 'PENDING'"
+              [class.bg-warning]="current.ExPostEvaluation.Status === 'DATA_UNAVAILABLE'"
+              [class.text-dark]="current.ExPostEvaluation.Status === 'DATA_UNAVAILABLE'"
+              [class.bg-success]="current.ExPostEvaluation.Status === 'TARGET_REACHED'"
+              [class.bg-danger]="current.ExPostEvaluation.Status === 'INVALIDATED'"
+              [class.bg-info]="current.ExPostEvaluation.Status === 'NEUTRAL'"
+              [class.text-dark]="current.ExPostEvaluation.Status === 'NEUTRAL'">
+              {{ current.ExPostEvaluation.StatusLabel }}
+            </span>
+          </div>
+
+          @if (current.ExPostEvaluation.ReviewScheduledAtUtc) {
+            <div class="text-body-secondary small">
+              Date de revue prévue : {{ current.ExPostEvaluation.ReviewScheduledAtUtc | date:'dd/MM/yyyy' }}
+            </div>
+          }
+
+          @if (current.ExPostEvaluation.Status === 'TARGET_REACHED' || current.ExPostEvaluation.Status === 'INVALIDATED' || current.ExPostEvaluation.Status === 'NEUTRAL') {
+            <div class="row g-3">
+              @if (current.ExPostEvaluation.PriceAtReview !== null) {
+                <div class="col-6 col-lg-3">
+                  <div class="text-muted small">Cours à la revue</div>
+                  <div class="fw-semibold">{{ current.ExPostEvaluation.PriceAtReview | number:'1.2-2' }}</div>
+                </div>
+              }
+              @if (current.ExPostEvaluation.TargetPrice !== null) {
+                <div class="col-6 col-lg-3">
+                  <div class="text-muted small">Cible</div>
+                  <div class="fw-semibold">{{ current.ExPostEvaluation.TargetPrice | number:'1.2-2' }}</div>
+                </div>
+              }
+              @if (current.ExPostEvaluation.InvalidationPrice !== null) {
+                <div class="col-6 col-lg-3">
+                  <div class="text-muted small">Invalidation</div>
+                  <div class="fw-semibold">{{ current.ExPostEvaluation.InvalidationPrice | number:'1.2-2' }}</div>
+                </div>
+              }
+            </div>
+          }
+
+          @if (current.ExPostEvaluation.PedagogicalNote) {
+            <div class="alert mb-0"
+              [class.alert-success]="current.ExPostEvaluation.Status === 'TARGET_REACHED'"
+              [class.alert-danger]="current.ExPostEvaluation.Status === 'INVALIDATED'"
+              [class.alert-secondary]="current.ExPostEvaluation.Status === 'PENDING' || current.ExPostEvaluation.Status === 'DATA_UNAVAILABLE'"
+              [class.alert-info]="current.ExPostEvaluation.Status === 'NEUTRAL'">
+              {{ current.ExPostEvaluation.PedagogicalNote }}
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+  } @else {
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-muted">Analyse introuvable.</div>
+    </div>
+  }
+
+</section>

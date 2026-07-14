@@ -1,17 +1,18 @@
 import { CommonModule, CurrencyPipe, DatePipe, PercentPipe } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import {
   ClientAnalysisResult,
   ClientDashboardOverview,
-  getPatternLabel,
   getPhaseLabel,
   getRecommendationBadgeClass,
   getRecommendationLabel
 } from '../../../Models/client-finance-models/client-finance-models';
-import { UserPaths } from '../../../Routes/app.routes.constants';
+import { UserPaths, toCommands } from '../../../Routes/app.routes.constants';
 import { ClientFinanceService } from '../../../services/client-finance.service';
+import { PatternCatalogStore } from '../../../services/pattern-catalog.store';
 
 @Component({
   selector: 'app-client-dashboard',
@@ -21,7 +22,11 @@ import { ClientFinanceService } from '../../../services/client-finance.service';
   styleUrl: './client-dashboard.scss'
 })
 export class ClientDashboardComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly patternCatalogStore = inject(PatternCatalogStore);
+
   readonly userPaths = UserPaths;
+  readonly toCommands = toCommands;
 
   overview = new ClientDashboardOverview();
   recentAnalyses: ClientAnalysisResult[] = [];
@@ -31,6 +36,11 @@ export class ClientDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loading = true;
+
+    this.patternCatalogStore
+      .ensureLoaded()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
 
     this.clientFinanceService
       .getDashboardOverview()
@@ -65,10 +75,10 @@ export class ClientDashboardComponent implements OnInit {
   get latestInsightSummary(): string {
     const insight = this.latestInsight;
     if (!insight) {
-      return 'Aucune analyse recente pour le moment.';
+      return 'Aucune analyse récente pour le moment.';
     }
 
-    return `${getPatternLabel(insight.Pattern)} sur ${insight.Symbol}, phase ${getPhaseLabel(insight.Phase)}, probabilite ${Math.round(insight.Probability * 100)} %.`;
+    return `${this.patternCatalogStore.labelFor(insight.Pattern)} sur ${insight.Symbol}, phase ${getPhaseLabel(insight.Phase)}, probabilité ${Math.round(insight.Probability * 100)} %.`;
   }
 
   getBadgeClass(action: ClientAnalysisResult['RecommendationAction']): string {
@@ -80,6 +90,11 @@ export class ClientDashboardComponent implements OnInit {
   }
 
   formatPattern(pattern: ClientAnalysisResult['Pattern']): string {
-    return getPatternLabel(pattern);
+    return this.patternCatalogStore.labelFor(pattern);
+  }
+
+  formatPhase(phase: string): string {
+    return getPhaseLabel(phase);
   }
 }
+

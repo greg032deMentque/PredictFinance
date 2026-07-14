@@ -1,0 +1,50 @@
+<section class="d-flex flex-column gap-4">
+
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <a [routerLink]="backPath" class="btn btn-outline-secondary btn-sm rounded-pill">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <p class="text-uppercase text-secondary fw-semibold small mb-0">Éducation financière</p>
+  </div>
+
+  @if (loading()) {
+    <div class="card border-0 shadow-sm">
+      <div class="card-body placeholder-glow d-flex flex-column gap-3">
+        <span class="placeholder col-3 rounded"></span>
+        <span class="placeholder col-7 rounded"></span>
+        <span class="placeholder col-10 rounded"></span>
+        <span class="placeholder col-9 rounded"></span>
+        <span class="placeholder col-12 rounded"></span>
+        <span class="placeholder col-8 rounded"></span>
+      </div>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+      <i class="bi bi-exclamation-triangle flex-shrink-0 mt-1"></i>
+      <div>
+        <p class="mb-1">{{ error() }}</p>
+        <button type="button" class="btn btn-outline-warning btn-sm" (click)="retry()">
+          <i class="bi bi-arrow-clockwise me-1"></i>Réessayer
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (!loading() && !error() && detail()) {
+    <article class="card border-0 shadow-sm edu-article">
+      <header class="edu-article-header">
+        <span class="badge edu-badge mb-3">
+          <i class="bi bi-mortarboard-fill"></i>{{ detail()!.ProductType }}
+        </span>
+        <h1 class="h2 fw-bold mb-2">{{ detail()!.Title }}</h1>
+        <p class="edu-summary mb-0">{{ detail()!.Summary }}</p>
+      </header>
+      <div class="card-body">
+        <div class="education-body" [innerHTML]="bodyHtml()"></div>
+      </div>
+    </article>
+  }
+
+</section>

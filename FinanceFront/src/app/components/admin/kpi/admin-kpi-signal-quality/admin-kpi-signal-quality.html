@@ -1,0 +1,151 @@
+<section class="d-flex flex-column gap-4">
+  <section class="hero">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-8">
+        <span class="chip bg-white text-dark mb-3"><i class="bi bi-bar-chart-line"></i> KPI</span>
+        <h1 class="display-6 fw-bold mb-3">Qualité des signaux</h1>
+        <p class="mb-0 text-white-50 fs-5">Performance et calibration des signaux d'analyse sur la période sélectionnée.</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="surface bg-white p-4">
+          <div class="fw-bold text-dark mb-3">Fenêtre d'analyse</div>
+          <div class="filter-bar">
+            <button type="button" class="filter-pill" [class.active-pill]="selectedWindow === 'D30'" (click)="selectWindow('D30')">30 jours</button>
+            <button type="button" class="filter-pill" [class.active-pill]="selectedWindow === 'D90'" (click)="selectWindow('D90')">90 jours</button>
+          </div>
+          <button type="button" class="btn btn-outline-dark w-100 mt-3" [disabled]="loading || exporting || !kpi" (click)="exportCsv()">
+            <i class="bi bi-download me-1"></i>{{ exporting ? 'Export…' : 'Exporter CSV' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  @if (loading) {
+    <div class="loading-skeleton-group">
+      <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div>
+      <div class="skeleton-card"><div class="skeleton-line skeleton-w-55"></div><div class="skeleton-line skeleton-w-90"></div></div>
+    </div>
+  } @else if (error) {
+    <div class="error-panel">
+      <div class="fw-semibold">Chargement impossible</div>
+      <div>{{ error }}</div>
+      <button type="button" class="btn btn-outline-danger w-auto" (click)="loadKpi()">Réessayer</button>
+    </div>
+  } @else if (kpi) {
+    <section class="page-shell">
+
+      <!-- Cartes synthèse -->
+      <div class="kpi-grid mb-4">
+        <div class="metric-card">
+          <div class="small muted mb-1">Taux de réussite cible global</div>
+          <div class="h3 mb-0">{{ formatRate(kpi.OverallTargetHitRate) }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Signaux évalués</div>
+          <div class="h3 mb-0">{{ kpi.TotalEvaluated }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Signaux ouverts</div>
+          <div class="h3 mb-0">{{ kpi.OpenSignals }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Non évaluables</div>
+          <div class="h3 mb-0">{{ kpi.NotEvaluable }}</div>
+        </div>
+      </div>
+
+      <!-- Calibration par niveau de confiance -->
+      <div class="page-card mb-4">
+        <div class="section-title mb-3">Calibration par niveau de confiance</div>
+        @if (kpi.ConfidenceCalibration.length === 0) {
+          <div class="empty-state"><div class="muted">Aucune donnée disponible.</div></div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Niveau</th>
+                  <th class="text-end">Signaux</th>
+                  <th class="text-end">Cibles atteintes</th>
+                  <th class="text-end">Taux de réussite</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of kpi.ConfidenceCalibration; track row.Label) {
+                  <tr>
+                    <td><span class="chip chip-navy">{{ row.Label }}</span></td>
+                    <td class="text-end">{{ row.TotalSignals }}</td>
+                    <td class="text-end">{{ row.TargetHits }}</td>
+                    <td class="text-end fw-semibold">{{ formatRate(row.HitRate) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Performance par pattern -->
+      <div class="page-card mb-4">
+        <div class="section-title mb-3">Performance par pattern</div>
+        @if (kpi.PatternPerformance.length === 0) {
+          <div class="empty-state"><div class="muted">Aucune donnée disponible.</div></div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Pattern</th>
+                  <th class="text-end">Évalués</th>
+                  <th class="text-end">Taux de réussite</th>
+                  <th class="text-end">Confiance moy.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of kpi.PatternPerformance; track row.PatternId) {
+                  <tr>
+                    <td><span class="code-chip">{{ row.PatternId }}</span></td>
+                    <td class="text-end">{{ row.TotalEvaluated }}</td>
+                    <td class="text-end fw-semibold">{{ formatRate(row.TargetHitRate) }}</td>
+                    <td class="text-end">{{ (row.AvgConfidence * 100) | number:'1.1-1' }} %</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Performance par version de modèle -->
+      <div class="page-card">
+        <div class="section-title mb-3">Performance par version de modèle</div>
+        @if (kpi.ModelPerformance.length === 0) {
+          <div class="empty-state"><div class="muted">Aucune donnée disponible.</div></div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Version modèle</th>
+                  <th class="text-end">Évalués</th>
+                  <th class="text-end">Taux de réussite</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of kpi.ModelPerformance; track row.ModelVersion) {
+                  <tr>
+                    <td><span class="code-chip">{{ row.ModelVersion }}</span></td>
+                    <td class="text-end">{{ row.TotalEvaluated }}</td>
+                    <td class="text-end fw-semibold">{{ formatRate(row.TargetHitRate) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+    </section>
+  }
+</section>

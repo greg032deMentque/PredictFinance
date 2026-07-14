@@ -1,0 +1,58 @@
+/* ============================================================
+   States — vide / chargement / erreur récupérable / non-exécutable métier
+   Distinction stricte : erreur technique ≠ état métier non-exécutable (RM-24)
+   ============================================================ */
+
+/* pf-state n'affiche qu'un seul data-state à la fois (géré par state-switcher.js) */
+pf-state [data-state] { display: none; }
+pf-state [data-state].is-active { display: block; }
+
+/* ---- Vide ---- */
+.empty-state {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--pf-space-3);
+  padding: var(--pf-space-5); border: 1px dashed var(--pf-border-strong); border-radius: var(--pf-radius-lg);
+  background: var(--pf-surface-2);
+}
+.empty-icon {
+  width: 3rem; height: 3rem; border-radius: var(--pf-radius); display: inline-flex; align-items: center; justify-content: center;
+  background: var(--pf-soft-info); color: var(--pf-on-info); font-size: 1.25rem;
+}
+
+/* ---- Chargement (skeleton) ---- */
+.skeleton-group { display: grid; gap: var(--pf-space-4); }
+.skeleton-card { border: 1px solid var(--pf-border); border-radius: var(--pf-radius-lg); background: var(--pf-surface); padding: var(--pf-space-4); }
+.skeleton-line {
+  height: 12px; border-radius: var(--pf-radius-pill);
+  background: linear-gradient(90deg, var(--pf-bg-2) 0%, var(--pf-surface) 50%, var(--pf-bg-2) 100%);
+  background-size: 200% 100%; animation: pfShimmer 1.5s infinite linear;
+}
+.skeleton-line + .skeleton-line { margin-top: .7rem; }
+.sk-90 { width: 90%; } .sk-70 { width: 70%; } .sk-55 { width: 55%; } .sk-35 { width: 35%; }
+@keyframes pfShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ---- Erreur récupérable (technique) ---- */
+.error-panel {
+  display: flex; flex-direction: column; gap: var(--pf-space-3); padding: var(--pf-space-5);
+  border-radius: var(--pf-radius-lg); background: var(--pf-soft-danger); border: 1px solid var(--pf-border);
+  color: var(--pf-on-danger);
+}
+.error-panel .pf-btn { align-self: flex-start; }
+
+/* ---- Non-exécutable métier (état de premier rang, PAS une erreur) ---- */
+.non-exec-panel {
+  display: flex; flex-direction: column; gap: var(--pf-space-3); padding: var(--pf-space-5);
+  border-radius: var(--pf-radius-lg); background: var(--pf-soft-warning); border: 1px solid var(--pf-border);
+  color: var(--pf-on-warning);
+}
+.non-exec-panel .non-exec-tag {
+  align-self: flex-start; font-size: var(--pf-font-2xs); text-transform: uppercase; letter-spacing: .06em;
+  font-weight: 800; padding: .25rem .6rem; border-radius: var(--pf-radius-pill);
+  background: color-mix(in srgb, var(--pf-warning) 18%, transparent);
+}
+
+/* ---- Disponibilité KPI (état métier admin) ---- */
+.kpi-unavailable {
+  display: flex; flex-direction: column; gap: var(--pf-space-2); padding: var(--pf-space-4);
+  border: 1px dashed var(--pf-border-strong); border-radius: var(--pf-radius-lg);
+  background: var(--pf-soft-neutral); color: var(--pf-on-neutral);
+}

@@ -1,122 +1,180 @@
-<div class="users-page container-fluid py-3">
-  <section class="users-toolbar card border-0 shadow-sm mb-3">
-    <div class="card-body d-flex flex-wrap gap-3 align-items-center justify-content-between">
-      <div>
-        <h1 class="h4 mb-1">Utilisateurs</h1>
-        <p class="text-muted mb-0">Gestion des comptes de la plateforme.</p>
-      </div>
+<section class="page-shell">
+  <div class="page-heading mb-4 gap-3">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-people"></i> User management</span>
+      <h1 class="h2 fw-bold mb-2">Gestion des utilisateurs</h1>
+      <p class="muted mb-0">Gestion centralisée des comptes administrateurs et utilisateurs sans logique métier déplacée dans le front.</p>
+    </div>
 
-      <div class="toolbar-actions d-flex flex-wrap gap-2 align-items-center">
-        <div class="search-wrap">
-          <i class="bi bi-search"></i>
+    <button class="btn btn-primary rounded-pill" type="button" (click)="goToCreate()" [disabled]="!canAdd()">
+      <i class="bi bi-person-plus"></i>
+      <span>Créer un utilisateur</span>
+    </button>
+  </div>
+
+  <div class="page-card mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-xl-5 col-lg-6">
+        <label class="form-label" for="admin-user-filter">Recherche</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
           <input
+            id="admin-user-filter"
             type="text"
             class="form-control"
-            placeholder="Rechercher un utilisateur"
+            placeholder="Nom, email ou téléphone"
             [value]="filter()"
             (input)="setFilter(($any($event.target).value ?? '').toString())"
           />
         </div>
-
-        <button class="btn btn-primary" (click)="goToCreate()" [disabled]="!canAdd()">
-          <i class="bi bi-plus-lg"></i>
-          <span>Ajouter</span>
-        </button>
+      </div>
+      <div class="col-xl-7 col-lg-6">
+        <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+          <span class="chip chip-info"><i class="bi bi-sort-alpha-down"></i> Tri {{ sortDescending() ? 'descendant' : 'ascendant' }}</span>
+          <span class="chip chip-info"><i class="bi bi-person-badge"></i> {{ total() }} utilisateur{{ total() > 1 ? 's' : '' }}</span>
+          <span class="chip chip-info"><i class="bi bi-clock-history"></i> Page {{ currentPageLabel() }}</span>
+        </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="card border-0 shadow-sm overflow-hidden">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0 align-middle users-table">
-        <thead>
-          <tr>
-            <th role="button" (click)="toggleSort('LastName')">
-              <span>Nom</span>
-              <i class="bi" [class]="sortIcon('LastName')"></i>
-            </th>
-            <th role="button" (click)="toggleSort('FirstName')">
-              <span>Prenom</span>
-              <i class="bi" [class]="sortIcon('FirstName')"></i>
-            </th>
-            <th role="button" (click)="toggleSort('Email')">
-              <span>Email</span>
-              <i class="bi" [class]="sortIcon('Email')"></i>
-            </th>
-            <th>Roles</th>
-            <th class="text-end">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @if (loading()) {
+  @if (loading()) {
+    <div class="loading-skeleton-group">
+      <div class="skeleton-card">
+        <div class="skeleton-line skeleton-w-55"></div>
+        <div class="skeleton-line skeleton-w-90"></div>
+        <div class="skeleton-line skeleton-w-70"></div>
+      </div>
+    </div>
+  } @else if (users().length === 0) {
+    <div class="empty-state">
+      <div class="empty-state-icon"><i class="bi bi-person-x"></i></div>
+      <div class="fw-semibold">Aucun utilisateur</div>
+      <div class="muted">Aucun compte ne correspond au filtre courant.</div>
+    </div>
+  } @else {
+    <div class="page-card p-0 overflow-hidden mb-4 d-none d-lg-block">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
             <tr>
-              <td colspan="5" class="text-center py-5">
-                <div class="d-inline-flex align-items-center gap-2 text-muted">
-                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                  <span>Chargement des utilisateurs...</span>
-                </div>
-              </td>
+              <th role="button" (click)="toggleSort('LastName')">
+                Utilisateur
+                <i class="bi ms-1" [class]="sortIcon('LastName')"></i>
+              </th>
+              <th role="button" (click)="toggleSort('Email')">
+                Contact
+                <i class="bi ms-1" [class]="sortIcon('Email')"></i>
+              </th>
+              <th>Rôle</th>
+              <th>Statut</th>
+              <th role="button" (click)="toggleSort('LastConnection')">
+                Dernière activité
+                <i class="bi ms-1" [class]="sortIcon('LastConnection')"></i>
+              </th>
+              <th class="text-end">Actions</th>
             </tr>
-          } @else {
-            @if (users().length === 0) {
+          </thead>
+          <tbody>
+            @for (u of users(); track u.Id) {
               <tr>
-                <td colspan="5" class="text-center py-5 text-muted">Aucun utilisateur trouve.</td>
+                <td>
+                  <div class="fw-semibold">{{ u.FullName || (u.FirstName + ' ' + u.LastName).trim() }}</div>
+                  <div class="small muted">{{ u.UserName || u.Email }}</div>
+                </td>
+                <td>
+                  <div>{{ u.Email }}</div>
+                  <div class="small muted">{{ u.PhoneNumber || 'Téléphone non renseigné' }}</div>
+                </td>
+                <td>
+                  <div class="d-flex flex-wrap gap-1">
+                    @for (r of u.Roles; track r.RoleId) {
+                      <span class="chip" [class.chip-danger]="isPrivilegedRole(r.RoleName)" [class.chip-info]="!isPrivilegedRole(r.RoleName)">{{ r.RoleName }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="chip" [class.chip-success]="u.IsActive" [class.chip-warning]="!u.IsActive">{{ u.IsActive ? 'Actif' : 'Inactif' }}</span>
+                </td>
+                <td>
+                  <div>{{ u.LastConnection ? (u.LastConnection | date:'dd/MM/yyyy HH:mm') : 'Jamais' }}</div>
+                  <div class="small muted">Créé {{ u.CreatedAt ? (u.CreatedAt | date:'dd/MM/yyyy') : '—' }}</div>
+                </td>
+                <td class="text-end">
+                  <div class="d-inline-flex gap-2 flex-wrap justify-content-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="goToEdit(u.Id)" [disabled]="loading()">
+                      <i class="bi bi-pencil-square"></i>
+                      <span>Modifier</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" (click)="deleteUser(u.Id)" [disabled]="loading()">
+                      <i class="bi bi-trash"></i>
+                      <span>Supprimer</span>
+                    </button>
+                  </div>
+                </td>
               </tr>
-            } @else {
-              @for (u of users(); track u.Id) {
-                <tr>
-                  <td class="fw-semibold">{{ u.LastName }}</td>
-                  <td>{{ u.FirstName }}</td>
-                  <td>{{ u.Email }}</td>
-                  <td>
-                    <div class="d-flex flex-wrap gap-1">
-                      @for (r of u.Roles; track r.RoleId) {
-                        <span class="badge user-role-badge">{{ r.RoleName }}</span>
-                      }
-                    </div>
-                  </td>
-                  <td class="text-end">
-                    <div class="d-inline-flex gap-2">
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        (click)="goToEdit(u.Id)"
-                        [disabled]="loading()"
-                      >
-                        <i class="bi bi-eye pe-3"></i>
-                        <span>Voir</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-danger"
-                        (click)="deleteUser(u.Id)"
-                        [disabled]="loading()"
-                      >
-                        <i class="bi bi-trash ps-3"></i>
-                        <span>Supprimer</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              }
             }
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div class="text-muted small">Page {{ currentPageLabel() }}</div>
-
-      <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary" (click)="prev()" [disabled]="loading() || pageIndex() === 0">
-          Precedent
-        </button>
-        <button class="btn btn-outline-secondary" (click)="next()" [disabled]="loading() || pageIndex() >= maxPageIndex()">
-          Suivant
-        </button>
+          </tbody>
+        </table>
       </div>
     </div>
-  </section>
-</div>
+
+    <div class="d-flex d-lg-none flex-column gap-3 mb-4">
+      @for (u of users(); track u.Id) {
+        <article class="page-card">
+          <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+            <div>
+              <div class="fw-semibold">{{ u.FullName || (u.FirstName + ' ' + u.LastName).trim() }}</div>
+              <div class="small muted">{{ u.Email }}</div>
+            </div>
+            <span class="chip" [class.chip-success]="u.IsActive" [class.chip-warning]="!u.IsActive">{{ u.IsActive ? 'Actif' : 'Inactif' }}</span>
+          </div>
+
+          <dl class="row mb-3 small">
+            <dt class="col-4 muted">Téléphone</dt>
+            <dd class="col-8 mb-2">{{ u.PhoneNumber || 'Non renseigné' }}</dd>
+            <dt class="col-4 muted">Dernière activité</dt>
+            <dd class="col-8 mb-2">{{ u.LastConnection ? (u.LastConnection | date:'dd/MM/yyyy HH:mm') : 'Jamais' }}</dd>
+            <dt class="col-4 muted">Rôles</dt>
+            <dd class="col-8 mb-0">
+              <div class="d-flex flex-wrap gap-1">
+                @for (r of u.Roles; track r.RoleId) {
+                  <span class="chip" [class.chip-danger]="isPrivilegedRole(r.RoleName)" [class.chip-info]="!isPrivilegedRole(r.RoleName)">{{ r.RoleName }}</span>
+                }
+              </div>
+            </dd>
+          </dl>
+
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="goToEdit(u.Id)" [disabled]="loading()">
+              <i class="bi bi-pencil-square"></i>
+              <span>Modifier</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" (click)="deleteUser(u.Id)" [disabled]="loading()">
+              <i class="bi bi-trash"></i>
+              <span>Supprimer</span>
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  <div class="page-card d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+      <div class="fw-semibold">Navigation</div>
+      <div class="small muted">Page {{ currentPageLabel() }} · {{ total() }} résultat{{ total() > 1 ? 's' : '' }}</div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap justify-content-end">
+      <button class="btn btn-outline-secondary rounded-pill" type="button" (click)="prev()" [disabled]="loading() || pageIndex() === 0">
+        <i class="bi bi-arrow-left"></i>
+        <span>Précédent</span>
+      </button>
+      <button class="btn btn-outline-secondary rounded-pill" type="button" (click)="next()" [disabled]="loading() || pageIndex() >= maxPageIndex()">
+        <span>Suivant</span>
+        <i class="bi bi-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+</section>

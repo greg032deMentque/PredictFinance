@@ -1,0 +1,68 @@
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- checkout: self
+  fetchDepth: 0
+
+- task: UseDotNet@2
+  displayName: "Install .NET SDK 10"
+  inputs:
+    packageType: sdk
+    version: '10.x'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore'
+  inputs:
+    command: 'restore'
+    projects: 'FinanceBack/BackPredictFinance.API/BackPredictFinance.API.csproj'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Build'
+  inputs:
+    command: 'build'
+    projects: 'FinanceBack/BackPredictFinance.API/BackPredictFinance.API.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: "Publish BackPredictFinance.API"
+  inputs:
+    command: 'publish'
+    projects: 'FinanceBack/BackPredictFinance.API/BackPredictFinance.API.csproj'
+    arguments: >
+      --configuration $(buildConfiguration)
+      --runtime linux-x64
+      --self-contained true
+      --output $(Build.ArtifactStagingDirectory)
+    zipAfterPublish: false
+
+- task: PowerShell@2
+  displayName: 'Remove local appsettings files from publish output'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $publishDir = "$(Build.ArtifactStagingDirectory)"
+      $forbiddenFiles = Get-ChildItem -Path $publishDir -Filter "appsettings.*.json" -File -Recurse
+
+      if ($forbiddenFiles.Count -gt 0) {
+        $forbiddenFiles | ForEach-Object {
+          Write-Host "Removing local config file: $($_.FullName)"
+          Remove-Item -Path $_.FullName -Force
+        }
+      }
+
+      $hasAppsettingsJson = Test-Path -Path "$publishDir/appsettings.json"
+      if ($hasAppsettingsJson) {
+        Write-Host "appsettings.json found - this will be replaced on the server."
+      } else {
+        Write-Warning "appsettings.json not found in publish output."
+      }
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Push Artifact'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)'
+    artifact: 'app_service_back-prod'

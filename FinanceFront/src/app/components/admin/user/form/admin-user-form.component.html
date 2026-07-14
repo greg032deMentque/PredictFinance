@@ -1,63 +1,129 @@
-<section class="d-flex flex-column gap-4">
-  <div>
-    <p class="text-uppercase text-muted mb-1">Administration</p>
-    <h1 class="h4 mb-0">{{ title }}</h1>
-  </div>
-
-  <div class="card border-0 shadow-sm">
-    <div class="card-body p-4">
-      @if (loading) {
-        <div class="text-muted mb-3">
-          <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-          Chargement utilisateur...
-        </div>
-      }
-
-      <form [formGroup]="form" (ngSubmit)="submit()" class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Prenom</label>
-          <input class="form-control" type="text" formControlName="firstName" />
-        </div>
-
-        <div class="col-md-6">
-          <label class="form-label">Nom</label>
-          <input class="form-control" type="text" formControlName="lastName" />
-        </div>
-
-        <div class="col-12">
-          <label class="form-label">Email</label>
-          <input class="form-control" type="email" formControlName="email" />
-        </div>
-
-        @if (!isEdit) {
-          <div class="col-12">
-            <label class="form-label">Mot de passe initial</label>
-            <input class="form-control" type="password" formControlName="password" />
-          </div>
-        }
-
-        <div class="col-md-6">
-          <label class="form-label">Role</label>
-          <select class="form-select" formControlName="roleId">
-            <option value="" disabled>Selectionner un role</option>
-            @for (role of roleOptions; track role.RoleId) {
-              <option [value]="role.RoleId">{{ role.RoleName }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="col-12 d-flex gap-2 justify-content-end mt-3">
-          <button class="btn btn-outline-secondary" type="button" (click)="cancel()" [disabled]="submitting">
-            Annuler
-          </button>
-          <button class="btn btn-primary" type="submit" [disabled]="submitting">
-            @if (submitting) {
-              <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-            }
-            {{ submitLabel }}
-          </button>
-        </div>
-      </form>
+<section class="page-shell">
+  <div class="page-heading mb-4 gap-3">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-person-badge"></i> User administration</span>
+      <h1 class="h2 fw-bold mb-2">{{ title }}</h1>
+      <p class="muted mb-0">Formulaire d’administration aligné sur les champs réellement exposés et acceptés par l’API utilisateur.</p>
     </div>
+
+    <button class="btn btn-outline-secondary rounded-pill" type="button" (click)="cancel()" [disabled]="submitting">
+      <i class="bi bi-arrow-left"></i>
+      <span>Retour à la liste</span>
+    </button>
   </div>
+
+  @if (loading) {
+    <div class="loading-skeleton-group mb-4">
+      <div class="skeleton-card">
+        <div class="skeleton-line skeleton-w-55"></div>
+        <div class="skeleton-line skeleton-w-90"></div>
+        <div class="skeleton-line skeleton-w-70"></div>
+      </div>
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="d-flex flex-column gap-4">
+    <div class="row g-4">
+      <div class="col-xl-6">
+        <section class="page-card h-100">
+          <h2 class="h5 mb-3">Identité</h2>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="admin-user-firstname">Prénom</label>
+              <input id="admin-user-firstname" class="form-control" type="text" formControlName="firstName" />
+              @if (form.controls.firstName.touched && form.controls.firstName.invalid) {
+                <div class="text-danger small mt-1">Le prénom doit contenir au moins 2 caractères.</div>
+              }
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="admin-user-lastname">Nom</label>
+              <input id="admin-user-lastname" class="form-control" type="text" formControlName="lastName" />
+              @if (form.controls.lastName.touched && form.controls.lastName.invalid) {
+                <div class="text-danger small mt-1">Le nom doit contenir au moins 2 caractères.</div>
+              }
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="admin-user-email">Email</label>
+              <input id="admin-user-email" class="form-control" type="email" formControlName="email" />
+              @if (form.controls.email.touched && form.controls.email.invalid) {
+                <div class="text-danger small mt-1">Une adresse email valide est requise.</div>
+              }
+            </div>
+
+            <div class="col-12">
+              <label class="form-label" for="admin-user-phone">Téléphone</label>
+              <input id="admin-user-phone" class="form-control" type="text" formControlName="phoneNumber" />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-xl-6">
+        <section class="page-card h-100">
+          <h2 class="h5 mb-3">Accès</h2>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="admin-user-password">{{ isEdit ? 'Nouveau mot de passe' : 'Mot de passe initial' }}</label>
+              <input
+                id="admin-user-password"
+                class="form-control"
+                type="password"
+                formControlName="password"
+                [placeholder]="isEdit ? 'Laisser vide pour conserver le mot de passe actuel' : ''"
+              />
+              @if (form.controls.password.touched && form.controls.password.invalid) {
+                <div class="text-danger small mt-1">{{ isEdit ? 'Si renseigné, le mot de passe doit contenir au moins 6 caractères.' : 'Le mot de passe initial doit contenir au moins 6 caractères.' }}</div>
+              }
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label" for="admin-user-role">Rôle</label>
+              <select id="admin-user-role" class="form-select" formControlName="roleId">
+                <option value="" disabled>Sélectionner un rôle</option>
+                @for (role of roleOptions; track role.RoleId) {
+                  <option [value]="role.RoleId">{{ role.RoleName }}</option>
+                }
+              </select>
+              @if (form.controls.roleId.touched && form.controls.roleId.invalid) {
+                <div class="text-danger small mt-1">Le rôle est obligatoire.</div>
+              }
+            </div>
+
+            <div class="col-md-6 d-flex align-items-end">
+              <div class="form-check form-switch">
+                <input id="admin-user-active" class="form-check-input" type="checkbox" formControlName="isActive" />
+                <label class="form-check-label" for="admin-user-active">Compte actif</label>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="alert alert-light border mb-0" role="status">
+                <div class="fw-semibold mb-1">Contrat actif</div>
+                <div class="small mb-0">Le formulaire n’envoie que le prénom, le nom, l’email, le téléphone, le rôle, l’état d’activation et le mot de passe optionnel.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="page-card d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <div class="fw-semibold">Validation</div>
+        <div class="small muted">Création, mise à jour, chargement d’un utilisateur et chargement des rôles sont tous alignés sur le back actuel.</div>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap justify-content-end">
+        <button class="btn btn-outline-secondary rounded-pill" type="button" (click)="cancel()" [disabled]="submitting">Annuler</button>
+        <button class="btn btn-primary rounded-pill" type="submit" [disabled]="submitting">
+          @if (submitting) {
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+          }
+          <span>{{ submitLabel }}</span>
+        </button>
+      </div>
+    </section>
+  </form>
 </section>

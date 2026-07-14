@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login - PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/style.css" rel="stylesheet">
+</head>
+<body>
+  <div class="auth-only">
+    <div class="auth-shell">
+      <div class="auth-side">
+        <span class="chip bg-white text-dark mb-3"><i class="bi bi-box-arrow-in-right"></i> Login only entry</span>
+        <h1 class="display-6 fw-bold mb-3">Entrée unique, puis séparation nette entre les parcours</h1>
+        <p class="text-white-50 fs-5 mb-4">Avant connexion, aucun shell applicatif n’est visible. Après connexion, l’espace diverge selon le rôle : user pour l’usage produit, admin pour la gouvernance et l’exploitation.</p>
+        <div class="compact-list">
+          <div>• aucune navigation interne avant login</div>
+          <div>• deux profils mock explicitement décrits</div>
+          <div>• deux espaces avec objectifs distincts</div>
+        </div>
+      </div>
+      <div class="auth-card">
+        <div class="mb-4">
+          <span class="chip chip-navy mb-2"><i class="bi bi-person-check"></i> Connexion mock</span>
+          <h2 class="h3 fw-bold mb-2">Choisir un profil de démo</h2>
+          <p class="muted mb-0">Les deux accès ci-dessous servent à explorer séparément les parcours utilisateur et administrateur.</p>
+        </div>
+        <div class="auth-grid mb-4">
+          <div class="role-card">
+            <div class="role-card-title mb-3">
+              <div>
+                <div class="fw-semibold">Mock user</div>
+                <div class="small muted">Investisseur / utilisatrice produit</div>
+              </div>
+              <span class="chip chip-info">User</span>
+            </div>
+            <div class="small mb-2"><strong>Email :</strong> user@mock.local</div>
+            <div class="small mb-3"><strong>Mot de passe :</strong> UserDemo!23</div>
+            <div class="small muted mb-3">Accède au dashboard user, à la watchlist, au portefeuille, aux analyses, au compte et aux notifications. Ne gère que ses propres informations.</div>
+            <a class="btn btn-primary w-100 rounded-4 cta-primary" href="user-home.html">Se connecter en user</a>
+          </div>
+          <div class="role-card">
+            <div class="role-card-title mb-3">
+              <div>
+                <div class="fw-semibold">Mock admin</div>
+                <div class="small muted">Support / gouvernance / qualité</div>
+              </div>
+              <span class="chip chip-danger">Admin</span>
+            </div>
+            <div class="small mb-2"><strong>Email :</strong> admin@mock.local</div>
+            <div class="small mb-3"><strong>Mot de passe :</strong> AdminDemo!23</div>
+            <div class="small muted mb-3">Accède à la gestion des utilisateurs, aux registres, aux politiques, à l’audit et à la qualité des données. N’est pas le parcours de consultation principal d’un utilisateur final.</div>
+            <a class="btn btn-outline-secondary w-100 rounded-4" href="admin-overview.html">Se connecter en admin</a>
+          </div>
+        </div>
+        <div class="inline-help mb-4">
+          <i class="bi bi-info-circle"></i>
+          <div class="small">Dans une implémentation réelle, cette page conduirait vers des shells distincts : <strong>AnonymousShell</strong>, <strong>UserShell</strong> et <strong>AdminShell</strong>.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Email</label>
+          <input class="form-control form-control-lg" placeholder="nom@exemple.com">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Mot de passe</label>
+          <input class="form-control form-control-lg" type="password" placeholder="••••••••">
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div class="form-check"><input class="form-check-input" type="checkbox" id="remember"><label class="form-check-label" for="remember">Se souvenir de moi</label></div>
+          <a href="forgot-password.html" class="small fw-semibold">Mot de passe oublié ?</a>
+        </div>
+        <div class="d-grid gap-2">
+          <a class="btn btn-lg btn-primary rounded-4 cta-primary" href="user-home.html">Connexion rapide user</a>
+          <a class="btn btn-outline-secondary rounded-4" href="admin-overview.html">Connexion rapide admin</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<section class="d-flex flex-column gap-4">
+  <section class="hero">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-8">
+        <span class="chip bg-white text-dark mb-3"><i class="bi bi-bell"></i> Notifications</span>
+        <h1 class="display-6 fw-bold mb-3">Centre de notifications</h1>
+        <p class="mb-0 text-white-50 fs-5">
+          Retrouve les alertes de surveillance, les nouvelles analyses et les messages pédagogiques du produit.
+        </p>
+      </div>
+      <div class="col-lg-4">
+        <div class="surface bg-white p-4">
+          <div class="fw-bold text-dark mb-2">À traiter</div>
+          <div class="h2 text-dark mb-1">{{ unreadCount }}</div>
+          <div class="small text-dark">notifications non lues</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page-shell">
+    <div class="page-heading mb-4">
+      <div class="page-subtitle">
+        <span class="chip chip-navy mb-2"><i class="bi bi-filter-circle"></i> Filtres</span>
+        <h2 class="h3 fw-bold mb-2">Trier les messages utiles</h2>
+        <p class="muted mb-0">Retrouvez ici toutes vos alertes, filtrées par statut.</p>
+      </div>
+      <div class="filter-bar">
+        <button type="button" class="filter-pill" [class.active-pill]="selectedStatus === 'all'" (click)="selectedStatus='all'; loadNotifications()">Toutes</button>
+        <button type="button" class="filter-pill" [class.active-pill]="selectedStatus === 'unread'" (click)="selectedStatus='unread'; loadNotifications()">Non lues</button>
+        <button type="button" class="filter-pill" [class.active-pill]="selectedStatus === 'read'" (click)="selectedStatus='read'; loadNotifications()">Lues</button>
+      </div>
+    </div>
+
+    @if (loading) {
+      <div class="loading-skeleton-group">
+        <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div><div class="skeleton-line skeleton-w-35"></div></div>
+        <div class="skeleton-card"><div class="skeleton-line skeleton-w-55"></div><div class="skeleton-line skeleton-w-90"></div><div class="skeleton-line skeleton-w-35"></div></div>
+      </div>
+    } @else if (error) {
+      <div class="error-panel">
+        <div class="fw-semibold">Chargement impossible</div>
+        <div>{{ error }}</div>
+        <button type="button" class="btn btn-outline-danger w-auto" (click)="loadNotifications()">Réessayer</button>
+      </div>
+    } @else if (filteredNotifications.length === 0) {
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="bi bi-bell-slash"></i></div>
+        <div class="fw-semibold">Aucune notification à afficher</div>
+        <div class="muted">Aucun message ne correspond au filtre courant.</div>
+      </div>
+    } @else {
+      <div class="compact-list">
+        @for (notification of filteredNotifications; track notification.NotificationId) {
+          <div class="compact-row align-items-center">
+            <div>
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="chip" [class.chip-warning]="!isRead(notification)" [class.chip-success]="isRead(notification)">
+                  {{ isRead(notification) ? 'Lu' : 'À surveiller' }}
+                </span>
+                <span class="code-chip">{{ notification.Category }}</span>
+                @if (getAlertTriggerMeta(notification.AlertTrigger); as triggerMeta) {
+                  <span class="chip" [ngClass]="triggerMeta.chipClass">
+                    <i class="bi me-1" [ngClass]="triggerMeta.icon"></i>{{ triggerMeta.label }}
+                  </span>
+                }
+              </div>
+              <div class="fw-semibold mb-1">{{ notification.Title }}</div>
+              <div class="small muted mb-2">{{ notification.Summary }}</div>
+              <div class="small muted">{{ notification.CreatedAtUtc | date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+            <div class="d-flex flex-column gap-2 align-items-end">
+              @if (!isRead(notification)) {
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" (click)="markAsRead(notification)">Marquer comme lue</button>
+              }
+              @if (canNavigate(notification)) {
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="openTarget(notification)">
+                  <i class="bi bi-arrow-right me-1"></i>Ouvrir
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</section>

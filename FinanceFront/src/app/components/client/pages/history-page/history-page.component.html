@@ -1,0 +1,112 @@
+<section class="container-fluid px-0 d-flex flex-column gap-4">
+
+  <!-- En-tête -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+      <div>
+        <p class="text-uppercase text-muted small mb-1">Client</p>
+        <h1 class="h3 mb-2">Historique des analyses</h1>
+        <p class="text-body-secondary mb-0">Historique persistant des analyses déjà produites.</p>
+      </div>
+      <a class="btn btn-primary" [routerLink]="toCommands(userPaths.AnalysisEntry)">Nouvelle analyse</a>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <form [formGroup]="filters" class="row g-3 align-items-end">
+        <div class="col-12 col-md-5">
+          <label class="form-label small fw-semibold" for="symbolFilter">Symbole</label>
+          <input id="symbolFilter" type="text" class="form-control" placeholder="Ex. : AAPL" formControlName="symbol" autocomplete="off" />
+        </div>
+        <div class="col-12 col-md-5">
+          <label class="form-label small fw-semibold" for="recommendationFilter">Recommandation</label>
+          <select id="recommendationFilter" class="form-select" formControlName="recommendation">
+            @for (opt of recommendationOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex justify-content-end">
+          <button type="button" class="btn btn-outline-secondary w-100" (click)="toggleSort()">
+            Date {{ sortDirection() === 'desc' ? '↓' : '↑' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tableau -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+
+      @if (loading()) {
+        <div class="text-muted py-4 text-center">Chargement…</div>
+      } @else if (error()) {
+        <div class="alert alert-danger mb-0">{{ error() }}</div>
+      } @else {
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 class="h5 mb-0">Résultats</h2>
+          <span class="text-muted small">{{ history().Total }} analyse(s)</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Valeur</th>
+                <th>Issue</th>
+                <th>Pattern</th>
+                <th>Recommandation</th>
+                <th>Support</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of history().Items; track item.AnalysisId) {
+                <tr>
+                  <td class="text-nowrap">{{ item.TimestampUtc | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <div class="fw-semibold">{{ item.Instrument.Symbol }}</div>
+                    <div class="small text-muted">{{ item.Instrument.DisplayName }}</div>
+                  </td>
+                  <td>{{ item.OutcomeDisplayLabel }}</td>
+                  <td>{{ item.PrimaryPatternLabel || 'n/a' }}</td>
+                  <td>{{ item.RecommendationSummary }}</td>
+                  <td>{{ item.SupportAvailabilitySummary }}</td>
+                  <td class="text-end">
+                    <div class="btn-group btn-group-sm">
+                      <a class="btn btn-outline-secondary" [routerLink]="toCommands(userPaths.InstrumentDetail(item.Instrument.Symbol))">Instrument</a>
+                      <a class="btn btn-outline-primary" [routerLink]="toCommands(userPaths.AnalysisDetail(item.AnalysisId))">Détail</a>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-4">Aucun résultat pour ces critères.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (totalPages() > 1) {
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <button class="btn btn-outline-secondary btn-sm" (click)="goToPrev()" [disabled]="!hasPrev()">
+              ← Précédent
+            </button>
+            <span class="text-muted small">Page {{ history().Page }} / {{ totalPages() }}</span>
+            <button class="btn btn-outline-secondary btn-sm" (click)="goToNext()" [disabled]="!hasNext()">
+              Suivant →
+            </button>
+          </div>
+        }
+      }
+
+    </div>
+  </div>
+
+</section>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analysis result - PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/style.css" rel="stylesheet">
+</head>
+<body>
+  <div class="app-root py-4 py-lg-4">
+    <div class="topbar px-3 px-lg-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 sticky-section-nav">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-mark"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <div><div class="fw-bold fs-5">PredictFinance V1</div><div class="small muted">Outcome then readings</div></div>
+      </div>
+      <div class="top-actions-scroll">
+        <span class="chip chip-info"><i class="bi bi-person-badge"></i> User mock connecté</span>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="notifications.html"><i class="bi bi-bell me-2"></i>Notifications</a>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="login.html"><i class="bi bi-box-arrow-left me-2"></i>Déconnexion</a>
+      </div>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="mb-4"><div class="text-uppercase small opacity-75 mb-2">Espace user</div><div class="fw-semibold fs-5">Navigation</div></div>
+        <nav class="nav flex-column gap-2">
+          <a class="nav-link" href="user-home.html"><i class="bi bi-house-door"></i> Accueil user</a>
+          <a class="nav-link" href="watchlist.html"><i class="bi bi-stars"></i> Watchlist</a>
+          <a class="nav-link" href="portfolio.html"><i class="bi bi-briefcase"></i> Portfolio</a>
+          <a class="nav-link" href="analysis-entry.html"><i class="bi bi-search-heart"></i> Analysis</a>
+          <a class="nav-link active" href="analysis-result.html"><i class="bi bi-graph-up-arrow"></i> Result</a>
+          <a class="nav-link" href="history.html"><i class="bi bi-clock-history"></i> History</a>
+          <a class="nav-link" href="learn.html"><i class="bi bi-mortarboard"></i> Learn</a>
+        </nav>
+      </aside>
+      <main class="main-col d-flex flex-column gap-4">
+        <section class="page-shell">
+          <div class="page-heading mb-4">
+            <div class="page-subtitle">
+              <span class="chip chip-navy mb-2"><i class="bi bi-graph-up-arrow"></i> Analysis result</span>
+              <h1 class="h2 fw-bold mb-2">Résultat consolidé et plus stable</h1>
+              <p class="muted mb-0">Cette version standardise mieux les états, expose clairement les patterns alternatifs compatibles et prépare les composants à être réutilisés ailleurs.</p>
+            </div>
+          </div>
+
+          <div class="state-banner state-success mb-4"><i class="bi bi-check2-circle me-2"></i> Pattern crédible détecté</div>
+
+          <div class="row g-4">
+            <div class="col-xl-8">
+              <div class="page-card mb-4">
+                <div class="section-title">Market reading</div>
+                <div class="chart-box mb-4"></div>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                  <span class="chip chip-success">Pattern principal · Rectangle continuation</span>
+                  <span class="chip chip-success">Statut · Confirmé</span>
+                  <span class="chip chip-info">Confiance élevée</span>
+                  <span class="chip chip-warning">Invalidation sous la borne basse</span>
+                </div>
+                <div class="section-title mb-3">Alternative compatible patterns</div>
+                <div class="alt-pattern-list">
+                  <span class="chip chip-warning">Symmetrical triangle</span>
+                  <span class="chip chip-info">Continuation channel</span>
+                </div>
+              </div>
+
+              <div class="page-card mb-4">
+                <div class="section-title">Support reading</div>
+                <div class="split-cards">
+                  <div class="surface"><div class="small muted">Score composite</div><div class="fw-semibold">81 / 100</div></div>
+                  <div class="surface"><div class="small muted">Couverture</div><div class="fw-semibold">Complète</div></div>
+                  <div class="surface"><div class="small muted">PEA</div><div class="fw-semibold text-success">Confirmée</div></div>
+                </div>
+              </div>
+
+              <div class="page-card">
+                <div class="section-title">Personal-situation reading</div>
+                <div class="split-cards">
+                  <div class="surface"><div class="fw-semibold mb-2">Instrument non détenu</div><div class="d-flex flex-wrap gap-2"><span class="chip chip-info">Surveiller</span><span class="chip chip-warning">Attendre</span><span class="chip chip-success">Acheter</span></div></div>
+                  <div class="surface"><div class="fw-semibold mb-2">Instrument détenu</div><div class="d-flex flex-wrap gap-2"><span class="chip chip-warning">Attendre</span><span class="chip chip-info">Conserver</span><span class="chip chip-success">Renforcer</span><span class="chip chip-warning">Alléger</span><span class="chip chip-danger">Vendre</span></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-4">
+              <div class="right-rail">
+                <div class="page-card">
+                  <div class="section-title">Summary rail</div>
+                  <div class="compact-list mb-3">
+                    <span class="chip chip-success">Pattern crédible détecté</span>
+                    <span class="chip chip-success">Éligibilité PEA confirmée</span>
+                    <span class="chip chip-info">Score composite disponible</span>
+                    <span class="chip chip-success">Acheter</span>
+                  </div>
+                  <div class="why-panel">
+                    <div class="fw-semibold mb-2">Pourquoi la recommandation est celle-ci</div>
+                    <div class="small mb-2">Le marché fournit ici un pattern crédible détecté. Le support reading n’est pas bloquant. La PEA est confirmée. Dans le contexte non détenu, cela autorise un verbe d’achat plutôt qu’un simple suivi.</div>
+                    <a class="btn btn-sm btn-outline-secondary rounded-pill" href="help-center.html">Comprendre cette logique</a>
+                  </div>
+                </div>
+
+                <div class="page-card">
+                  <div class="section-title">Business non-executable examples</div>
+                  <div class="non-executable-panel">
+                    <div class="fw-semibold">Unsupported instrument</div>
+                    <div class="small">Le produit doit distinguer clairement un cas non exécutable métier d’une erreur technique ou d’un manque temporaire de données.</div>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill align-self-start">Voir les limites V1</button>
+                  </div>
+                </div>
+
+                <div class="page-card">
+                  <div class="section-title">Next steps</div>
+                  <div class="d-grid gap-2">
+                    <a class="btn btn-primary rounded-4 cta-primary" href="history.html">Voir l’historique</a>
+                    <a class="btn btn-outline-secondary rounded-4" href="parameter-detail.html">Détail paramètres</a>
+                    <a class="btn btn-outline-secondary rounded-4" href="simulation.html">Simulation</a>
+                    <a class="btn btn-outline-secondary rounded-4" href="snapshot-comparison.html">Comparer snapshots</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page-shell">
+          <div class="section-title">Résumé ultra-court mobile / lecture rapide</div>
+          <div class="compact-mobile-explain">
+            <div class="fw-semibold mb-2">En une phrase</div>
+            <div class="small muted">Pattern crédible détecté, support exploitable, PEA confirmée, contexte non détenu : le prochain verbe possible est Acheter.</div>
+          </div>
+        </section>
+
+        <div class="footer-divider pt-3 small muted">PredictFinance V1 — result page stable avec patterns alternatifs normalisés et états métiers plus explicites.</div>
+      </main>
+    </div>
+  </div>
+  <div class="mobile-nav d-md-none"><div class="container-fluid"><div class="row g-0">
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="user-home.html"><i class="bi bi-house-door fs-5"></i><span>Home</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="watchlist.html"><i class="bi bi-stars fs-5"></i><span>Watchlist</span></a></div>
+    <div class="col text-center"><a class="active d-flex flex-column align-items-center gap-1 py-2" href="analysis-result.html"><i class="bi bi-search fs-5"></i><span>Result</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="account.html"><i class="bi bi-person fs-5"></i><span>Compte</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="admin-overview.html"><i class="bi bi-shield-lock fs-5"></i><span>Admin</span></a></div>
+  </div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

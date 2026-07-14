@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watchlist - PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/style.css" rel="stylesheet">
+</head>
+<body>
+  <div class="app-root py-4 py-lg-4">
+    <div class="topbar px-3 px-lg-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 sticky-section-nav">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-mark"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <div><div class="fw-bold fs-5">PredictFinance V1</div><div class="small muted">Prioritized instruments</div></div>
+      </div>
+      <div class="top-actions-scroll">
+        <span class="chip chip-info"><i class="bi bi-person-badge"></i> User mock connecté</span>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="analysis-entry.html"><i class="bi bi-search-heart me-2"></i>Analyser</a>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="login.html"><i class="bi bi-box-arrow-left me-2"></i>Déconnexion</a>
+      </div>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="mb-4"><div class="text-uppercase small opacity-75 mb-2">Espace user</div><div class="fw-semibold fs-5">Navigation</div></div>
+        <nav class="nav flex-column gap-2">
+          <a class="nav-link" href="user-home.html"><i class="bi bi-house-door"></i> Accueil user</a>
+          <a class="nav-link active" href="watchlist.html"><i class="bi bi-stars"></i> Watchlist</a>
+          <a class="nav-link" href="portfolio.html"><i class="bi bi-briefcase"></i> Portfolio</a>
+          <a class="nav-link" href="analysis-entry.html"><i class="bi bi-search-heart"></i> Analysis</a>
+        </nav>
+      </aside>
+      <main class="main-col d-flex flex-column gap-4">
+        <section class="page-shell">
+          <div class="page-heading mb-4">
+            <div class="page-subtitle">
+              <span class="chip chip-navy mb-2"><i class="bi bi-stars"></i> Watchlist</span>
+              <h1 class="h2 fw-bold mb-2">Liste plus profonde sans casser la lisibilité</h1>
+              <p class="muted mb-0">Cette correction renforce les filtres, la logique de priorisation et les états de page directement dans la surface watchlist.</p>
+            </div>
+            <div class="page-cta"><a class="btn btn-primary rounded-pill cta-primary" href="analysis-entry.html"><i class="bi bi-plus-lg me-2"></i>Ajouter / analyser</a></div>
+          </div>
+
+          <div class="mini-filter-grid mb-4">
+            <div class="filter-select">Recherche</div>
+            <div class="filter-select">Priorité</div>
+            <div class="filter-select">Pattern</div>
+            <div class="filter-select">Recommandation</div>
+            <div class="filter-select">PEA</div>
+            <div class="filter-select">Fraîcheur</div>
+          </div>
+
+          <div class="ranking-bar mb-4">
+            <span class="rank-tag"><i class="bi bi-sort-down"></i> Tri actuel : priorité</span>
+            <span class="rank-tag"><i class="bi bi-eye"></i> 2 surveillances hautes</span>
+            <span class="rank-tag"><i class="bi bi-check2-circle"></i> 1 opportunité confirmée</span>
+          </div>
+
+          <div class="compact-list mb-4">
+            <div class="compact-row"><div><div class="fw-semibold">Legrand</div><div class="small muted">Priorité haute · Rectangle à surveiller · Score composite disponible · PEA confirmée</div></div><div class="d-flex flex-wrap gap-2"><span class="chip chip-info">Surveiller</span><a class="btn btn-sm btn-outline-secondary rounded-pill" href="analysis-result.html">Voir</a></div></div>
+            <div class="compact-row"><div><div class="fw-semibold">Dassault Systèmes</div><div class="small muted">Priorité moyenne · Bull flag confirmé · Score composite disponible · PEA confirmée</div></div><div class="d-flex flex-wrap gap-2"><span class="chip chip-success">Acheter</span><a class="btn btn-sm btn-outline-secondary rounded-pill" href="analysis-result.html">Voir</a></div></div>
+            <div class="compact-row"><div><div class="fw-semibold">Rubis</div><div class="small muted">Priorité basse · Données insuffisantes · Support partiel · PEA non confirmée</div></div><div class="d-flex flex-wrap gap-2"><span class="chip chip-warning">Attendre</span><a class="btn btn-sm btn-outline-secondary rounded-pill" href="help-center.html">Comprendre</a></div></div>
+          </div>
+
+          <div class="page-state-grid">
+            <div class="page-card">
+              <div class="section-title">Empty state</div>
+              <div class="empty-state">
+                <div class="empty-state-icon"><i class="bi bi-stars"></i></div>
+                <div class="fw-semibold">Aucun instrument pour ce filtre</div>
+                <div class="small muted">Réduire les filtres ou relancer une analyse pour alimenter la watchlist.</div>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill">Réinitialiser les filtres</button>
+              </div>
+            </div>
+            <div class="page-card">
+              <div class="section-title">Business non-executable</div>
+              <div class="non-executable-panel">
+                <div class="fw-semibold">Instrument hors périmètre V1</div>
+                <div class="small">Ce cas doit être visible comme limite produit, pas comme erreur technique.</div>
+                <a class="btn btn-sm btn-outline-secondary rounded-pill align-self-start" href="help-center.html">Voir limites</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="footer-divider pt-3 small muted">PredictFinance V1 — corrections directes : filtres plus crédibles, priorisation plus explicite et états natifs dans la watchlist.</div>
+      </main>
+    </div>
+  </div>
+  <div class="mobile-nav d-md-none"><div class="container-fluid"><div class="row g-0">
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="user-home.html"><i class="bi bi-house-door fs-5"></i><span>Home</span></a></div>
+    <div class="col text-center"><a class="active d-flex flex-column align-items-center gap-1 py-2" href="watchlist.html"><i class="bi bi-stars fs-5"></i><span>Watchlist</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="analysis-entry.html"><i class="bi bi-search fs-5"></i><span>Analyse</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="account.html"><i class="bi bi-person fs-5"></i><span>Compte</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="admin-overview.html"><i class="bi bi-shield-lock fs-5"></i><span>Admin</span></a></div>
+  </div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

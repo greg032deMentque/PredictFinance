@@ -1,0 +1,12 @@
+.pattern-candidate-btn {
+  background: var(--bs-body-bg);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--bs-primary) !important;
+  }
+
+  &.border-primary {
+    background: var(--bs-primary-bg-subtle);
+  }
+}

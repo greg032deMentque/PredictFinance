@@ -1,17 +1,16 @@
 import { CommonModule, CurrencyPipe, PercentPipe } from '@angular/common';
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
-  CLIENT_DEFAULT_PATTERN,
-  CLIENT_SUPPORTED_PATTERNS,
   type ClientSimulationResult,
   ClientSimulationRequest,
-  type ClientSupportedPattern,
   getPhaseLabel,
   getRecommendationBadgeClass,
   getRecommendationLabel,
   getRiskLevelLabel
 } from '../../../../Models/client-finance-models/client-finance-models';
+import { PatternCatalogStore } from '../../../../services/pattern-catalog.store';
 
 @Component({
   selector: 'app-finance-simulation',
@@ -20,9 +19,12 @@ import {
   templateUrl: './finance-simulation.component.html',
   styleUrl: './finance-simulation.component.scss'
 })
-export class FinanceSimulationComponent {
+export class FinanceSimulationComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
-  readonly availablePatterns = CLIENT_SUPPORTED_PATTERNS;
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly patternCatalogStore = inject(PatternCatalogStore);
+
+  readonly availablePatterns = this.patternCatalogStore.items;
 
   @Input() selectedSymbol = '';
   @Input() loading = false;
@@ -31,10 +33,24 @@ export class FinanceSimulationComponent {
   @Output() launch = new EventEmitter<ClientSimulationRequest>();
 
   readonly form = this.fb.nonNullable.group({
-    pattern: this.fb.nonNullable.control<ClientSupportedPattern>(CLIENT_DEFAULT_PATTERN, [Validators.required]),
+    pattern: this.fb.nonNullable.control('', [Validators.required]),
     investmentAmount: this.fb.nonNullable.control(1000, [Validators.required, Validators.min(1)]),
     horizonDays: this.fb.nonNullable.control(30, [Validators.required, Validators.min(1), Validators.max(365)])
   });
+
+  ngOnInit(): void {
+    this.patternCatalogStore
+      .ensureLoaded()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((patterns) => {
+        const selectedPattern = this.form.controls.pattern.value;
+        const hasSelectedPattern = patterns.some((pattern) => pattern.Id === selectedPattern);
+
+        if (!hasSelectedPattern) {
+          this.form.controls.pattern.setValue(patterns[0]?.Id ?? '');
+        }
+      });
+  }
 
   get recommendationLabel(): string {
     return getRecommendationLabel(this.result?.RecommendationAction ?? '');

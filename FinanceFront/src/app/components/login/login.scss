@@ -1,19 +1,52 @@
-@use "../../../themes/variables" as *;
-
-.login-page {
-  background: $finance-bg;
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
 }
 
-
-.login-title {
-  font-size: 1.5rem;
+.auth-card.login-card {
+  width: min(460px, 100%);
+  padding: 2.25rem 2rem;
+  border: 1px solid var(--pf-border);
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f5faff 100%);
+  box-shadow: 0 26px 64px rgba(15, 39, 66, 0.18);
 }
 
-.no-autofill:-webkit-autofill,
-.no-autofill:-webkit-autofill:hover,
-.no-autofill:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0px 1000px $finance-white inset !important;
-  box-shadow: 0 0 0px 1000px $finance-white inset !important;
-  -webkit-text-fill-color: $finance-black !important;
-  transition: background-color 9999s ease-in-out 0s !important;
+.login-mark {
+  width: 76px;
+  height: 76px;
+  filter: drop-shadow(0 14px 26px rgba(15, 39, 66, 0.28));
+}
+
+.login-highlights {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e2e9f2;
+}
+
+.login-highlight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1 1 0;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--pf-text-soft);
+}
+
+.login-highlight i {
+  font-size: 1.2rem;
+  color: #16916b;
+}
+
+@media (max-width: 575.98px) {
+  .auth-card.login-card {
+    padding: 1.5rem 1.25rem;
+  }
 }

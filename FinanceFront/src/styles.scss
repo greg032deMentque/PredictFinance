@@ -1,96 +1,10 @@
 @use './themes/variables' as *;
+@use './themes/foundation';
+@use './themes/layout';
+@use './themes/surface';
+@use './themes/bootstrap';
 @use './themes/button';
 @use './themes/input';
+@use './themes/label';
+@use './themes/ngSelect';
 @use './themes/toastr';
-
-html,
-body {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  background-color: $finance-bg;
-  color: $finance-navy;
-  font-size: 15px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.finance-hero-card {
-  background: linear-gradient(120deg, $finance-surface-soft 0%, $finance-role-bg 100%);
-  border: 1px solid $finance-border-soft;
-  border-radius: 12px;
-}
-
-.finance-soft-panel {
-  border: 1px solid $finance-border-soft;
-  border-radius: 10px;
-  background-color: $finance-surface-soft;
-  padding: 0.75rem;
-}
-
-.finance-border-soft {
-  border-color: $finance-border-soft !important;
-}
-
-.admin-shell,
-.client-shell {
-  min-height: 0;
-}
-
-.layout-sidebar {
-  overflow: hidden;
-}
-
-.side-menu-scroll {
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.layout-main {
-  overflow: hidden;
-  min-height: 0;
-}
-
-.content-scroll {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.finance-select .ng-select-container {
-  min-height: 44px;
-  border-color: $finance-border-soft;
-  border-radius: 0.5rem;
-}
-
-.finance-select.ng-select-focused .ng-select-container {
-  border-color: $finance-navy;
-  box-shadow: 0 0 0 0.2rem rgba(15, 39, 66, 0.12);
-}
-
-.finance-select .ng-dropdown-panel {
-  border-color: $finance-border-soft;
-}
-
-.finance-select .ng-option {
-  padding: 0.65rem 0.75rem;
-}
-
-.text-vert {
-  color: $finance-emerald !important;
-}
-
-::-webkit-scrollbar {
-  width: 0.7em;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient($finance-scrollbar-start, $finance-navy);
-  border: 0.08em solid $finance-scrollbar-border;
-  border-radius: 100vw;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: $finance-scrollbar-hover;
-}

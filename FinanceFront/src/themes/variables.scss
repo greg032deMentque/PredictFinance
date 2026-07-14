@@ -1,24 +1,79 @@
 $finance-navy: #0f2742;
+$finance-navy-2: #1f5480;
+$finance-blue: #2f6ea7;
 $finance-emerald: #127a5a;
 $finance-gold: #a8741a;
+$finance-warning: #b7791f;
 $finance-loss-red: #b13a3a;
 $finance-bg: #f4f7fb;
+$finance-bg-alt: #fbfdff;
+$finance-text: #1f2a37;
 $finance-slate: #5b6b7d;
 $finance-white: #ffffff;
 $finance-black: #000000;
 $finance-muted: #7a8699;
-$finance-surface-soft: #f8fbff;
-$finance-surface: #f5f7fb;
-$finance-surface-hover: #ecf1f9;
-$finance-border-soft: #dbe4ff;
-$finance-role-bg: #eef2ff;
+$finance-surface-soft: #f7fafe;
+$finance-surface: #f1f6fb;
+$finance-surface-hover: #e6eef7;
+$finance-border-soft: #d6e0ec;
+$finance-border-strong: #b7c8da;
+$finance-role-bg: #eef3ff;
 $finance-text-inverse: #f8f8f8;
-$finance-scrollbar-start: #748397;
-$finance-scrollbar-border: #bfc8d3;
-$finance-scrollbar-hover: #435364;
-$finance-shadow-soft: #999999;
-$finance-toast-bg: #030303;
-$finance-toast-success: #51a351;
-$finance-toast-error: #bd362f;
-$finance-toast-info: #2f96b4;
-$finance-toast-warning: #f89406;
+$finance-soft-success: #eef9f1;
+$finance-soft-warning: #fff7e8;
+$finance-soft-danger: #fff1f1;
+$finance-soft-info: #eef7fb;
+$finance-soft-navy: #ebf1f7;
+$finance-shadow: 0 18px 40px rgba(12, 35, 59, 0.1);
+$finance-shadow-sm: 0 12px 24px rgba(12, 35, 59, 0.08);
+$finance-shadow-xs: 0 8px 16px rgba(12, 35, 59, 0.06);
+$finance-toast-bg: #10263f;
+$finance-toast-success: #16805d;
+$finance-toast-error: #b13a3a;
+$finance-toast-info: #2f6ea7;
+$finance-toast-warning: #b7791f;
+
+/* =====================================================================
+ * NE PAS SUPPRIMER CE BLOC :root.
+ * Source unique des couleurs = les variables $finance-* ci-dessus
+ * (requises au compile-time par button/input/label/ngSelect/toastr
+ * pour color.adjust()). Ce :root se contente de les EXPOSER au runtime
+ * sous forme de var(--pf-*), consommées par foundation/layout/surface/
+ * bootstrap et les composants. Sans ce bloc : police = Times New Roman,
+ * couleurs/ombres/arrondis absents sur TOUTE l'app.
+ * Aucune valeur n'est dupliquée : --pf-* dérive de $finance-*.
+ * ===================================================================== */
+:root {
+  --pf-navy: #{$finance-navy};
+  --pf-navy-2: #{$finance-navy-2};
+  --pf-blue: #{$finance-blue};
+  --pf-emerald: #{$finance-emerald};
+  --pf-gold: #{$finance-gold};
+  --pf-gold-bright: #d8a53a; // accent doré lumineux (liserés, halos) — plus clair que --pf-gold
+
+  --pf-text: #{$finance-text};
+  --pf-text-soft: #{$finance-slate};
+  --pf-text-inverse: #{$finance-text-inverse};
+
+  --pf-bg: #{$finance-bg};
+  --pf-bg-alt: #{$finance-bg-alt};
+  --pf-border: #{$finance-border-soft};
+  --pf-role-bg: #{$finance-role-bg};
+  --pf-soft-navy: #{$finance-soft-navy};
+  --pf-soft-success: #{$finance-soft-success};
+  --pf-soft-warning: #{$finance-soft-warning};
+  --pf-soft-danger: #{$finance-soft-danger};
+  --pf-soft-info: #{$finance-soft-info};
+
+  --pf-shadow: #{$finance-shadow};
+  --pf-shadow-sm: #{$finance-shadow-sm};
+  --pf-shadow-xs: #{$finance-shadow-xs};
+
+  --pf-radius-xl: 1.5rem;
+  --pf-radius-lg: 1.1rem;
+
+  --pf-topbar-h: 64px;
+  --pf-sidebar-w: 280px;
+
+  --pf-font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}

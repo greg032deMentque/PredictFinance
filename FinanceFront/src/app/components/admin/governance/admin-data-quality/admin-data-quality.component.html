@@ -1,0 +1,32 @@
+<section class="page-shell">
+  <div class="page-heading mb-4">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-database-check"></i> Data quality</span>
+      <h1 class="h2 fw-bold mb-2">Anomalies prioritaires et impact user</h1>
+      <p class="muted mb-0">Anomalies priorisées par impact, avec les prochaines actions à mener.</p>
+    </div>
+    <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="load()">Rafraîchir</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-skeleton-group"><div class="skeleton-card"><div class="skeleton-line skeleton-w-55"></div><div class="skeleton-line skeleton-w-90"></div></div></div>
+  } @else if (error) {
+    <div class="error-panel">{{ error }}</div>
+  } @else if (payload) {
+    <div class="kpi-grid mb-3">
+      <div class="metric-card"><div class="small muted mb-1">Profils non synchronisés</div><div class="h3 mb-0">{{ payload.AssetsMissingProfileSyncCount }}</div></div>
+      <div class="metric-card"><div class="small muted mb-1">Sans registre PEA</div><div class="h3 mb-0">{{ payload.AssetsWithoutPeaRegistryCount }}</div></div>
+      <div class="metric-card"><div class="small muted mb-1">PEA inconnus</div><div class="h3 mb-0">{{ payload.PeaRegistryUnknownStatusCount }}</div></div>
+      <div class="metric-card"><div class="small muted mb-1">Runs sans snapshot</div><div class="h3 mb-0">{{ payload.CompletedAnalysisRunsWithoutModelSnapshotCount }}</div></div>
+    </div>
+    <div class="compact-list">
+      @for (issue of payload.IssueSummaries; track issue) {
+        <div class="compact-row"><div>{{ issue }}</div><span class="chip chip-warning">À traiter</span></div>
+      } @empty {
+        <div class="empty-state"><div class="fw-semibold">Aucune anomalie remontée</div></div>
+      }
+    </div>
+  } @else {
+    <div class="empty-state"><div class="fw-semibold">Aucune donnée qualité</div></div>
+  }
+</section>

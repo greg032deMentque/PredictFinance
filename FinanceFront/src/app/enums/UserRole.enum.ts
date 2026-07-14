@@ -1,7 +1,5 @@
 ﻿
 export enum UserRoleEnum {
-  superAdmin,
+  user,
   admin,
-  internalConsultant,
-  externalConsultant,
 }

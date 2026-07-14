@@ -1,34 +1,76 @@
-<section class="d-flex flex-column gap-3">
-  <div class="finance-hero-card p-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <div>
-      <p class="text-uppercase text-muted mb-1">Administration</p>
-      <h1 class="h4 mb-0">Dashboard utilisateurs</h1>
+<section class="d-flex flex-column gap-4">
+  <section class="hero">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-8">
+        <span class="chip bg-white text-dark mb-3"><i class="bi bi-speedometer2"></i> Overview</span>
+        <h1 class="display-6 fw-bold mb-3">Pilotage gouverné de la plateforme</h1>
+        <p class="mb-4 text-white-50 fs-5">La page s'aligne sur la spec admin : overview, registres, policy, audit et qualité.</p>
+        <div class="admin-tabs">
+          <a class="admin-tab" [routerLink]="toCommands(adminPaths.UsersList)">Users</a>
+          <a class="admin-tab" [routerLink]="toCommands(adminPaths.InstrumentRegistry)">Instrument registry</a>
+          <a class="admin-tab" [routerLink]="toCommands(adminPaths.SnapshotAudit)">Snapshot audit</a>
+          <a class="admin-tab" [routerLink]="toCommands(adminPaths.DataQuality)">Data quality</a>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="surface bg-white p-4">
+          <div class="fw-bold text-dark mb-3">Action rapide</div>
+          <button type="button" class="btn btn-primary rounded-pill w-100 cta-primary" (click)="loadOverview()">Rafraîchir l'overview</button>
+        </div>
+      </div>
     </div>
-    <a class="btn btn-primary" [routerLink]="['/', adminPaths.UsersList]">Voir les utilisateurs</a>
-  </div>
+  </section>
 
   @if (error) {
-    <div class="alert alert-danger mb-0">{{ error }}</div>
+    <div class="error-panel">{{ error }}</div>
   }
 
-  <div class="row g-3">
-    <div class="col-12 col-md-6">
-      <div class="card border finance-border-soft shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1">Nombre total utilisateurs</p>
-          <div class="display-6 fw-semibold">{{ loading ? '...' : totalUsers }}</div>
-        </div>
-      </div>
+  @if (loading) {
+    <div class="loading-skeleton-group">
+      <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div>
     </div>
+  } @else if (overview) {
+    <section class="page-shell">
+      <div class="kpi-grid">
+        <div class="metric-card"><div class="small muted mb-1">Utilisateurs</div><div class="h3 mb-0">{{ overview.TotalUsers }}</div></div>
+        <div class="metric-card"><div class="small muted mb-1">Utilisateurs actifs</div><div class="h3 mb-0">{{ overview.ActiveUsers }}</div></div>
+        <div class="metric-card"><div class="small muted mb-1">Assets</div><div class="h3 mb-0">{{ overview.TotalAssets }}</div></div>
+        <div class="metric-card"><div class="small muted mb-1">Runs d'analyse</div><div class="h3 mb-0">{{ overview.TotalAnalysisRuns }}</div></div>
+        <div class="metric-card"><div class="small muted mb-1">Runs complétés</div><div class="h3 mb-0">{{ overview.CompletedAnalysisRuns }}</div></div>
+        <div class="metric-card"><div class="small muted mb-1">Runs en échec</div><div class="h3 mb-0">{{ overview.FailedAnalysisRuns }}</div></div>
+        <div class="metric-card"><div class="small muted mb-1">PEA confirmés</div><div class="h3 mb-0">{{ overview.ConfirmedEligiblePeaEntries }}</div></div>
+        <div class="metric-card"><div class="small muted mb-1">PEA inconnus</div><div class="h3 mb-0">{{ overview.UnknownPeaEntries }}</div></div>
+      </div>
+    </section>
 
-    <div class="col-12 col-md-6">
-      <div class="card border finance-border-soft shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1">Utilisateurs actifs</p>
-          <div class="display-6 fw-semibold">{{ loading ? '...' : activeUsersMock }}</div>
-          <small class="text-muted">{{ activeUsersMockLabel }}</small>
+    <section class="split-cards">
+      <div class="page-card">
+        <div class="section-title">Gouvernance</div>
+        <div class="compact-list">
+          <div class="compact-row"><span>Parameters publiés</span><span class="code-chip">{{ overview.PublishedParameterEntries }}</span></div>
+          <div class="compact-row"><span>Dernière analyse complétée</span><span class="code-chip">{{ overview.LatestCompletedAnalysisUtc ? (overview.LatestCompletedAnalysisUtc | date:'dd/MM/yyyy HH:mm') : 'n/a' }}</span></div>
         </div>
       </div>
-    </div>
-  </div>
+      <div class="helper-panel">
+        <div class="fw-semibold mb-2">Lecture recommandée</div>
+        <div class="mini-note">Commencer par les anomalies de qualité, puis contrôler les registres et enfin l'audit des snapshots.</div>
+      </div>
+    </section>
+
+    <section class="split-cards">
+      <div class="page-card">
+        <div class="section-title mb-3">KPI</div>
+        <div class="d-flex flex-column flex-md-row gap-3">
+          <a [routerLink]="toCommands(adminPaths.KpiSignalQuality)" class="btn btn-outline-secondary d-flex align-items-center gap-2 flex-grow-1">
+            <i class="bi bi-bar-chart-line"></i>
+            <span>Qualité des signaux</span>
+          </a>
+          <a [routerLink]="toCommands(adminPaths.KpiEngagement)" class="btn btn-outline-secondary d-flex align-items-center gap-2 flex-grow-1">
+            <i class="bi bi-people"></i>
+            <span>Engagement utilisateurs</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  }
 </section>

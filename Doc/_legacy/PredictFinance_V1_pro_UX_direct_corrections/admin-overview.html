@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin overview - PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/style.css" rel="stylesheet">
+</head>
+<body>
+  <div class="app-root py-4 py-lg-4">
+    <div class="topbar px-3 px-lg-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 sticky-section-nav">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-mark"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <div>
+          <div class="fw-bold fs-5">PredictFinance V1</div>
+          <div class="small muted">Governance and operational attention</div>
+        </div>
+      </div>
+      <div class="top-actions-scroll">
+        <span class="chip chip-info"><i class="bi bi-person-badge"></i> Admin mock connecté</span>
+        <span class="chip chip-navy"><i class="bi bi-diagram-3"></i> Espace admin</span>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="notifications.html"><i class="bi bi-bell me-2"></i>Notifications</a>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="login.html"><i class="bi bi-box-arrow-left me-2"></i>Déconnexion</a>
+      </div>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="mb-4">
+          <div class="text-uppercase small opacity-75 mb-2">Espace admin</div>
+          <div class="fw-semibold fs-5">Navigation</div>
+        </div>
+        <nav class="nav flex-column gap-2 mb-4"><a class="nav-link" href="user-home.html"><i class="bi bi-house-door"></i> Accueil user</a><a class="nav-link" href="watchlist.html"><i class="bi bi-stars"></i> Watchlist</a><a class="nav-link" href="portfolio.html"><i class="bi bi-briefcase"></i> Portfolio</a><a class="nav-link" href="analysis-entry.html"><i class="bi bi-search-heart"></i> Analysis</a><a class="nav-link" href="analysis-result.html"><i class="bi bi-graph-up-arrow"></i> Result</a><a class="nav-link" href="instrument-detail.html"><i class="bi bi-building"></i> Instrument</a><a class="nav-link" href="parameter-detail.html"><i class="bi bi-sliders2"></i> Parameter</a><a class="nav-link" href="simulation.html"><i class="bi bi-calculator"></i> Simulation</a><a class="nav-link" href="history.html"><i class="bi bi-clock-history"></i> History</a><a class="nav-link" href="snapshot-comparison.html"><i class="bi bi-columns-gap"></i> Compare</a><a class="nav-link" href="learn.html"><i class="bi bi-mortarboard"></i> Learn</a><a class="nav-link" href="account.html"><i class="bi bi-person-circle"></i> Compte</a><a class="nav-link" href="notifications.html"><i class="bi bi-bell"></i> Notifications</a><a class="nav-link" href="onboarding-empty.html"><i class="bi bi-rocket"></i> Onboarding</a><a class="nav-link" href="help-center.html"><i class="bi bi-life-preserver"></i> Help center</a></nav>
+        <div class="soft-divider mb-4"></div>
+        <div class="mb-3 text-uppercase small opacity-75">Admin</div>
+        <nav class="nav flex-column gap-2"><a class="nav-link active" href="admin-overview.html"><i class="bi bi-speedometer2"></i> Overview</a><a class="nav-link" href="admin-users.html"><i class="bi bi-people"></i> Users</a><a class="nav-link" href="admin-instrument-registry.html"><i class="bi bi-building-gear"></i> Instrument registry</a><a class="nav-link" href="admin-pea-registry.html"><i class="bi bi-patch-check"></i> PEA registry</a><a class="nav-link" href="admin-scoring-policy.html"><i class="bi bi-sliders"></i> Scoring policy</a><a class="nav-link" href="admin-parameter-dictionary.html"><i class="bi bi-journal-text"></i> Parameter dictionary</a><a class="nav-link" href="admin-wording-versions.html"><i class="bi bi-chat-left-text"></i> Wording versions</a><a class="nav-link" href="admin-snapshot-audit.html"><i class="bi bi-clock-history"></i> Snapshot audit</a><a class="nav-link" href="admin-data-quality.html"><i class="bi bi-database-check"></i> Data quality</a><a class="nav-link" href="design-system.html"><i class="bi bi-grid-1x2"></i> Design system</a></nav>
+      </aside>
+      <main class="main-col d-flex flex-column gap-4">
+        
+<section class="hero">
+  <div class="row g-4 align-items-center">
+    <div class="col-lg-8">
+      <span class="chip bg-white text-dark mb-3"><i class="bi bi-shield-lock"></i> Admin overview</span>
+      <h1 class="display-6 fw-bold mb-3">Espace admin clairement séparé après login</h1>
+      <p class="mb-4 text-white-50 fs-5">Le parcours admin est maintenant distinct dès l’entrée. L’admin dispose en plus d’une vraie page de gestion des utilisateurs.</p>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-light rounded-pill px-4 fw-semibold" href="admin-users.html">Gérer les utilisateurs</a>
+        <a class="btn btn-outline-light rounded-pill px-4" href="admin-data-quality.html">Data quality</a>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="surface bg-white p-4">
+        <div class="fw-bold text-dark mb-3">Surfaces admin</div>
+        <div class="compact-list small text-dark">
+          <div>• users</div>
+          <div>• instrument registry</div>
+          <div>• PEA registry</div>
+          <div>• scoring policy</div>
+          <div>• audit & data quality</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="page-shell">
+  <div class="quick-links">
+    <a class="quick-link-card" href="admin-users.html"><div class="fw-semibold mb-1">Users</div><div class="small muted">Créer, activer, suspendre, attribuer les rôles</div></a>
+    <a class="quick-link-card" href="admin-instrument-registry.html"><div class="fw-semibold mb-1">Instrument registry</div><div class="small muted">Produit, mapping provider, support et fraîcheur</div></a>
+    <a class="quick-link-card" href="admin-pea-registry.html"><div class="fw-semibold mb-1">PEA registry</div><div class="small muted">Vérité PEA gouvernée</div></a>
+    <a class="quick-link-card" href="admin-data-quality.html"><div class="fw-semibold mb-1">Data quality</div><div class="small muted">Dégradations et incompletudes</div></a>
+  </div>
+</section>
+
+        <div class="footer-divider pt-3 small muted">PredictFinance V1 — parcours séparés admin / user après login mock, shell large, design system partagé.</div>
+      </main>
+    </div>
+  </div>
+  <div class="mobile-nav d-md-none"><div class="container-fluid"><div class="row g-0"><div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="user-home.html"><i class="bi bi-house-door fs-5"></i><span>Home</span></a></div><div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="watchlist.html"><i class="bi bi-stars fs-5"></i><span>Watchlist</span></a></div><div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="analysis-entry.html"><i class="bi bi-search fs-5"></i><span>Analyse</span></a></div><div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="account.html"><i class="bi bi-person fs-5"></i><span>Compte</span></a></div><div class="col text-center"><a class="active d-flex flex-column align-items-center gap-1 py-2" href="admin-overview.html"><i class="bi bi-shield-lock fs-5"></i><span>Admin</span></a></div></div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

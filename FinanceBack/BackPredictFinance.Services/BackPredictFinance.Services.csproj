@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AutoMapper" Version="16.1.1" />
+		<PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+		<PackageReference Include="MailKit" Version="4.17.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+		<PackageReference Include="Serilog" Version="4.3.1" />
+		<PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\BackPredictFinance.Common\BackPredictFinance.Common.csproj" />
+		<ProjectReference Include="..\BackPredictFinance.Datas\BackPredictFinance.Datas.csproj" />		<ProjectReference Include="..\BackPredictFinance.ViewModels\BackPredictFinance.ViewModels.csproj" />
+		<ProjectReference Include="..\BackPredictFinance.Patterns\BackPredictFinance.Patterns.csproj" />
+	</ItemGroup>
+
+</Project>

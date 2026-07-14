@@ -1,64 +1,57 @@
-﻿import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { HttpErrorResponse, HttpEvent, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
-import { AuthService } from '../services/AuthService.service';
-import { StorageService } from '../services/storage.service';
+import { switchMap } from 'rxjs/operators';
+import { AuthService } from '@app/services/AuthService.service';
+import { StorageService } from '@app/services/storage.service';
 
-@Injectable()
-export class TokenInterceptor implements HttpInterceptor {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly storageService: StorageService
-  ) {}
-
-  intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    if (this.isAccountEndpoint(req.url)) {
-      return next.handle(req);
-    }
-
-    const token = this.storageService.GetToken();
-    if (!token) {
-      return next.handle(req);
-    }
-
-    if (!this.authService.isTokenExpired(token)) {
-      return next.handle(this.addAuthorization(req, token));
-    }
-
-    const refreshToken = this.storageService.GetRefreshToken();
-    if (!refreshToken) {
-      this.authService.logout();
-      return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Session expired' }));
-    }
-
-    return this.authService.refreshToken(token, refreshToken).pipe(
-      switchMap((response) =>
-        next.handle(this.addAuthorization(req, (response.Token ?? '').trim()))
-      ),
-      catchError((err) => {
-        this.authService.logout();
-        return throwError(() => err);
-      })
-    );
-  }
-
-  private addAuthorization(req: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
-    return req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-  }
-
-  private isAccountEndpoint(url: string): boolean {
-    return (
-      url.includes('/Account/Login') ||
-      url.includes('/Account/LoginAdmin') ||
-      url.includes('/Account/Refresh') ||
-      url.includes('/Account/ForgotPassword') ||
-      url.includes('/Account/ResetPassword') ||
-      url.includes('/Account/Logout')
-    );
-  }
+function addAuthorization(req: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
+  return req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
 }
+
+function isAccountEndpoint(url: string): boolean {
+  return (
+    url.includes('/Account/Login') ||
+    url.includes('/Account/Register') ||
+    url.includes('/Account/LoginAdmin') ||
+    url.includes('/Account/ConfirmEmail') ||
+    url.includes('/Account/ResendConfirmationEmail') ||
+    url.includes('/Account/Refresh') ||
+    url.includes('/Account/ForgotPassword') ||
+    url.includes('/Account/ResetPassword') ||
+    url.includes('/Account/Logout')
+  );
+}
+
+export const tokenInterceptor: HttpInterceptorFn = (
+  req: HttpRequest<unknown>,
+  next: HttpHandlerFn
+): Observable<HttpEvent<unknown>> => {
+  const authService = inject(AuthService);
+  const storageService = inject(StorageService);
+
+  if (isAccountEndpoint(req.url)) {
+    return next(req);
+  }
+
+  // Capture si une session est présente avant la tentative de refresh.
+  // Si ensureValidAccessToken() retourne null alors qu'un token expiré existe en storage,
+  // c'est une session expirée sans refresh token valide : on logout immédiatement
+  // plutôt que de laisser partir une requête destinée à échouer en 401.
+  const hadToken = !!storageService.GetToken();
+
+  return authService.ensureValidAccessToken().pipe(
+    switchMap((token) => {
+      if (!token) {
+        if (hadToken) {
+          authService.logout();
+          return throwError(
+            () => new HttpErrorResponse({ status: 401, statusText: 'Session expirée' })
+          );
+        }
+        return next(req);
+      }
+      return next(addAuthorization(req, token));
+    })
+  );
+};

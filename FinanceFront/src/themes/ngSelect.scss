@@ -1,42 +1,70 @@
+@use "./variables" as *;
+
+.ng-select,
+.finance-select.ng-select {
+  width: 100%;
+}
+
+.finance-select.ng-select .ng-select-container,
 .ng-select .ng-select-container {
-    border-radius: 0 !important;
-    overflow: auto !important;
-
-
+  min-height: 46px;
+  border: 1px solid rgba(214, 224, 236, 0.96) !important;
+  border-radius: 1rem !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: inset 0 1px 2px rgba(15, 39, 66, 0.03);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
-.ng-select .ng-select-container {
-
-    max-height: 100px !important;
+.finance-select.ng-select .ng-select-container:hover,
+.ng-select .ng-select-container:hover {
+  border-color: rgba(183, 200, 218, 1) !important;
 }
 
-
-.ng-select {
-    &.ng-select-focused {
-        &:not(.ng-select-opened)>.ng-select-container {
-            border-color: transparent !important;
-            box-shadow: none !important;
-            max-height: 100px !important;
-
-        }
-    }
+.finance-select.ng-select.ng-select-focused:not(.ng-select-opened) > .ng-select-container,
+.ng-select.ng-select-focused:not(.ng-select-opened) > .ng-select-container,
+.ng-select.ng-select-opened > .ng-select-container {
+  border-color: rgba(31, 84, 128, 0.34) !important;
+  box-shadow: 0 0 0 0.22rem rgba(31, 84, 128, 0.12) !important;
 }
 
+.ng-select .ng-placeholder {
+  color: $finance-muted !important;
+}
+
+.ng-select .ng-arrow-wrapper .ng-arrow {
+  border-color: $finance-navy transparent transparent !important;
+}
+
+.ng-dropdown-panel {
+  border: 1px solid rgba(214, 224, 236, 0.96) !important;
+  border-radius: 1rem !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 18px 32px rgba(12, 35, 59, 0.12) !important;
+}
 
 .ng-dropdown-panel .ng-dropdown-panel-items {
-
-    max-height: 180px !important;
-    overflow: auto !important;
+  max-height: 220px !important;
+  overflow: auto !important;
 }
 
+.ng-dropdown-panel .ng-option {
+  padding: 0.7rem 0.85rem !important;
+}
 
-.ng-select.ng-select-opened.ng-select-bottom > .ng-select-container {
+.ng-dropdown-panel .ng-option.ng-option-marked,
+.ng-dropdown-panel .ng-option:hover {
+  background: $finance-soft-navy !important;
+  color: $finance-navy !important;
+}
 
-    max-height: 100px !important;
-    overflow: auto !important;
+.ng-dropdown-panel .ng-option.ng-option-selected {
+  background: rgba(238, 247, 251, 0.96) !important;
+  color: $finance-navy !important;
 }
 
 .ng-clear-wrapper {
-    display: none;
-
+  display: none;
 }

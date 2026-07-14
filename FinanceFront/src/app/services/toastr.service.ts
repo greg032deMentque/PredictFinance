@@ -21,16 +21,16 @@ export class ToastService {
   public success(message: string) {
     if(message != null){
       if (message.length > 160) {
-        message = "Aucune erreur n'a Ã©tÃ© levÃ©e."
+        message = "Aucune erreur n'a été levée."
       }
     }
-    this.toastr.success(message, "SuccÃ¨s", { timeOut: 4500 })
+    this.toastr.success(message, "Succès", { timeOut: 4500 })
   }
 
   public warning(message: string) {
     if(message != null){
       if (message.length > 160) {
-        message = "Veuillez vÃ©rifier tous les paramÃ¨tres."
+        message = "Veuillez vérifier tous les paramètres."
       }
     }
     this.toastr.warning(message, "Attention", { timeOut: 4500 })

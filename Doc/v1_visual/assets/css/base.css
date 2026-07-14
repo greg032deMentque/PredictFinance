@@ -1,0 +1,42 @@
+/* ============================================================
+   Base — reset léger, typographie, body, liens, focus
+   ============================================================ */
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--pf-bg);
+  color: var(--pf-text);
+  font-family: var(--pf-font-sans);
+  line-height: var(--pf-leading);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .25s ease, color .25s ease;
+}
+
+a { text-decoration: none; color: var(--pf-blue); }
+a:hover { color: var(--pf-navy-2); }
+
+h1, h2, h3, h4 { color: var(--pf-text); line-height: var(--pf-leading-tight); }
+
+.pf-h1 { font-size: var(--pf-font-3xl); font-weight: 800; letter-spacing: -.02em; }
+.pf-h2 { font-size: var(--pf-font-2xl); font-weight: 800; letter-spacing: -.01em; }
+.pf-h3 { font-size: var(--pf-font-xl); font-weight: 700; }
+
+.muted { color: var(--pf-text-muted); }
+.mini-note { font-size: var(--pf-font-xs); color: var(--pf-text-muted); }
+
+/* Avant que les Web Components ne soient définis : éviter le flash de contenu brut */
+pf-shell:not(:defined),
+pf-state:not(:defined) { visibility: hidden; }
+pf-shell { display: block; min-height: 60vh; }
+
+/* Focus visible accessible et homogène */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pf-ring);
+  border-radius: var(--pf-radius-xs);
+}
+
+/* Le wording interne (codes enum) ne doit jamais fuiter : utilitaire debug masqué */
+.pf-code-internal { display: none; }

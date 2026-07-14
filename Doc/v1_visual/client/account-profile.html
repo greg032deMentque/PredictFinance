@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profil — PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="../assets/css/app.css" rel="stylesheet">
+</head>
+<body>
+  <pf-shell space="client" active="account-profile">
+    <section class="hero on-dark">
+      <div class="pf-row-between">
+        <div>
+          <div class="card-eyebrow" style="color:rgba(255,255,255,.75)">Compte</div>
+          <h1 class="pf-h2 mt-1 mb-2">Profil</h1>
+          <p class="muted mb-0" style="color:rgba(255,255,255,.82);max-width:76ch">Édition de la projection compte utilisateur courant.</p>
+        </div>
+        <span class="pf-btn pf-btn-on-dark"><i class="bi bi-signpost"></i> /client/account/profile</span>
+      </div>
+    </section>
+
+    <pf-state default="ready">
+      <div data-state="ready">
+        <div class="with-rail">
+          <div class="pf-stack pf-stack-5">
+            <section class="page-card">
+  <div class="section-title"><i class="bi bi-code-square"></i> Traçabilité code → visuel</div>
+  <div class="table-card"><table class="pf-table"><tbody><tr><th>Route Angular</th><td><code class="code-chip">/client/account/profile</code></td></tr><tr><th>Composant</th><td><code class="code-chip">AccountProfileComponent</code></td></tr><tr><th>Template source</th><td><code class="code-chip">src/app/components/client/account/profile/account-profile.component.html</code></td></tr><tr><th>But écran</th><td>Édition de la projection compte utilisateur courant.</td></tr></tbody></table></div>
+</section>
+<section class="page-card">
+  <div class="section-title"><i class="bi bi-layout-text-window-reverse"></i> Structure visuelle obligatoire</div>
+  <ul class="mb-0"><li>Shell compte avec titre “Mon espace personnel”.</li><li>Onglets Profil et Sécurité.</li><li>Formulaire Profil : email, prénom, nom, téléphone.</li><li>Texte d’aide indiquant projection compte dédiée.</li></ul>
+</section>
+<section class="page-card">
+  <div class="section-title"><i class="bi bi-database"></i> Données, listes et champs affichés</div>
+  <ul class="mb-0"><li>Email, Prénom, Nom, Téléphone.</li><li>Validations : prénom/nom au moins 2 caractères.</li><li>loading profile et submitting.</li></ul>
+</section>
+<section class="page-card">
+  <div class="section-title"><i class="bi bi-cursor"></i> Actions et navigation</div>
+  <div class="table-card"><table class="pf-table"><thead><tr><th>Action UI</th><th>Destination / effet</th><th>Règle visuelle</th></tr></thead><tbody><tr><td>Rafraîchir</td><td>reload profile</td><td>Bouton secondaire.</td></tr><tr><td>Enregistrer</td><td>save profile</td><td>Bouton primaire soumis si formulaire valide.</td></tr><tr><td>Sécurité</td><td>/client/account/security</td><td>Onglet du shell compte.</td></tr></tbody></table></div>
+</section>
+          </div>
+          <aside class="right-rail">
+            <section class="page-card">
+  <div class="section-title"><i class="bi bi-toggles"></i> États à prévoir</div>
+  <ul class="mb-0"><li>Chargement du profil.</li><li>Erreur chargement profil.</li><li>Validation formulaire.</li><li>Sauvegarde non disponible si formulaire invalide.</li></ul>
+</section>
+            <section class="page-card">
+  <div class="section-title"><i class="bi bi-diagram-3"></i> Entrées / sorties</div>
+  <div class="table-card"><table class="pf-table"><thead><tr><th>Entrée</th><th>Sortie</th></tr></thead><tbody><tr><td>Dashboard</td><td>Sécurité</td></tr></tbody></table></div>
+</section>
+          </aside>
+        </div>
+      </div>
+      <div data-state="loading"><div class="skeleton-group"><div class="skeleton-card"><div class="skeleton-line sk-55"></div><div class="skeleton-line sk-90"></div><div class="skeleton-line sk-70"></div></div><div class="skeleton-card"><div class="skeleton-line sk-40"></div><div class="skeleton-line sk-80"></div></div></div></div>
+      <div data-state="empty"><div class="empty-state"><span class="empty-icon"><i class="bi bi-inbox"></i></span><div class="fw-bold">Aucune donnée affichable</div><p class="muted mb-0">L’état vide doit conserver la structure de l’écran et expliquer la prochaine action disponible sans inventer de résultat.</p></div></div>
+      <div data-state="error"><div class="error-panel"><div class="fw-bold"><i class="bi bi-wifi-off"></i> Chargement indisponible</div><p class="mb-0">L’erreur technique reste récupérable, visible et séparée des états métier non exécutables.</p><button class="pf-btn"><i class="bi bi-arrow-clockwise"></i> Réessayer</button></div></div>
+      <div data-state="non-executable"><div class="non-exec-panel"><span class="non-exec-tag">État métier</span><div class="fw-bold">Action non exécutable dans ce contexte</div><p class="mb-0">L’écran doit expliquer la cause métier sans l’afficher comme une panne applicative.</p></div></div>
+    </pf-state>
+  </pf-shell>
+
+  <script type="application/json" id="pf-flow">
+{
+  "screen": "Profil",
+  "in": [
+    {
+      "label": "Dashboard",
+      "href": "dashboard.html"
+    }
+  ],
+  "out": [
+    {
+      "label": "Sécurité",
+      "href": "account-security.html"
+    }
+  ]
+}
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/pf.bundle.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<section class="page-shell">
+  <div class="page-heading mb-4">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-clock-history"></i> Snapshot audit</span>
+      <h1 class="h2 fw-bold mb-2">Ce qui a été persisté et sous quel contexte</h1>
+      <p class="muted mb-0">Lecture admin centrée sur les runs récents, le statut, la trace et la version moteur.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="load()">Rafraîchir</button>
+      <button type="button" class="btn btn-primary rounded-pill" (click)="goToCompare()" [disabled]="selectedAnalysisRunIds.size !== 2">Comparer les 2 sélections</button>
+    </div>
+  </div>
+
+  @if (loading) {
+    <div class="loading-skeleton-group"><div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div></div>
+  } @else if (error) {
+    <div class="error-panel">{{ error }}</div>
+  } @else if (items.length === 0) {
+    <div class="empty-state"><div class="fw-semibold">Aucun snapshot récent</div></div>
+  } @else {
+    <div class="compact-list">
+      @for (item of items; track item.AnalysisRunId) {
+        <div class="compact-row gap-3">
+          <div class="form-check mt-1">
+            <input class="form-check-input" type="checkbox" [id]="'snapshot-' + item.AnalysisRunId" [checked]="isSelected(item.AnalysisRunId)" (change)="toggleSelection(item.AnalysisRunId)" />
+          </div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold">{{ item.Symbol }} · {{ item.AnalysisRunId }}</div>
+            <div class="small muted mb-2">Status: {{ item.Status }} · Pattern primaire: {{ item.PrimaryPatternId || 'n/a' }}</div>
+            <div class="small muted">Trace: {{ item.TraceId }}</div>
+          </div>
+          <div class="text-end d-flex flex-column gap-2 align-items-end">
+            <span class="code-chip">{{ item.AnalysisEngineVersion || 'Version n/a' }}</span>
+            <span class="chip chip-info">{{ item.RecommendationAction || 'n/a' }}</span>
+            <div class="small muted">{{ item.CompletedAtUtc ? (item.CompletedAtUtc | date:'dd/MM/yyyy HH:mm') : (item.StartedAtUtc | date:'dd/MM/yyyy HH:mm') }}</div>
+            <a class="btn btn-sm btn-outline-secondary rounded-pill" [routerLink]="toCommands(adminPaths.SnapshotAuditDetail(item.AnalysisRunId))">Voir le détail</a>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>

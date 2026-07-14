@@ -1,0 +1,64 @@
+<!-- Modal Bootstrap — ajouter les attributs data-bs-backdrop="static" sur le déclencheur parent -->
+<div class="modal fade" id="investmentWarningModal" tabindex="-1" aria-labelledby="investmentWarningModalLabel" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+
+      <div class="modal-header bg-warning-subtle border-bottom-0">
+        <h5 class="modal-title d-flex align-items-center gap-2" id="investmentWarningModalLabel">
+          <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+          Avertissement réglementaire
+        </h5>
+      </div>
+
+      <div class="modal-body d-flex flex-column gap-3">
+        <p class="fw-semibold mb-0">
+          FinInsight est un outil d'analyse technique pédagogique. Il ne constitue pas un conseil en investissement.
+        </p>
+
+        <ul class="list-unstyled d-flex flex-column gap-2 mb-0">
+          <li class="d-flex align-items-start gap-2">
+            <i class="bi bi-x-circle-fill text-danger flex-shrink-0 mt-1"></i>
+            <span>Aucun ordre ne peut être passé depuis cette application.</span>
+          </li>
+          <li class="d-flex align-items-start gap-2">
+            <i class="bi bi-x-circle-fill text-danger flex-shrink-0 mt-1"></i>
+            <span>FinInsight n'est pas une banque et n'est pas agréé comme conseiller en investissement (CIF).</span>
+          </li>
+          <li class="d-flex align-items-start gap-2">
+            <i class="bi bi-x-circle-fill text-danger flex-shrink-0 mt-1"></i>
+            <span>Les analyses affichées ne constituent pas des recommandations d'achat ou de vente de titres financiers.</span>
+          </li>
+          <li class="d-flex align-items-start gap-2">
+            <i class="bi bi-x-circle-fill text-danger flex-shrink-0 mt-1"></i>
+            <span>Les performances passées ne préjugent pas des performances futures.</span>
+          </li>
+        </ul>
+
+        <p class="text-secondary small mb-0">
+          Toute décision d'investissement est de votre entière responsabilité. En cas de doute, consultez un conseiller financier habilité.
+        </p>
+      </div>
+
+      <div class="modal-footer border-top-0 d-flex gap-2">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          data-bs-dismiss="modal"
+          (click)="dismiss()"
+        >
+          <i class="bi bi-arrow-left me-2"></i>Retour
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          data-bs-dismiss="modal"
+          (click)="confirm()"
+        >
+          J'ai compris — Continuer vers l'analyse
+          <i class="bi bi-arrow-right ms-2"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>

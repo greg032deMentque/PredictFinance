@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>History - PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/style.css" rel="stylesheet">
+</head>
+<body>
+  <div class="app-root py-4 py-lg-4">
+    <div class="topbar px-3 px-lg-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 sticky-section-nav">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-mark"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <div><div class="fw-bold fs-5">PredictFinance V1</div><div class="small muted">Persisted feed</div></div>
+      </div>
+      <div class="top-actions-scroll">
+        <span class="chip chip-info"><i class="bi bi-person-badge"></i> User mock connecté</span>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="notifications.html"><i class="bi bi-bell me-2"></i>Notifications</a>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="login.html"><i class="bi bi-box-arrow-left me-2"></i>Déconnexion</a>
+      </div>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="mb-4"><div class="text-uppercase small opacity-75 mb-2">Espace user</div><div class="fw-semibold fs-5">Navigation</div></div>
+        <nav class="nav flex-column gap-2">
+          <a class="nav-link" href="user-home.html"><i class="bi bi-house-door"></i> Accueil user</a>
+          <a class="nav-link" href="watchlist.html"><i class="bi bi-stars"></i> Watchlist</a>
+          <a class="nav-link" href="analysis-entry.html"><i class="bi bi-search-heart"></i> Analysis</a>
+          <a class="nav-link active" href="history.html"><i class="bi bi-clock-history"></i> History</a>
+          <a class="nav-link" href="snapshot-comparison.html"><i class="bi bi-columns-gap"></i> Compare</a>
+        </nav>
+      </aside>
+      <main class="main-col d-flex flex-column gap-4">
+        <section class="page-shell">
+          <div class="page-heading mb-4">
+            <div class="page-subtitle">
+              <span class="chip chip-navy mb-2"><i class="bi bi-clock-history"></i> History</span>
+              <h1 class="h2 fw-bold mb-2">Historique renforcé autour des snapshots persistés</h1>
+              <p class="muted mb-0">Cette version stable rend plus explicite que l’historique reflète une vérité datée persistée, pas une reconstruction depuis l’état présent.</p>
+            </div>
+          </div>
+
+          <div class="section-tabs mb-4">
+            <span class="section-tab active"><i class="bi bi-list-ul"></i> Feed global</span>
+            <span class="section-tab"><i class="bi bi-building"></i> Par instrument</span>
+            <span class="section-tab"><i class="bi bi-columns-gap"></i> Compare</span>
+          </div>
+
+          <div class="compact-list mb-4">
+            <div class="timeline-card">
+              <div class="timeline-content">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                  <div>
+                    <div class="fw-semibold">09/04/2026 · snapshot_2026_04_09_001</div>
+                    <div class="small muted">Legrand · Pattern crédible détecté · Rectangle · support FULL · rules V1.0</div>
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span class="chip chip-info">Surveiller</span>
+                    <span class="chip chip-success">PEA confirmée</span>
+                    <a class="btn btn-sm btn-outline-secondary rounded-pill" href="snapshot-comparison.html">Comparer</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="timeline-card">
+              <div class="timeline-content">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                  <div>
+                    <div class="fw-semibold">08/04/2026 · snapshot_2026_04_08_011</div>
+                    <div class="small muted">LVMH · Aucun pattern crédible retenu · support FULL · rules V1.0</div>
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span class="chip chip-warning">Attendre</span>
+                    <span class="chip chip-success">PEA confirmée</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="timeline-card">
+              <div class="timeline-content">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                  <div>
+                    <div class="fw-semibold">06/04/2026 · snapshot_2026_04_06_004</div>
+                    <div class="small muted">Rubis · Données insuffisantes pour analyser · support PARTIAL · rules V1.0</div>
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span class="chip chip-warning">Attendre</span>
+                    <span class="chip chip-warning">PEA non confirmée</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page-state-grid">
+            <div class="page-card">
+              <div class="section-title">Empty state pattern</div>
+              <div class="empty-state">
+                <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
+                <div class="fw-semibold">Aucun snapshot pour ce filtre</div>
+                <div class="small muted">Le message vide guide l’utilisateur sans le bloquer, avec action explicite.</div>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill">Réinitialiser les filtres</button>
+              </div>
+            </div>
+            <div class="page-card">
+              <div class="section-title">Loading state pattern</div>
+              <div class="loading-skeleton-group">
+                <div class="skeleton-card">
+                  <div class="skeleton-line skeleton-w-55"></div>
+                  <div class="skeleton-line skeleton-w-90"></div>
+                  <div class="skeleton-line skeleton-w-35"></div>
+                </div>
+              </div>
+            </div>
+            <div class="page-card">
+              <div class="section-title">Error state pattern</div>
+              <div class="error-panel">
+                <div class="fw-semibold">Impossible de charger l’historique</div>
+                <div class="small">Une erreur technique doit être distinguée d’un cas métier non exécutable ou de données insuffisantes.</div>
+                <button class="btn btn-sm btn-outline-danger rounded-pill align-self-start">Réessayer</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="footer-divider pt-3 small muted">PredictFinance V1 — history page stable avec timeline persistée, états standardisés et meilleure lisibilité des snapshots.</div>
+      </main>
+    </div>
+  </div>
+  <div class="mobile-nav d-md-none"><div class="container-fluid"><div class="row g-0">
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="user-home.html"><i class="bi bi-house-door fs-5"></i><span>Home</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="watchlist.html"><i class="bi bi-stars fs-5"></i><span>Watchlist</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="analysis-entry.html"><i class="bi bi-search fs-5"></i><span>Analyse</span></a></div>
+    <div class="col text-center"><a class="active d-flex flex-column align-items-center gap-1 py-2" href="history.html"><i class="bi bi-clock-history fs-5"></i><span>History</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="account.html"><i class="bi bi-person fs-5"></i><span>Compte</span></a></div>
+  </div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

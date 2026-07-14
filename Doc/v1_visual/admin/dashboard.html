@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pilotage gouverné de la plateforme — PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="../assets/css/app.css" rel="stylesheet">
+</head>
+<body>
+  <pf-shell space="admin" active="dashboard">
+    <section class="hero on-dark">
+      <div class="pf-row-between">
+        <div>
+          <div class="card-eyebrow" style="color:rgba(255,255,255,.75)">Overview</div>
+          <h1 class="pf-h2 mt-1 mb-2">Pilotage gouverné de la plateforme</h1>
+          <p class="muted mb-0" style="color:rgba(255,255,255,.82);max-width:76ch">Vue admin de pilotage : overview, registres, policy, audit et qualité.</p>
+        </div>
+        <span class="pf-btn pf-btn-on-dark"><i class="bi bi-signpost"></i> /admin/dashboard</span>
+      </div>
+    </section>
+
+    <pf-state default="ready">
+      <div data-state="ready">
+        <div class="with-rail">
+          <div class="pf-stack pf-stack-5">
+            <section class="page-card">
+  <div class="section-title"><i class="bi bi-code-square"></i> Traçabilité code → visuel</div>
+  <div class="table-card"><table class="pf-table"><tbody><tr><th>Route Angular</th><td><code class="code-chip">/admin/dashboard</code></td></tr><tr><th>Composant</th><td><code class="code-chip">AdminDashboardComponent</code></td></tr><tr><th>Template source</th><td><code class="code-chip">src/app/components/admin/admin-dashboard/admin-dashboard.component.html</code></td></tr><tr><th>But écran</th><td>Vue admin de pilotage : overview, registres, policy, audit et qualité.</td></tr></tbody></table></div>
+</section>
+<section class="page-card">
+  <div class="section-title"><i class="bi bi-layout-text-window-reverse"></i> Structure visuelle obligatoire</div>
+  <ul class="mb-0"><li>Hero admin avec tabs de navigation rapide.</li><li>Carte Action rapide à droite.</li><li>Grille KPI 8 cartes.</li><li>Section Gouvernance et panneau Lecture recommandée.</li></ul>
+</section>
+<section class="page-card">
+  <div class="section-title"><i class="bi bi-database"></i> Données, listes et champs affichés</div>
+  <ul class="mb-0"><li>TotalUsers, ActiveUsers, TotalAssets, TotalAnalysisRuns.</li><li>CompletedAnalysisRuns, FailedAnalysisRuns.</li><li>ConfirmedEligiblePeaEntries, UnknownPeaEntries.</li><li>PublishedParameterEntries, LatestCompletedAnalysisUtc.</li></ul>
+</section>
+<section class="page-card">
+  <div class="section-title"><i class="bi bi-cursor"></i> Actions et navigation</div>
+  <div class="table-card"><table class="pf-table"><thead><tr><th>Action UI</th><th>Destination / effet</th><th>Règle visuelle</th></tr></thead><tbody><tr><td>Rafraîchir l’overview</td><td>GET AdminOverview/Get</td><td>Bouton primaire dans carte Action rapide.</td></tr><tr><td>Users</td><td>/admin/users</td><td>Tab rapide.</td></tr><tr><td>Instrument registry</td><td>/admin/instrument-registry</td><td>Tab rapide.</td></tr><tr><td>Snapshot audit</td><td>/admin/snapshot-audit</td><td>Tab rapide.</td></tr><tr><td>Data quality</td><td>/admin/data-quality</td><td>Tab rapide.</td></tr></tbody></table></div>
+</section>
+          </div>
+          <aside class="right-rail">
+            <section class="page-card">
+  <div class="section-title"><i class="bi bi-toggles"></i> États à prévoir</div>
+  <ul class="mb-0"><li>Chargement overview.</li><li>Erreur “Impossible de charger la vue d’ensemble admin.”</li><li>Overview absent.</li><li>Non-exécutable si endpoint admin inaccessible.</li></ul>
+</section>
+            <section class="page-card">
+  <div class="section-title"><i class="bi bi-diagram-3"></i> Entrées / sorties</div>
+  <div class="table-card"><table class="pf-table"><thead><tr><th>Entrée</th><th>Sortie</th></tr></thead><tbody><tr><td>Login admin</td><td>Users</td></tr><tr><td>—</td><td>Instrument registry</td></tr><tr><td>—</td><td>Snapshot audit</td></tr><tr><td>—</td><td>Data quality</td></tr></tbody></table></div>
+</section>
+          </aside>
+        </div>
+      </div>
+      <div data-state="loading"><div class="skeleton-group"><div class="skeleton-card"><div class="skeleton-line sk-55"></div><div class="skeleton-line sk-90"></div><div class="skeleton-line sk-70"></div></div><div class="skeleton-card"><div class="skeleton-line sk-40"></div><div class="skeleton-line sk-80"></div></div></div></div>
+      <div data-state="empty"><div class="empty-state"><span class="empty-icon"><i class="bi bi-inbox"></i></span><div class="fw-bold">Aucune donnée affichable</div><p class="muted mb-0">L’état vide doit conserver la structure de l’écran et expliquer la prochaine action disponible sans inventer de résultat.</p></div></div>
+      <div data-state="error"><div class="error-panel"><div class="fw-bold"><i class="bi bi-wifi-off"></i> Chargement indisponible</div><p class="mb-0">L’erreur technique reste récupérable, visible et séparée des états métier non exécutables.</p><button class="pf-btn"><i class="bi bi-arrow-clockwise"></i> Réessayer</button></div></div>
+      <div data-state="non-executable"><div class="non-exec-panel"><span class="non-exec-tag">État métier</span><div class="fw-bold">Action non exécutable dans ce contexte</div><p class="mb-0">L’écran doit expliquer la cause métier sans l’afficher comme une panne applicative.</p></div></div>
+    </pf-state>
+  </pf-shell>
+
+  <script type="application/json" id="pf-flow">
+{
+  "screen": "Pilotage gouverné de la plateforme",
+  "in": [
+    {
+      "label": "Login admin",
+      "href": "../anonymous/login.html"
+    }
+  ],
+  "out": [
+    {
+      "label": "Users",
+      "href": "users.html"
+    },
+    {
+      "label": "Instrument registry",
+      "href": "instrument-registry.html"
+    },
+    {
+      "label": "Snapshot audit",
+      "href": "snapshot-audit.html"
+    },
+    {
+      "label": "Data quality",
+      "href": "data-quality.html"
+    }
+  ]
+}
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/pf.bundle.js"></script>
+</body>
+</html>

@@ -1,13 +1,14 @@
 import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, DestroyRef, Input, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ClientAnalysisResult,
-  getPatternLabel,
   getPhaseLabel,
   getRecommendationBadgeClass,
   getRecommendationLabel,
   getRiskLevelLabel
 } from '../../../../Models/client-finance-models/client-finance-models';
+import { PatternCatalogStore } from '../../../../services/pattern-catalog.store';
 
 @Component({
   selector: 'app-finance-analysis-history',
@@ -17,7 +18,17 @@ import {
   styleUrl: './finance-analysis-history.component.scss'
 })
 export class FinanceAnalysisHistoryComponent {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly patternCatalogStore = inject(PatternCatalogStore);
+
   @Input() history: ClientAnalysisResult[] = [];
+
+  constructor() {
+    this.patternCatalogStore
+      .ensureLoaded()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+  }
 
   getBadgeClass(action: ClientAnalysisResult['RecommendationAction']): string {
     return getRecommendationBadgeClass(action);
@@ -36,6 +47,6 @@ export class FinanceAnalysisHistoryComponent {
   }
 
   getPatternLabel(pattern: ClientAnalysisResult['Pattern']): string {
-    return getPatternLabel(pattern);
+    return this.patternCatalogStore.labelFor(pattern);
   }
 }

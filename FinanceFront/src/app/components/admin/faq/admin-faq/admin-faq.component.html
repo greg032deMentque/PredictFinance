@@ -1,0 +1,142 @@
+<section class="page-shell">
+  <div class="page-heading mb-4">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-question-circle"></i> FAQ</span>
+      <h1 class="h2 fw-bold mb-2">Questions fréquentes</h1>
+      <p class="muted mb-0">Contenu du centre d'aide exposé aux utilisateurs.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="load()">Rafraîchir</button>
+      <button type="button" class="btn btn-primary rounded-pill" (click)="openAdd()">
+        <i class="bi bi-plus-lg me-1"></i>Ajouter
+      </button>
+    </div>
+  </div>
+
+  @if (isPanelOpen) {
+    <div class="page-card mb-4">
+      <h2 class="h5 mb-3">{{ isEditing ? 'Modifier la question' : 'Nouvelle question' }}</h2>
+      <form [formGroup]="itemForm" (ngSubmit)="submit()" novalidate>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" for="faq-category">Catégorie <span class="text-danger">*</span></label>
+            <input
+              id="faq-category"
+              type="text"
+              class="form-control"
+              formControlName="category"
+              [class.is-invalid]="itemForm.controls.category.invalid && itemForm.controls.category.touched"
+              autocomplete="off"
+              placeholder="ex : Compte et données"
+            />
+            @if (itemForm.controls.category.invalid && itemForm.controls.category.touched) {
+              <div class="invalid-feedback">La catégorie est requise.</div>
+            }
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="faq-order">Ordre <span class="text-danger">*</span></label>
+            <input id="faq-order" type="number" class="form-control" formControlName="displayOrder" min="0" />
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <div class="form-check mb-2">
+              <input id="faq-published" type="checkbox" class="form-check-input" formControlName="isPublished" />
+              <label class="form-check-label" for="faq-published">Publié</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="faq-question">Question <span class="text-danger">*</span></label>
+            <input
+              id="faq-question"
+              type="text"
+              class="form-control"
+              formControlName="question"
+              [class.is-invalid]="itemForm.controls.question.invalid && itemForm.controls.question.touched"
+              autocomplete="off"
+            />
+            @if (itemForm.controls.question.invalid && itemForm.controls.question.touched) {
+              <div class="invalid-feedback">La question est requise.</div>
+            }
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="faq-answer">Réponse <span class="text-danger">*</span></label>
+            <textarea
+              id="faq-answer"
+              class="form-control"
+              formControlName="answer"
+              rows="4"
+              [class.is-invalid]="itemForm.controls.answer.invalid && itemForm.controls.answer.touched"
+            ></textarea>
+            @if (itemForm.controls.answer.invalid && itemForm.controls.answer.touched) {
+              <div class="invalid-feedback">La réponse est requise.</div>
+            }
+          </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3">
+          <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="closePanel()">Annuler</button>
+          <button type="submit" class="btn btn-primary rounded-pill" [disabled]="submitting()">
+            @if (submitting()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+            {{ isEditing ? 'Mettre à jour' : 'Ajouter' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="loading-skeleton-group">
+      <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div>
+    </div>
+  } @else if (error()) {
+    <div class="error-panel">{{ error() }}</div>
+  } @else if (items().length === 0) {
+    <div class="empty-state"><div class="fw-semibold">Aucune question disponible.</div></div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Question</th>
+            <th>Catégorie</th>
+            <th>Ordre</th>
+            <th>Statut</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ item.question }}</div>
+                <div class="small muted text-truncate" style="max-width: 400px;">{{ item.answer }}</div>
+              </td>
+              <td><span class="code-chip">{{ item.category }}</span></td>
+              <td>{{ item.displayOrder }}</td>
+              <td>
+                @if (item.isPublished) {
+                  <span class="badge bg-success-subtle text-success-emphasis">Publié</span>
+                } @else {
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">Brouillon</span>
+                }
+              </td>
+              <td class="text-end">
+                <div class="d-flex gap-2 justify-content-end">
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="openEdit(item)">
+                    <i class="bi bi-pencil me-1"></i>Modifier
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger rounded-pill"
+                    [disabled]="deletingId() === item.id"
+                    (click)="delete(item)"
+                  >
+                    <i class="bi bi-trash me-1"></i>Supprimer
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

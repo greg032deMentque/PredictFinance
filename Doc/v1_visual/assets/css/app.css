@@ -1,0 +1,10 @@
+/* ============================================================
+   app.css — barrel : un seul <link> par page.
+   Ordre : tokens -> base -> layout -> components -> states -> utilities
+   ============================================================ */
+@import url("tokens.css");
+@import url("base.css");
+@import url("layout.css");
+@import url("components.css");
+@import url("states.css");
+@import url("utilities.css");

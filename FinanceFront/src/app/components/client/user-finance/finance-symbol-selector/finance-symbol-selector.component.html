@@ -1,6 +1,22 @@
-<div class="card border-0 shadow-sm">
-  <div class="card-body">
-    <h2 class="h6 text-uppercase text-muted mb-3">1. Selection de la valeur</h2>
+<div [class]="flat ? '' : 'card border-0 shadow-sm'">
+  <div [class]="flat ? '' : 'card-body'">
+    @if (!flat) {
+      <h2 class="h6 text-uppercase text-muted mb-3">1. Selection de la valeur</h2>
+    }
+
+    @if (peaFilterVisible) {
+      <div class="d-flex justify-content-end mb-2">
+        <button
+          type="button"
+          class="btn btn-sm"
+          [class.btn-success]="peaEligibleOnly"
+          [class.btn-outline-secondary]="!peaEligibleOnly"
+          (click)="onTogglePea()"
+        >
+          <i class="bi bi-shield-check me-1"></i>PEA uniquement
+        </button>
+      </div>
+    }
 
     <ng-select
       class="finance-select d-block"
@@ -12,8 +28,10 @@
       [searchable]="true"
       [virtualScroll]="true"
       [ngModel]="selectedSymbol"
-      (search)="onSearch($event)"
+      [typeahead]="searchInput$"
+      [minTermLength]="0"
       (change)="onSelectionChanged($event)"
+      (open)="onDropdownOpened()"
       placeholder="Ex: AAPL, Microsoft, TSLA..."
       notFoundText="Aucun resultat"
       loadingText="Recherche en cours..."
@@ -30,6 +48,9 @@
               {{ item.DayVariationPct | number: '1.2-2' }}%
             </small>
           </div>
+          @if (item.IsPeaEligible) {
+            <span class="badge pf-badge-pea ms-1">PEA</span>
+          }
         </div>
       </ng-template>
 
@@ -39,9 +60,9 @@
     </ng-select>
 
     @if (selectedAsset; as asset) {
-      <div class="finance-soft-panel mt-3">
-        <div class="fw-semibold">Valeur selectionnee: {{ asset.Symbol }}</div>
-        <div class="text-muted small">{{ asset.CompanyName }} ({{ asset.Market }})</div>
+      <div [class]="flat ? 'mt-2 p-2 border rounded small' : 'finance-soft-panel mt-3'">
+        <div class="fw-semibold">{{ asset.Symbol }}</div>
+        <div class="text-muted">{{ asset.CompanyName }} ({{ asset.Market }})</div>
       </div>
     }
   </div>

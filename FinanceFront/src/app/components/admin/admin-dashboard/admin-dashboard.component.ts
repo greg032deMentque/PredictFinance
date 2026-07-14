@@ -1,60 +1,58 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { AdminPaths } from '../../../Routes/app.routes.constants';
-import { PaginateInterface } from '../../../Models/Paginate/paginate-interface';
-import { PaginateSettings } from '../../../Models/Paginate/paginate-settings';
-import { User } from '../../../Models/User';
+import { AdminPaths, toCommands } from '../../../Routes/app.routes.constants';
 import { environment } from '../../../../environments/environment';
+
+interface AdminOverview {
+  TotalUsers: number;
+  ActiveUsers: number;
+  TotalAssets: number;
+  TotalAnalysisRuns: number;
+  CompletedAnalysisRuns: number;
+  FailedAnalysisRuns: number;
+  ConfirmedEligiblePeaEntries: number;
+  UnknownPeaEntries: number;
+  PublishedParameterEntries: number;
+  LatestCompletedAnalysisUtc?: string | null;
+}
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, DatePipe],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.scss'
 })
 export class AdminDashboardComponent implements OnInit {
   readonly adminPaths = AdminPaths;
-  readonly activeRateMock = 0.72;
-  readonly activeUsersMockLabel = 'estimation (mock)';
+  readonly toCommands = toCommands;
 
-  totalUsers = 0;
-  activeUsersMock = 0;
+  overview: AdminOverview | null = null;
   loading = false;
   error: string | null = null;
   private readonly http = inject(HttpClient);
 
   ngOnInit(): void {
-    this.loadTotalUsers();
+    this.loadOverview();
   }
 
-  private loadTotalUsers(): void {
-    const payload: PaginateSettings = {
-      PageIndex: 0,
-      PageSize: 1,
-      Filter: '',
-      SortActive: 'LastName',
-      SortDirection: false
-    };
-
+  loadOverview(): void {
     this.loading = true;
     this.error = null;
 
     this.http
-      .post<PaginateInterface<User>>(`${environment.apiUrl}User/GetUsersList`, payload)
+      .get<AdminOverview>(`${environment.apiUrl}admin/overview`)
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
-        next: (response) => {
-          this.totalUsers = response.Total ?? 0;
-          this.activeUsersMock = Math.round(this.totalUsers * this.activeRateMock);
+        next: (payload) => {
+          this.overview = payload;
         },
         error: () => {
-          this.totalUsers = 0;
-          this.activeUsersMock = 0;
-          this.error = 'Impossible de charger les statistiques utilisateurs.';
+          this.overview = null;
+          this.error = 'Impossible de charger la vue d’ensemble admin.';
         }
       });
   }

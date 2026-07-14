@@ -2,14 +2,47 @@
   <div class="card-body">
     <h2 class="h6 text-uppercase text-muted mb-3">Saisir une transaction</h2>
 
-    <div class="alert alert-warning py-2" *ngIf="selectedSymbol.length === 0">
-      Selectionne d'abord une valeur dans la watchlist ou la recherche.
-    </div>
+    <!-- Sélection de la valeur -->
+    @if (effectiveSymbol) {
+      <div class="d-flex align-items-center justify-content-between mb-3 px-3 py-2 bg-primary-subtle rounded">
+        <div>
+          <span class="fw-semibold text-primary">{{ effectiveSymbol }}</span>
+          @if (internalAsset()) {
+            <span class="text-muted small ms-2">{{ internalAsset()?.CompanyName }}</span>
+          }
+        </div>
+        <button class="btn btn-sm btn-link text-muted p-0 ms-2" type="button" (click)="clearSymbol()">Changer</button>
+      </div>
+    } @else {
+      <app-finance-symbol-selector
+        [flat]="true"
+        [selectedAsset]="internalAsset()"
+        [options]="searchResults()"
+        [loading]="searchLoading()"
+        (searchChanged)="onSearchChanged($event)"
+        (assetSelected)="onAssetSelected($event)" />
+    }
 
-    <form [formGroup]="form" (ngSubmit)="submit()" class="d-flex flex-column gap-2">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="d-flex flex-column gap-2 mt-3">
+
       <div>
-        <label class="form-label">Valeur</label>
-        <input class="form-control" [value]="selectedSymbol || '-'" readonly />
+        <label class="form-label fw-semibold">Portefeuille <span class="text-danger">*</span></label>
+        @if (portfolios.length === 0) {
+          <div class="alert alert-warning py-2 mb-0">
+            Aucun portefeuille disponible. Crée un portefeuille depuis la page Portefeuille.
+          </div>
+        } @else {
+          <select class="form-select" formControlName="portfolioId"
+            [class.is-invalid]="form.controls.portfolioId.invalid && form.controls.portfolioId.touched">
+            <option value="" disabled>-- Choisir un portefeuille --</option>
+            @for (p of portfolios; track p.Id) {
+              <option [value]="p.Id">{{ p.Name }}</option>
+            }
+          </select>
+          @if (form.controls.portfolioId.invalid && form.controls.portfolioId.touched) {
+            <div class="invalid-feedback">Le portefeuille est obligatoire.</div>
+          }
+        }
       </div>
 
       <div>
@@ -21,7 +54,7 @@
       </div>
 
       <div>
-        <label class="form-label">Quantite</label>
+        <label class="form-label">Quantité</label>
         <input class="form-control" type="number" step="0.0001" formControlName="quantity" />
       </div>
 
@@ -36,11 +69,13 @@
       </div>
 
       <div>
-        <label class="form-label">Date/heure</label>
+        <label class="form-label">Date / heure</label>
         <input class="form-control" type="datetime-local" formControlName="timestampUtc" />
       </div>
 
-      <button class="btn btn-primary mt-2" [disabled]="submitting" type="submit">
+      <button class="btn btn-primary mt-2"
+        [disabled]="submitting || portfolios.length === 0 || !effectiveSymbol"
+        type="submit">
         {{ submitting ? 'Enregistrement...' : 'Enregistrer' }}
       </button>
     </form>

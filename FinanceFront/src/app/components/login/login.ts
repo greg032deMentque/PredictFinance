@@ -1,4 +1,4 @@
-﻿import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,22 +7,17 @@ import { AllModule } from '../../module/allModule.module';
 import { AuthStore } from '../../core/auth.store';
 import { AuthService } from '../../services/AuthService.service';
 import { ToastService } from '../../services/toastr.service';
-import { environment } from '../../../environments/environment';
-import { HttpClient } from '@angular/common/http';
-import { TokenResponse } from '../../Models/token-response';
 import { StorageService } from '../../services/storage.service';
-import { AdminPaths, UserPaths } from '../../Routes/app.routes.constants';
-
-type ForgotPasswordRequest = { email: string };
+import { AdminPaths, AuthPaths, UserPaths } from '../../Routes/app.routes.constants';
 
 @Component({
   selector: 'app-login',
+  standalone: true,
   imports: [AllModule],
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })
 export class LoginComponent {
-  private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastService);
   private readonly fb = inject(FormBuilder);
@@ -31,13 +26,8 @@ export class LoginComponent {
   private readonly auth = inject(AuthStore);
   private readonly authService = inject(AuthService);
 
+  readonly authPaths = AuthPaths;
   readonly isSubmitting = signal(false);
-
-  readonly isForgotOpen = signal(false);
-  readonly isForgotSubmitting = signal(false);
-  readonly forgotEmail = signal('');
-  readonly forgotError = signal<string | null>(null);
-  readonly forgotSuccess = signal<string | null>(null);
 
   readonly form = this.fb.nonNullable.group({
     Email: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
@@ -45,42 +35,15 @@ export class LoginComponent {
   });
 
   ngOnInit(): void {
-    localStorage.clear();
-    sessionStorage.clear();
+    this.storageService.RemoveToken();
+    this.storageService.RemoveRefreshToken();
+    this.auth.clear(false);
   }
 
   openForgotPassword(): void {
-    const email = this.form.controls.Email.value?.trim() ?? '';
-    this.forgotEmail.set(email);
-    this.forgotError.set(null);
-    this.forgotSuccess.set(null);
-    this.isForgotOpen.set(true);
-  }
-
-  closeForgotPassword(): void {
-    this.isForgotOpen.set(false);
-  }
-
-  confirmForgotPassword(): void {
-    const email = (this.forgotEmail() ?? '').trim();
-    if (!email) {
-      this.forgotError.set('Veuillez renseigner un email.');
-      return;
-    }
-
-    this.isForgotSubmitting.set(true);
-    this.forgotError.set(null);
-    this.forgotSuccess.set(null);
-
-    const payload: ForgotPasswordRequest = { email };
-
-    this.http
-      .post<void>(environment.apiUrl + 'Account/ForgotPassword', payload)
-      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isForgotSubmitting.set(false)))
-      .subscribe({
-        next: () => this.forgotSuccess.set('Si lâ€™adresse existe, un email de rÃ©initialisation a Ã©tÃ© envoyÃ©.'),
-        error: () => this.forgotError.set("Impossible dâ€™envoyer lâ€™email pour le moment."),
-      });
+    const email = (this.form.controls.Email.value ?? '').trim();
+    const queryParams = email ? { email } : undefined;
+    void this.router.navigate(['/', this.authPaths.ForgotPassword], { queryParams });
   }
 
   submit(): void {
@@ -91,24 +54,15 @@ export class LoginComponent {
 
     this.isSubmitting.set(true);
 
-    this.http
-      .post<TokenResponse>(environment.apiUrl + 'Account/Login', this.form.getRawValue())
+    this.authService
+      .login(this.form.getRawValue())
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isSubmitting.set(false)))
       .subscribe({
-        next: (obj) => {
-          this.storageService.SetToken(obj.Token);
-          this.storageService.SetRefreshToken(obj.RefreshToken);
-
-          this.auth.syncFromStorage();
-          this.authService.scheduleTokenRefresh(obj.Token, obj.RefreshToken);
-          const isAdmin = this.authService.isAdmin(obj.Token);
-
-          void this.router.navigate([
-            isAdmin ? AdminPaths.Dashboard : UserPaths.Dashboard
-          ]);
-
+        next: () => {
+          const isAdmin = this.authService.isAdmin();
+          void this.router.navigate([isAdmin ? AdminPaths.Dashboard : UserPaths.Dashboard]);
         },
-        error: () => this.toastr.error('Ã‰chec de la connexion.'),
+        error: () => this.toastr.error('Échec de la connexion.'),
       });
   }
 }

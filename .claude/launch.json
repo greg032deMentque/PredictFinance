@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "finance-front",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "FinanceFront", "start", "--", "--port", "4300"],
+      "port": 4300,
+      "autoPort": false
+    }
+  ]
+}

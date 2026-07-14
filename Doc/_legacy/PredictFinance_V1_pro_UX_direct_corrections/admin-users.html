@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>User management - PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/style.css" rel="stylesheet">
+</head>
+<body>
+  <div class="app-root py-4 py-lg-4">
+    <div class="topbar px-3 px-lg-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 sticky-section-nav">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-mark"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <div><div class="fw-bold fs-5">PredictFinance V1</div><div class="small muted">Admin manages users</div></div>
+      </div>
+      <div class="top-actions-scroll">
+        <span class="chip chip-info"><i class="bi bi-person-badge"></i> Admin mock connecté</span>
+        <span class="chip chip-danger"><i class="bi bi-shield-lock"></i> Espace admin</span>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="login.html"><i class="bi bi-box-arrow-left me-2"></i>Déconnexion</a>
+      </div>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="mb-4"><div class="text-uppercase small opacity-75 mb-2">Espace admin</div><div class="fw-semibold fs-5">Navigation</div></div>
+        <nav class="nav flex-column gap-2">
+          <a class="nav-link" href="admin-overview.html"><i class="bi bi-speedometer2"></i> Overview</a>
+          <a class="nav-link active" href="admin-users.html"><i class="bi bi-people"></i> Users</a>
+          <a class="nav-link" href="admin-instrument-registry.html"><i class="bi bi-building-gear"></i> Instrument registry</a>
+          <a class="nav-link" href="admin-pea-registry.html"><i class="bi bi-patch-check"></i> PEA registry</a>
+          <a class="nav-link" href="admin-scoring-policy.html"><i class="bi bi-sliders"></i> Scoring policy</a>
+          <a class="nav-link" href="admin-data-quality.html"><i class="bi bi-database-check"></i> Data quality</a>
+          <a class="nav-link" href="design-system.html"><i class="bi bi-grid-1x2"></i> Design system</a>
+        </nav>
+      </aside>
+      <main class="main-col d-flex flex-column gap-4">
+        <section class="page-shell">
+          <div class="page-heading mb-4">
+            <div class="page-subtitle">
+              <span class="chip chip-dark mb-2"><i class="bi bi-people"></i> User management</span>
+              <h1 class="h2 fw-bold mb-2">Gestion des utilisateurs stabilisée</h1>
+              <p class="muted mb-0">Cette version intègre un pattern de table admin normalisé, des filtres cohérents et une zone d’action prête à être transformée ensuite en drawer ou modal d’édition.</p>
+            </div>
+            <div class="page-cta">
+              <button class="btn btn-primary rounded-pill cta-primary"><i class="bi bi-person-plus me-2"></i>Créer un utilisateur</button>
+            </div>
+          </div>
+
+          <div class="filter-bar mb-3">
+            <span class="filter-pill"><i class="bi bi-search"></i> Recherche</span>
+            <span class="filter-pill"><i class="bi bi-person-badge"></i> Rôle</span>
+            <span class="filter-pill"><i class="bi bi-toggle-on"></i> Statut</span>
+            <span class="filter-pill"><i class="bi bi-clock-history"></i> Dernière activité</span>
+            <span class="filter-pill"><i class="bi bi-download"></i> Export</span>
+          </div>
+
+          <div class="page-card mb-4">
+            <div class="table-responsive">
+              <table class="ds-table">
+                <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Statut</th><th>Dernière activité</th><th>Action</th></tr></thead>
+                <tbody>
+                  <tr><td><div class="fw-semibold">User Demo</div><div class="small muted">user@mock.local</div></td><td><span class="chip chip-info">User</span></td><td><span class="chip chip-success">Actif</span></td><td>Aujourd’hui</td><td><button class="btn btn-sm btn-outline-secondary rounded-pill">Gérer</button></td></tr>
+                  <tr><td><div class="fw-semibold">Admin Demo</div><div class="small muted">admin@mock.local</div></td><td><span class="chip chip-danger">Admin</span></td><td><span class="chip chip-success">Actif</span></td><td>Aujourd’hui</td><td><button class="btn btn-sm btn-outline-secondary rounded-pill">Gérer</button></td></tr>
+                  <tr><td><div class="fw-semibold">Pending User</div><div class="small muted">pending@mock.local</div></td><td><span class="chip chip-info">User</span></td><td><span class="chip chip-warning">En attente</span></td><td>—</td><td><button class="btn btn-sm btn-outline-secondary rounded-pill">Gérer</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="responsive-table-card d-flex flex-column gap-3">
+              <div class="surface"><div class="fw-semibold mb-2">User Demo</div><div class="compact-list"><span class="chip chip-info">Rôle · User</span><span class="chip chip-success">Actif</span></div></div>
+              <div class="surface"><div class="fw-semibold mb-2">Admin Demo</div><div class="compact-list"><span class="chip chip-danger">Rôle · Admin</span><span class="chip chip-success">Actif</span></div></div>
+            </div>
+          </div>
+
+          <div class="split-cards">
+            <div class="page-card">
+              <div class="section-title">Edit drawer pattern</div>
+              <div class="small muted mb-3">Évolution UX issue de la matrice : transformer l’action “Gérer” en drawer d’édition de rôle, statut et sécurité.</div>
+              <button class="btn btn-outline-secondary rounded-pill">Ouvrir un drawer mock</button>
+            </div>
+            <div class="page-card">
+              <div class="section-title">Error / empty patterns</div>
+              <div class="page-state-grid">
+                <div class="empty-state">
+                  <div class="empty-state-icon"><i class="bi bi-person-x"></i></div>
+                  <div class="fw-semibold">Aucun utilisateur pour ce filtre</div>
+                  <div class="small muted">Le filtre peut être réinitialisé sans ambiguïté.</div>
+                </div>
+                <div class="error-panel">
+                  <div class="fw-semibold">Impossible de charger la liste des utilisateurs</div>
+                  <div class="small">Erreur technique distincte d’un état vide fonctionnel.</div>
+                  <button class="btn btn-sm btn-outline-danger rounded-pill align-self-start">Réessayer</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="footer-divider pt-3 small muted">PredictFinance V1 — admin users stable avec table normalisée, filtres cohérents et base pour édition future.</div>
+      </main>
+    </div>
+  </div>
+  <div class="mobile-nav d-md-none"><div class="container-fluid"><div class="row g-0">
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="user-home.html"><i class="bi bi-house-door fs-5"></i><span>Home</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="watchlist.html"><i class="bi bi-stars fs-5"></i><span>Watchlist</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="analysis-entry.html"><i class="bi bi-search fs-5"></i><span>Analyse</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="account.html"><i class="bi bi-person fs-5"></i><span>Compte</span></a></div>
+    <div class="col text-center"><a class="active d-flex flex-column align-items-center gap-1 py-2" href="admin-users.html"><i class="bi bi-shield-lock fs-5"></i><span>Admin</span></a></div>
+  </div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

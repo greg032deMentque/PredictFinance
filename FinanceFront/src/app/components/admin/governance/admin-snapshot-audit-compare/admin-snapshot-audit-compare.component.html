@@ -1,0 +1,63 @@
+<section class="page-shell">
+  <div class="page-heading mb-4 gap-3">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-columns-gap"></i> Snapshot compare</span>
+      <h1 class="h2 fw-bold mb-2">Comparer deux snapshots</h1>
+      <p class="muted mb-0">Comparaison pilotée par l’API d’audit sans recalcul d’écart dans le front.</p>
+    </div>
+    <a class="btn btn-outline-secondary rounded-pill" [routerLink]="toCommands(adminPaths.SnapshotAudit)">Retour à la liste</a>
+  </div>
+
+  @if (loading) {
+    <div class="loading-skeleton-group"><div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div></div>
+  } @else if (error) {
+    <div class="error-panel">{{ error }}</div>
+  } @else if (comparison) {
+    <div class="d-flex flex-column gap-4">
+      <section class="page-card">
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <h2 class="h5">Gauche</h2>
+            <dl class="mb-0">
+              <dt class="muted">AnalysisRunId</dt>
+              <dd>{{ comparison.LeftAnalysisRunId }}</dd>
+              <dt class="muted">PrimaryPatternId</dt>
+              <dd>{{ comparison.LeftPrimaryPatternId || '—' }}</dd>
+              <dt class="muted">RecommendationAction</dt>
+              <dd>{{ comparison.LeftRecommendationAction || '—' }}</dd>
+              <dt class="muted">AnalysisEngineVersion</dt>
+              <dd>{{ comparison.LeftAnalysisEngineVersion || '—' }}</dd>
+              <dt class="muted">ModelStatus</dt>
+              <dd>{{ comparison.LeftModelStatus ?? '—' }}</dd>
+            </dl>
+          </div>
+          <div class="col-lg-6">
+            <h2 class="h5">Droite</h2>
+            <dl class="mb-0">
+              <dt class="muted">AnalysisRunId</dt>
+              <dd>{{ comparison.RightAnalysisRunId }}</dd>
+              <dt class="muted">PrimaryPatternId</dt>
+              <dd>{{ comparison.RightPrimaryPatternId || '—' }}</dd>
+              <dt class="muted">RecommendationAction</dt>
+              <dd>{{ comparison.RightRecommendationAction || '—' }}</dd>
+              <dt class="muted">AnalysisEngineVersion</dt>
+              <dd>{{ comparison.RightAnalysisEngineVersion || '—' }}</dd>
+              <dt class="muted">ModelStatus</dt>
+              <dd>{{ comparison.RightModelStatus ?? '—' }}</dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-card">
+        <h2 class="h5 mb-3">Résultats</h2>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="chip" [class.chip-success]="comparison.SameUser" [class.chip-warning]="!comparison.SameUser">Même utilisateur : {{ comparison.SameUser ? 'oui' : 'non' }}</span>
+          <span class="chip" [class.chip-success]="comparison.SameAsset" [class.chip-warning]="!comparison.SameAsset">Même actif : {{ comparison.SameAsset ? 'oui' : 'non' }}</span>
+          <span class="chip" [class.chip-success]="comparison.SamePrimaryPattern" [class.chip-warning]="!comparison.SamePrimaryPattern">Même pattern primaire : {{ comparison.SamePrimaryPattern ? 'oui' : 'non' }}</span>
+          <span class="chip" [class.chip-success]="comparison.SameRecommendationAction" [class.chip-warning]="!comparison.SameRecommendationAction">Même recommandation : {{ comparison.SameRecommendationAction ? 'oui' : 'non' }}</span>
+        </div>
+      </section>
+    </div>
+  }
+</section>

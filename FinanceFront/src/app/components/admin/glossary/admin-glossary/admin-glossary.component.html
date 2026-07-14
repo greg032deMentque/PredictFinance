@@ -1,0 +1,162 @@
+<section class="page-shell">
+  <div class="page-heading mb-4">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-card-text"></i> Glossaire</span>
+      <h1 class="h2 fw-bold mb-2">Glossaire des termes produits</h1>
+      <p class="muted mb-0">Termes liés aux enveloppes et produits financiers exposés aux utilisateurs.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="load()">Rafraîchir</button>
+      <button type="button" class="btn btn-primary rounded-pill" (click)="openAdd()">
+        <i class="bi bi-plus-lg me-1"></i>Ajouter
+      </button>
+    </div>
+  </div>
+
+  <!-- Formulaire inline -->
+  @if (isPanelOpen) {
+    <div class="page-card mb-4">
+      <h2 class="h5 mb-3">{{ isEditing ? 'Modifier le terme' : 'Nouveau terme' }}</h2>
+      <form [formGroup]="termForm" (ngSubmit)="submit()" novalidate>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="gl-term">Terme <span class="text-danger">*</span></label>
+            <input
+              id="gl-term"
+              type="text"
+              class="form-control"
+              formControlName="term"
+              [class.is-invalid]="termForm.controls.term.invalid && termForm.controls.term.touched"
+              autocomplete="off"
+            />
+            @if (termForm.controls.term.invalid && termForm.controls.term.touched) {
+              <div class="invalid-feedback">Le terme est requis.</div>
+            }
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="gl-category">Catégorie <span class="text-danger">*</span></label>
+            <input
+              id="gl-category"
+              type="text"
+              class="form-control"
+              formControlName="category"
+              [class.is-invalid]="termForm.controls.category.invalid && termForm.controls.category.touched"
+              autocomplete="off"
+            />
+            @if (termForm.controls.category.invalid && termForm.controls.category.touched) {
+              <div class="invalid-feedback">La catégorie est requise.</div>
+            }
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check mb-2">
+              <input id="gl-published" type="checkbox" class="form-check-input" formControlName="isPublished" />
+              <label class="form-check-label" for="gl-published">Publié</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="gl-def">Définition <span class="text-danger">*</span></label>
+            <textarea
+              id="gl-def"
+              class="form-control"
+              formControlName="definition"
+              rows="3"
+              [class.is-invalid]="termForm.controls.definition.invalid && termForm.controls.definition.touched"
+            ></textarea>
+            @if (termForm.controls.definition.invalid && termForm.controls.definition.touched) {
+              <div class="invalid-feedback">La définition est requise.</div>
+            }
+          </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3">
+          <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="closePanel()">Annuler</button>
+          <button type="submit" class="btn btn-primary rounded-pill" [disabled]="submitting()">
+            @if (submitting()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            {{ isEditing ? 'Mettre à jour' : 'Ajouter' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <div class="input-group mb-4" style="max-width: 480px;">
+    <span class="input-group-text"><i class="bi bi-search"></i></span>
+    <input
+      type="text"
+      class="form-control"
+      placeholder="Rechercher un terme..."
+      [formControl]="searchControl"
+      autocomplete="off"
+    />
+    @if (searchControl.value) {
+      <button class="btn btn-outline-secondary" type="button" (click)="searchControl.setValue('')">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-skeleton-group">
+      <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div>
+    </div>
+  } @else if (error()) {
+    <div class="error-panel">{{ error() }}</div>
+  } @else if (terms().length === 0) {
+    <div class="empty-state">
+      <div class="fw-semibold">
+        @if (searchControl.value) {
+          Aucun terme ne correspond à « {{ searchControl.value }} ».
+        } @else {
+          Aucun terme disponible.
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Terme</th>
+            <th>Catégorie</th>
+            <th>Définition</th>
+            <th>Statut</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (term of terms(); track term.Id) {
+            <tr>
+              <td class="fw-semibold">{{ term.Term }}</td>
+              <td><span class="code-chip">{{ term.Category }}</span></td>
+              <td class="text-secondary">{{ term.Definition }}</td>
+              <td>
+                @if (term.IsPublished) {
+                  <span class="badge bg-success-subtle text-success-emphasis">Publié</span>
+                } @else {
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">Brouillon</span>
+                }
+              </td>
+              <td class="text-end">
+                <div class="d-flex gap-2 justify-content-end">
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="openEdit(term)">
+                    <i class="bi bi-pencil me-1"></i>Modifier
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger rounded-pill"
+                    [disabled]="deletingId() === term.Id"
+                    (click)="delete(term)"
+                  >
+                    <i class="bi bi-trash me-1"></i>Supprimer
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <p class="small muted mt-2">{{ terms().length }} terme{{ terms().length > 1 ? 's' : '' }}</p>
+  }
+</section>

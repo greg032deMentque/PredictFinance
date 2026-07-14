@@ -1,0 +1,121 @@
+<div class="auth-only">
+  <section class="auth-card register-card">
+    @if (pageState() === 'form') {
+        <div class="mb-4">
+          <span class="chip chip-navy mb-2"><i class="bi bi-envelope-check"></i> Inscription</span>
+          <h2 class="h3 fw-bold mb-2">Créer votre accès FinInsight</h2>
+          <p class="muted mb-0">Aucune donnée bancaire n’est demandée. Un email de confirmation sera envoyé avant toute connexion.</p>
+        </div>
+
+        <form [formGroup]="form" class="d-flex flex-column gap-3" (ngSubmit)="submit()">
+          <div>
+            <label for="register-email" class="form-label fw-semibold">Email</label>
+            <input id="register-email" type="email" class="form-control form-control-lg" formControlName="Email" />
+            @if (form.controls.Email.invalid && form.controls.Email.touched) {
+              <div class="text-danger small mt-1">
+                @if (form.controls.Email.hasError('required')) { Email requis. }
+                @if (form.controls.Email.hasError('email')) { Format email invalide. }
+              </div>
+            }
+          </div>
+
+          <div>
+            <label for="register-password" class="form-label fw-semibold">Mot de passe</label>
+            <input id="register-password" type="password" class="form-control form-control-lg" formControlName="Password" />
+            <div class="small muted mt-1">6 caractères minimum.</div>
+            @if (form.controls.Password.invalid && form.controls.Password.touched) {
+              <div class="text-danger small mt-1">
+                @if (form.controls.Password.hasError('required')) { Mot de passe requis. }
+                @if (form.controls.Password.hasError('minlength')) { 6 caractères minimum. }
+              </div>
+            }
+          </div>
+
+          <div>
+            <label for="register-confirm-password" class="form-label fw-semibold">Confirmation du mot de passe</label>
+            <input id="register-confirm-password" type="password" class="form-control form-control-lg" formControlName="ConfirmPassword" />
+            @if (form.controls.ConfirmPassword.invalid && form.controls.ConfirmPassword.touched) {
+              <div class="text-danger small mt-1">
+                @if (form.controls.ConfirmPassword.hasError('required')) { Confirmation requise. }
+                @if (form.controls.ConfirmPassword.hasError('minlength')) { 6 caractères minimum. }
+              </div>
+            }
+            @if (passwordsMismatch()) {
+              <div class="text-danger small mt-1">La confirmation du mot de passe ne correspond pas.</div>
+            }
+          </div>
+
+          <div class="form-check">
+            <input id="register-accept-legal" class="form-check-input" type="checkbox" formControlName="AcceptLegal" />
+            <label for="register-accept-legal" class="form-check-label">
+              J’accepte les <a [href]="termsUrl" target="_blank" rel="noopener noreferrer">CGU</a> et la
+              <a [href]="privacyUrl" target="_blank" rel="noopener noreferrer">politique de confidentialité</a>.
+            </label>
+            @if (form.controls.AcceptLegal.invalid && form.controls.AcceptLegal.touched) {
+              <div class="text-danger small mt-1">Cette acceptation est obligatoire.</div>
+            }
+          </div>
+
+          <div class="d-grid gap-2 pt-2">
+            <button type="submit" class="btn btn-lg btn-primary rounded-4 cta-primary" [disabled]="isSubmitting()">
+              @if (isSubmitting()) {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              }
+              <span>Créer mon compte</span>
+            </button>
+            <a class="btn btn-outline-secondary rounded-4" [routerLink]="toCommands(authPaths.Login)">J’ai déjà un compte</a>
+          </div>
+        </form>
+      } @else if (pageState() === 'email-sent') {
+        <div class="text-center">
+          <span class="chip chip-info mb-3"><i class="bi bi-envelope-paper"></i> Email envoyé</span>
+          <h2 class="h3 fw-bold mb-3">Vérifiez votre boîte mail</h2>
+          <p class="muted mb-4">
+            Un email de confirmation vient d’être envoyé à
+            <strong>{{ confirmationEmail() }}</strong>. Cliquez sur le lien qu’il contient pour activer votre compte, puis connectez-vous.
+          </p>
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-primary rounded-4" (click)="resendConfirmationEmail()" [disabled]="isResending()">
+              @if (isResending()) {
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+              }
+              <span>Renvoyer l’email</span>
+            </button>
+            <a class="btn btn-outline-secondary rounded-4" [routerLink]="toCommands(authPaths.Login)">Retour à la connexion</a>
+          </div>
+        </div>
+      } @else if (pageState() === 'confirming') {
+        <div class="text-center">
+          <span class="chip chip-navy mb-3"><i class="bi bi-hourglass-split"></i> Confirmation</span>
+          <h2 class="h3 fw-bold mb-3">Validation du lien en cours</h2>
+          <p class="muted mb-4">Le compte <strong>{{ confirmationEmail() }}</strong> est en cours de confirmation.</p>
+          <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+        </div>
+      } @else if (pageState() === 'confirmed') {
+        <div class="text-center">
+          <span class="chip chip-info mb-3"><i class="bi bi-patch-check"></i> Confirmation réussie</span>
+          <h2 class="h3 fw-bold mb-3">Adresse email confirmée</h2>
+          <p class="muted mb-4">Redirection vers la page de connexion…</p>
+          <a class="btn btn-primary rounded-4" [routerLink]="toCommands(authPaths.Login)">Se connecter</a>
+        </div>
+      } @else {
+        <div class="text-center">
+          <span class="chip chip-danger mb-3"><i class="bi bi-exclamation-octagon"></i> Lien invalide</span>
+          <h2 class="h3 fw-bold mb-3">Le lien de confirmation est invalide ou expiré</h2>
+          <p class="muted mb-4">
+            Vous pouvez demander un nouvel email de confirmation ou lancer une récupération de mot de passe si le compte existe déjà.
+          </p>
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-primary rounded-4" (click)="resendConfirmationEmail()" [disabled]="isResending()">
+              @if (isResending()) {
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+              }
+              <span>Renvoyer l’email</span>
+            </button>
+            <button type="button" class="btn btn-outline-secondary rounded-4" (click)="openForgotPassword()">Mot de passe oublié</button>
+            <a class="btn btn-link text-decoration-none" [routerLink]="toCommands(authPaths.Login)">Retour à la connexion</a>
+          </div>
+        </div>
+    }
+  </section>
+</div>

@@ -1,0 +1,78 @@
+<section class="d-flex flex-column gap-4">
+
+  <div>
+    <p class="text-uppercase text-secondary fw-semibold small mb-2">Référence</p>
+    <h1 class="h3 mb-1">Glossaire des produits</h1>
+    <p class="text-secondary mb-0">Définitions des termes liés aux enveloppes et produits financiers disponibles dans FinInsight.</p>
+  </div>
+
+  <div class="input-group">
+    <span class="input-group-text"><i class="bi bi-search"></i></span>
+    <input
+      type="text"
+      class="form-control"
+      placeholder="Rechercher un terme..."
+      [formControl]="searchControl"
+      autocomplete="off"
+    />
+    @if (searchControl.value) {
+      <button class="btn btn-outline-secondary" type="button" (click)="searchControl.setValue('')">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="row g-3">
+      @for (_ of [1,2,3,4,5,6]; track $index) {
+        <div class="col-12 col-md-6">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body placeholder-glow d-flex flex-column gap-2">
+              <span class="placeholder col-4 rounded"></span>
+              <span class="placeholder col-8 rounded"></span>
+              <span class="placeholder col-10 rounded"></span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (error()) {
+    <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+      <i class="bi bi-exclamation-triangle flex-shrink-0 mt-1"></i>
+      <p class="mb-0">{{ error() }}</p>
+    </div>
+  }
+
+  @if (!loading() && !error()) {
+    @if (terms().length === 0) {
+      <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        @if (searchControl.value) {
+          Aucun terme ne correspond à « {{ searchControl.value }} ».
+        } @else {
+          Aucun terme disponible pour le moment.
+        }
+      </div>
+    } @else {
+      <div class="row g-3">
+        @for (term of terms(); track term.Term) {
+          <div class="col-12 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body d-flex flex-column gap-1">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <span class="fw-semibold">{{ term.Term }}</span>
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis flex-shrink-0">{{ term.Category }}</span>
+                </div>
+                <p class="text-secondary small mb-0">{{ term.Definition }}</p>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+      <p class="text-secondary small mb-0">{{ terms().length }} terme{{ terms().length > 1 ? 's' : '' }}</p>
+    }
+  }
+
+</section>

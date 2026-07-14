@@ -1,0 +1,13 @@
+:host {
+  display: block;
+}
+
+/* Onglet actif : routerLinkActive ajoute `btn-primary` par-dessus la base
+   `btn-outline-secondary`. Or, dans button.scss, `.btn-outline-secondary` est
+   declare APRES `.btn-primary` → son fond blanc l'emporte et, avec `text-white`,
+   donne un onglet blanc sur blanc (invisible). On force ici le fond navy. */
+.nav-pills .btn-primary {
+  background: linear-gradient(135deg, var(--pf-navy) 0%, var(--pf-navy-2) 100%) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}

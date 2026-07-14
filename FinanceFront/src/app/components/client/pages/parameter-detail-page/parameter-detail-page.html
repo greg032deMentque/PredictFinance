@@ -1,0 +1,135 @@
+<section class="d-flex flex-column gap-4">
+
+  @if (missingContext()) {
+    <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+      <i class="bi bi-exclamation-triangle flex-shrink-0 mt-1"></i>
+      <div>
+        <strong>Contexte d'analyse requis</strong>
+        <p class="mb-1 mt-1">Ce paramètre ne peut être consulté que depuis une analyse existante. Accédez à une analyse pour lire ses paramètres en contexte.</p>
+        <a [routerLink]="historyPath" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-clock-history me-1"></i>Voir l'historique
+        </a>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="d-flex justify-content-center py-5">
+      <div class="spinner-border text-primary" role="status" aria-label="Chargement du paramètre"></div>
+    </div>
+  }
+
+  @if (!loading() && !missingContext() && detail()) {
+    <!-- Header -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-uppercase text-secondary fw-semibold small mb-2">
+          {{ detail()!.CategoryCode }}
+        </p>
+        <h1 class="h3 mb-1">{{ detail()!.Label }}</h1>
+        <p class="text-secondary mb-0">{{ detail()!.RoleInCategory }}</p>
+      </div>
+    </div>
+
+    <!-- Valeur courante -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column gap-2">
+        <h2 class="h6 fw-semibold mb-0">Valeur actuelle</h2>
+        @if (detail()!.CurrentValue.IsAvailable) {
+          <div class="d-flex align-items-baseline gap-3">
+            <span class="fs-4 fw-bold">{{ detail()!.CurrentValue.DisplayValue }}</span>
+            <span class="text-secondary small">{{ detail()!.CurrentValue.SourceLabel }}</span>
+          </div>
+          @if (detail()!.CurrentValue.AsOfUtc) {
+            <span class="text-secondary small">
+              <i class="bi bi-clock me-1"></i>Au {{ detail()!.CurrentValue.AsOfUtc | date:'dd/MM/yyyy HH:mm' }}
+            </span>
+          }
+        } @else {
+          <span class="text-secondary">{{ detail()!.CurrentValue.AvailabilityLabel }}</span>
+        }
+        @if (detail()!.HoldingContextLabel) {
+          <div class="badge bg-secondary-subtle text-secondary-emphasis align-self-start">
+            {{ detail()!.HoldingContextLabel }}
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Définition et lecture -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column gap-4">
+        <div>
+          <h2 class="h6 fw-semibold mb-2">Définition simple</h2>
+          <p class="mb-0">{{ detail()!.SimpleDefinition }}</p>
+        </div>
+        <div>
+          <h2 class="h6 fw-semibold mb-2">Comment lire cette valeur</h2>
+          <p class="mb-0">{{ detail()!.HowToReadCurrentValue }}</p>
+        </div>
+        <div>
+          <h2 class="h6 fw-semibold mb-2">Pourquoi c'est important</h2>
+          <p class="mb-0">{{ detail()!.WhyItMatters }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ce que dit et ne dit pas ce paramètre -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column gap-4">
+        <div>
+          <h2 class="h6 fw-semibold mb-2">Ce qu'indique ce paramètre</h2>
+          <p class="mb-0">{{ detail()!.WhatItSupports }}</p>
+        </div>
+        <div>
+          <h2 class="h6 fw-semibold mb-2">Ce qu'il n'indique pas</h2>
+          <p class="mb-0">{{ detail()!.WhatItDoesNotProve }}</p>
+        </div>
+        <div>
+          <h2 class="h6 fw-semibold mb-2">Limites d'interprétation</h2>
+          <p class="mb-0 text-secondary">{{ detail()!.LimitsOfInterpretation }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Implications selon position -->
+    <div class="row g-3">
+      <div class="col-12 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h2 class="h6 fw-semibold mb-2">
+              <i class="bi bi-dash-circle me-2 text-secondary"></i>Sans position
+            </h2>
+            <p class="mb-0">{{ detail()!.ImplicationWithoutPosition }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body">
+            <h2 class="h6 fw-semibold mb-2">
+              <i class="bi bi-check-circle me-2 text-success"></i>Avec position ouverte
+            </h2>
+            <p class="mb-0">{{ detail()!.ImplicationWithPosition }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+      <i class="bi bi-shield-exclamation flex-shrink-0 mt-1"></i>
+      <span class="small">
+        Aucun paramètre seul ne constitue une recommandation d'achat ou de vente. L'analyse agrège plusieurs signaux. FinInsight est un outil pédagogique, pas un conseiller en investissement.
+      </span>
+    </div>
+  }
+
+  @if (!loading() && !missingContext() && !detail()) {
+    <div class="alert alert-warning" role="alert">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Impossible de charger ce paramètre. Veuillez réessayer.
+    </div>
+  }
+
+</section>

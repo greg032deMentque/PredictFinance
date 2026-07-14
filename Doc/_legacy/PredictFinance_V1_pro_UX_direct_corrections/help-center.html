@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Help center - PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/style.css" rel="stylesheet">
+</head>
+<body>
+  <div class="app-root py-4 py-lg-4">
+    <div class="topbar px-3 px-lg-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 sticky-section-nav">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-mark"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <div><div class="fw-bold fs-5">PredictFinance V1</div><div class="small muted">Guided help and limits</div></div>
+      </div>
+      <div class="top-actions-scroll">
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="analysis-result.html"><i class="bi bi-graph-up-arrow me-2"></i>Résultat</a>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="history.html"><i class="bi bi-clock-history me-2"></i>History</a>
+        <a class="btn btn-outline-secondary rounded-pill px-3" href="login.html"><i class="bi bi-box-arrow-left me-2"></i>Déconnexion</a>
+      </div>
+    </div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="mb-4"><div class="text-uppercase small opacity-75 mb-2">Espace user</div><div class="fw-semibold fs-5">Navigation</div></div>
+        <nav class="nav flex-column gap-2">
+          <a class="nav-link" href="user-home.html"><i class="bi bi-house-door"></i> Accueil user</a>
+          <a class="nav-link" href="learn.html"><i class="bi bi-mortarboard"></i> Learn</a>
+          <a class="nav-link active" href="help-center.html"><i class="bi bi-life-preserver"></i> Help center</a>
+        </nav>
+      </aside>
+      <main class="main-col d-flex flex-column gap-4">
+        <section class="page-shell">
+          <div class="page-heading mb-4">
+            <div class="page-subtitle">
+              <span class="chip chip-navy mb-2"><i class="bi bi-life-preserver"></i> Help center</span>
+              <h1 class="h2 fw-bold mb-2">Centre d’aide plus contextuel</h1>
+              <p class="muted mb-0">Le help center est corrigé pour devenir plus actionnable : il relie maintenant mieux les doutes fréquents à la page concernée et à la bonne explication.</p>
+            </div>
+          </div>
+
+          <div class="help-link-grid mb-4">
+            <a class="help-chip" href="analysis-result.html"><i class="bi bi-graph-up-arrow"></i> Je ne comprends pas le résultat</a>
+            <a class="help-chip" href="snapshot-comparison.html"><i class="bi bi-columns-gap"></i> Je veux comprendre ce qui a changé</a>
+            <a class="help-chip" href="history.html"><i class="bi bi-clock-history"></i> Je veux comprendre les snapshots</a>
+            <a class="help-chip" href="account.html"><i class="bi bi-person-circle"></i> Je veux gérer mon compte</a>
+          </div>
+
+          <div class="split-cards">
+            <div class="page-card">
+              <div class="section-title">Comprendre un résultat</div>
+              <div class="compact-list">
+                <div class="surface"><div class="fw-semibold mb-1">1. Outcome</div><div class="small muted">L’issue de l’analyse dit si un pattern crédible a été retenu, pas encore quoi faire.</div></div>
+                <div class="surface"><div class="fw-semibold mb-1">2. Support / PEA</div><div class="small muted">Le support reading et le statut PEA sont distincts de la recommandation.</div></div>
+                <div class="surface"><div class="fw-semibold mb-1">3. Recommendation</div><div class="small muted">La recommandation dépend aussi du contexte détenu / non détenu.</div></div>
+              </div>
+            </div>
+
+            <div class="page-card">
+              <div class="section-title">Comprendre les limites V1</div>
+              <div class="compact-list">
+                <div class="surface"><div class="fw-semibold mb-1">Unsupported instrument</div><div class="small muted">Ce n’est pas une erreur technique, mais une limite du périmètre produit.</div></div>
+                <div class="surface"><div class="fw-semibold mb-1">Insufficient data</div><div class="small muted">Les données ne suffisent pas à produire un résultat fiable.</div></div>
+                <div class="surface"><div class="fw-semibold mb-1">Non-comparability</div><div class="small muted">Deux snapshots ne sont pas toujours directement comparables.</div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="footer-divider pt-3 small muted">PredictFinance V1 — help center corrigé pour mieux relier les questions fréquentes à la bonne page et à la bonne explication.</div>
+      </main>
+    </div>
+  </div>
+  <div class="mobile-nav d-md-none"><div class="container-fluid"><div class="row g-0">
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="user-home.html"><i class="bi bi-house-door fs-5"></i><span>Home</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="watchlist.html"><i class="bi bi-stars fs-5"></i><span>Watchlist</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="analysis-entry.html"><i class="bi bi-search fs-5"></i><span>Analyse</span></a></div>
+    <div class="col text-center"><a class="d-flex flex-column align-items-center gap-1 py-2" href="account.html"><i class="bi bi-person fs-5"></i><span>Compte</span></a></div>
+    <div class="col text-center"><a class="active d-flex flex-column align-items-center gap-1 py-2" href="help-center.html"><i class="bi bi-shield-lock fs-5"></i><span>Aide</span></a></div>
+  </div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

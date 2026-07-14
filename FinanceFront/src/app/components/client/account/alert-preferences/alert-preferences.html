@@ -1,0 +1,102 @@
+<section class="d-flex flex-column gap-4">
+
+  <div>
+    <p class="text-uppercase text-secondary fw-semibold small mb-2">Notifications</p>
+    <h2 class="h4 mb-1">Préférences d'alertes</h2>
+    <p class="text-secondary mb-0">Choisissez les événements pour lesquels vous souhaitez être notifié. Ces préférences s'appliquent aux valeurs de votre liste de surveillance.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="d-flex justify-content-center py-4">
+      <div class="spinner-border text-primary" role="status" aria-label="Chargement des préférences d'alertes"></div>
+    </div>
+  }
+
+  @if (!loading() && preferences()) {
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column gap-4">
+
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            <div class="fw-semibold mb-1">Changement d'état d'un pattern</div>
+            <p class="text-secondary small mb-0">Soyez alerté lorsqu'un pattern passe en état Confirmé ou Invalidé sur une valeur que vous suivez.</p>
+          </div>
+          <div class="form-check form-switch ms-3 flex-shrink-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="alertPatternStateChange"
+              [checked]="preferences()!.AlertPatternStateChangeEnabled"
+              (change)="togglePatternStateChange()"
+            />
+            <label class="form-check-label visually-hidden" for="alertPatternStateChange">Changement d'état d'un pattern</label>
+          </div>
+        </div>
+
+        <hr class="my-0" />
+
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            <div class="fw-semibold mb-1">Franchissement de niveau</div>
+            <p class="text-secondary small mb-0">Recevez une alerte lorsqu'une cible de prix ou un prix d'invalidation est atteint sur une valeur suivie.</p>
+          </div>
+          <div class="form-check form-switch ms-3 flex-shrink-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="alertLevelCrossed"
+              [checked]="preferences()!.AlertLevelCrossedEnabled"
+              (change)="toggleLevelCrossed()"
+            />
+            <label class="form-check-label visually-hidden" for="alertLevelCrossed">Franchissement de niveau</label>
+          </div>
+        </div>
+
+        <hr class="my-0" />
+
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            <div class="fw-semibold mb-1">Données obsolètes</div>
+            <p class="text-secondary small mb-0">Soyez informé lorsque la cotation d'une valeur de votre liste de surveillance n'a pas été mise à jour depuis trop longtemps.</p>
+          </div>
+          <div class="form-check form-switch ms-3 flex-shrink-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="alertDataStale"
+              [checked]="preferences()!.AlertDataStaleEnabled"
+              (change)="toggleDataStale()"
+            />
+            <label class="form-check-label visually-hidden" for="alertDataStale">Données obsolètes</label>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="saving()"
+            (click)="save()"
+          >
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            }
+            Enregistrer
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  @if (!loading() && !preferences()) {
+    <div class="alert alert-warning" role="alert">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Impossible de charger vos préférences d'alertes. Veuillez réessayer.
+    </div>
+  }
+
+</section>

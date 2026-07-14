@@ -4,8 +4,9 @@ import { AllModule } from './module/allModule.module';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { filter } from 'rxjs';
-import { AppArea, AuthStore, resolveAreaFromHost } from './core/auth.store';
-import { AppAreas, AppRoutes, UserPaths } from './Routes/app.routes.constants';
+import { AuthStore } from './core/auth.store';
+import { AuthService } from './services/AuthService.service';
+import { AppAreas, AppRoutes } from './Routes/app.routes.constants';
 type ProfileLink = { label: string; icon: string; commands: readonly (string | number)[] };
 
 @Component({
@@ -19,6 +20,7 @@ export class App {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthStore);
+  private readonly authService = inject(AuthService);
   private readonly title = inject(Title);
 
   private readonly navEnd = toSignal(
@@ -37,19 +39,19 @@ export class App {
 
   readonly headerTitle = computed(() => {
     const area = this.auth.area();
-    if (area === AppAreas.Admin) return 'Predict Finance â€“ Administration';
-    return 'Predict Finance';
+    if (area === AppAreas.Admin) return 'FinInsight - Administration';
+    return 'FinInsight';
   });
 
   constructor() {
     effect(() => {
       const area = this.auth.area();
       if (area === AppAreas.Admin) {
-        this.title.setTitle('Predict Finance â€“ Administration');
+        this.title.setTitle('FinInsight - Administration');
         return;
       }
       else {
-        this.title.setTitle('Predict Finance');
+        this.title.setTitle('FinInsight');
         return;
       }
     });
@@ -73,8 +75,8 @@ export class App {
 
   readonly userSubtitle = computed(() => {
     const area = this.auth.area();
-    if (area === AppAreas.Admin) return 'Gestionnaire FIDES';
-    return "Espace syndic";
+    if (area === AppAreas.Admin) return 'Espace gouvernance';
+    return 'Espace investisseur';
   });
 
   readonly userInitials = computed(() => {
@@ -89,12 +91,21 @@ export class App {
   readonly profileLinks = computed<readonly ProfileLink[]>(() => {
     const area = this.auth.area();
 
-    const monCompte =
-      area === AppAreas.Admin
-        ? null
-        : { label: 'Mon compte', icon: 'bi-person', commands: ['/', area, UserPaths.Profile] as const };
+    if (area === AppAreas.Admin) {
+      return [
+        { label: "Vue d'ensemble", icon: 'bi-speedometer2', commands: ['/', AppRoutes.AdminRoot, AppRoutes.Dashboard] }
+      ];
+    }
 
-    return [monCompte].filter(Boolean) as readonly ProfileLink[];
+    return [
+      { label: 'Mon espace', icon: 'bi-house-door', commands: ['/', AppRoutes.ClientRoot, AppRoutes.Dashboard] },
+      { label: 'Mon compte', icon: 'bi-person-gear', commands: ['/', AppRoutes.ClientRoot, AppRoutes.Account, AppRoutes.Profile] },
+      { label: 'Notifications', icon: 'bi-bell', commands: ['/', AppRoutes.ClientRoot, AppRoutes.Notifications] }
+    ];
   });
+
+  logout(): void {
+    this.authService.logout();
+  }
 
 }

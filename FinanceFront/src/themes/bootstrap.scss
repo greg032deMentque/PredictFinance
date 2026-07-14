@@ -1,0 +1,110 @@
+.navbar {
+  --bs-navbar-padding-y: 0.95rem;
+}
+
+.dropdown-menu {
+  border: 1px solid rgba(201, 215, 231, 0.96);
+  border-radius: 1.1rem;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 44px rgba(12, 35, 59, 0.14);
+  backdrop-filter: blur(18px);
+}
+
+.dropdown-item {
+  border-radius: 0.85rem;
+  color: var(--pf-text);
+  font-weight: 600;
+  padding-block: 0.7rem;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: var(--pf-soft-navy);
+  color: var(--pf-navy);
+  transform: translateX(2px);
+}
+
+.dropdown-divider {
+  border-top-color: rgba(201, 215, 231, 0.9);
+}
+
+.card {
+  border: 1px solid rgba(214, 224, 236, 0.95);
+  border-radius: var(--pf-radius-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.98) 100%);
+  box-shadow: var(--pf-shadow-sm);
+}
+
+.card-body {
+  padding: 1.35rem;
+}
+
+.table-responsive {
+  scrollbar-width: thin;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: rgba(236, 241, 249, 0.62);
+  --bs-table-striped-bg: rgba(247, 250, 254, 0.76);
+  --bs-table-border-color: rgba(214, 224, 236, 0.92);
+  margin-bottom: 0;
+  color: var(--pf-text);
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.95rem 1rem;
+  border-bottom-color: rgba(214, 224, 236, 0.86);
+}
+
+.table thead th,
+.table-light th {
+  background: rgba(241, 246, 251, 0.96) !important;
+  color: var(--pf-navy);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table thead th[role="button"] {
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.table thead th[role="button"]:hover {
+  background: rgba(230, 238, 247, 0.98) !important;
+}
+
+.table thead th[role="button"] i {
+  margin-left: 0.35rem;
+  color: var(--pf-text-soft);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.72rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.user-role-badge {
+  background: var(--pf-role-bg);
+  color: var(--pf-navy);
+  border: 1px solid var(--pf-border);
+}
+
+.spinner-border-sm {
+  width: 0.95rem;
+  height: 0.95rem;
+}

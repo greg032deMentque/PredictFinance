@@ -1,0 +1,23 @@
+﻿.lifecycle-step {
+  &.step-current {
+    background: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary-text-emphasis);
+    border: 1px solid var(--bs-primary);
+  }
+  &.step-past {
+    background: var(--bs-success-bg-subtle);
+    color: var(--bs-success-text-emphasis);
+  }
+  &.step-future {
+    background: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+  }
+  &.step-completed {
+    background: var(--bs-success-bg-subtle);
+    color: var(--bs-success-text-emphasis);
+  }
+  &.step-invalidated {
+    background: var(--bs-danger-bg-subtle);
+    color: var(--bs-danger-text-emphasis);
+  }
+}

@@ -1,0 +1,38 @@
+<section class="page-shell">
+  <div class="page-heading mb-4">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-patch-check"></i> PEA registry</span>
+      <h1 class="h2 fw-bold mb-2">Traçabilité de l’éligibilité PEA</h1>
+      <p class="muted mb-0">La page met en avant la source, la date de vérification et la policy de décision.</p>
+    </div>
+    <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="load()">Rafraîchir</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-skeleton-group"><div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div></div>
+  } @else if (error) {
+    <div class="error-panel">{{ error }}</div>
+  } @else if (items.length === 0) {
+    <div class="empty-state"><div class="fw-semibold">Aucune entrée PEA</div><div class="muted">Le registre ne contient pas encore d’élément.</div></div>
+  } @else {
+    <div class="compact-list">
+      @for (item of items; track item.EntryId) {
+        <div class="compact-row">
+          <div>
+            <div class="fw-semibold">{{ item.DisplayName }} ({{ item.Symbol }})</div>
+            <div class="small muted mb-2">Univers: {{ item.UniverseId }} · Source: {{ item.SourceType }}</div>
+            <div class="small muted">Référence: {{ item.SourceReference || 'n/a' }}</div>
+            @if (item.ReviewerNote) {
+              <div class="mini-note mt-2">{{ item.ReviewerNote }}</div>
+            }
+          </div>
+          <div class="text-end d-flex flex-column gap-2 align-items-end">
+            <span class="chip chip-info">{{ item.EligibilityStatus }}</span>
+            <span class="code-chip">{{ item.PolicyVersion }}</span>
+            <div class="small muted">{{ item.CheckedUtc ? (item.CheckedUtc | date:'dd/MM/yyyy HH:mm') : 'Non vérifié' }}</div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>

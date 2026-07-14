@@ -48,7 +48,6 @@ type Session = {
   defaultSite: string;
   sites: string[];
   area: AppArea;
-  isSuperAdmin: boolean;
   roles: string[];
 };
 
@@ -57,7 +56,6 @@ type JwtPayload = {
   tenant_code?: string;
   default_site?: string;
   site?: string[] | string;
-  is_superadmin?: string | boolean;
   roles?: string[] | string;
   role?: string[] | string;
   'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'?: string[] | string;
@@ -108,7 +106,6 @@ export class AuthStore {
 
   readonly area = signal<AppArea>(this.hostArea());
 
-  readonly isSuperAdmin = signal<boolean>(false);
   readonly roles = signal<string[]>([]);
 
   private readonly authenticated = computed(() => {
@@ -120,10 +117,8 @@ export class AuthStore {
   readonly isTenantAdmin = computed(() => this.roles().includes('tenant_admin') || this.roles().includes('admin'));
   readonly canAccessAdmin = computed(
     () =>
-      this.isSuperAdmin() ||
       this.roles().includes('tenant_admin') ||
-      this.roles().includes('admin') ||
-      this.roles().includes('superadmin')
+      this.roles().includes('admin')
   );
   readonly canSeeSiteTabs = computed(() => this.sites().length > 0);
 
@@ -168,7 +163,6 @@ export class AuthStore {
     const roles = normalizeStringArray(
       decoded.roles ?? decoded.role ?? decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
     );
-    const isSuperAdmin = normalizeBool(decoded.is_superadmin) || roles.includes('superadmin');
 
     const tenantId = (decoded.tenant_id ?? '').trim();
     const tenantCode = (decoded.tenant_code ?? '').trim().toLowerCase();
@@ -190,7 +184,6 @@ export class AuthStore {
       defaultSite,
       sites,
       area,
-      isSuperAdmin,
       roles
     });
   }
@@ -207,7 +200,6 @@ export class AuthStore {
 
     this.area.set(s.area);
 
-    this.isSuperAdmin.set(s.isSuperAdmin);
     this.roles.set(s.roles);
 
     this.setTokenScoped(s.token);
@@ -224,7 +216,6 @@ export class AuthStore {
     this.defaultSite.set('');
     this.sites.set([]);
 
-    this.isSuperAdmin.set(false);
     this.roles.set([]);
 
     this.hostArea.set(resolveAreaFromHost(window.location.hostname));

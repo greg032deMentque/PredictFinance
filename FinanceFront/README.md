@@ -16,7 +16,7 @@ Front Angular du MVP PredictFinance.
 
 1. L'utilisateur se connecte sur `/login`.
 2. Il est redirige selon son role:
-   - admin/superadmin -> `/admin/dashboard`
+   - admin -> `/admin/dashboard`
    - user -> `/client/dashboard`
 3. Il selectionne une valeur (ticker) et lance l'analyse.
 4. Le front appelle `GET /api/Trading/predict/{symbol}`.

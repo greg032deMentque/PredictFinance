@@ -1,0 +1,121 @@
+<section class="d-flex flex-column gap-4">
+
+  <div>
+    <p class="text-uppercase text-secondary fw-semibold small mb-2">Confidentialité</p>
+    <h2 class="h4 mb-1">Consentements et données personnelles</h2>
+    <p class="text-secondary mb-0">Gérez vos préférences de traitement des données. Ces choix peuvent être modifiés à tout moment.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="d-flex justify-content-center py-4">
+      <div class="spinner-border text-primary" role="status" aria-label="Chargement des consentements"></div>
+    </div>
+  }
+
+  @if (!loading() && consents()) {
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column gap-4">
+
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            <div class="fw-semibold mb-1">Mesure d'audience et statistiques</div>
+            <p class="text-secondary small mb-0">Permet à FinInsight d'analyser l'utilisation de l'application afin d'améliorer les fonctionnalités. Aucune donnée n'est partagée avec des tiers publicitaires.</p>
+          </div>
+          <div class="form-check form-switch ms-3 flex-shrink-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="analyticsConsent"
+              [checked]="consents()!.AnalyticsConsent"
+              (change)="toggleAnalytics()"
+            />
+            <label class="form-check-label visually-hidden" for="analyticsConsent">Mesure d'audience</label>
+          </div>
+        </div>
+
+        <hr class="my-0" />
+
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            <div class="fw-semibold mb-1">Emails d'information produit</div>
+            <p class="text-secondary small mb-0">Recevez des notifications sur les nouvelles fonctionnalités et les mises à jour de FinInsight. Hors emails transactionnels obligatoires liés au compte.</p>
+          </div>
+          <div class="form-check form-switch ms-3 flex-shrink-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="marketingConsent"
+              [checked]="consents()!.MarketingEmailConsent"
+              (change)="toggleMarketing()"
+            />
+            <label class="form-check-label visually-hidden" for="marketingConsent">Emails produit</label>
+          </div>
+        </div>
+
+        <hr class="my-0" />
+
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            <div class="fw-semibold mb-1">Amélioration du produit</div>
+            <p class="text-secondary small mb-0">Contribuez à l'amélioration de FinInsight via des retours anonymisés sur vos interactions. Les données sont traitées de façon agrégée.</p>
+          </div>
+          <div class="form-check form-switch ms-3 flex-shrink-0">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="productImprovementConsent"
+              [checked]="consents()!.ProductImprovementConsent"
+              (change)="toggleProductImprovement()"
+            />
+            <label class="form-check-label visually-hidden" for="productImprovementConsent">Amélioration produit</label>
+          </div>
+        </div>
+
+        @if (consents()!.LastUpdatedUtc) {
+          <p class="text-secondary small mb-0">Dernière mise à jour : {{ consents()!.LastUpdatedUtc | date:'dd/MM/yyyy à HH:mm' }}</p>
+        }
+
+        <div class="d-flex justify-content-end">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="saving()"
+            (click)="save()"
+          >
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            }
+            Enregistrer mes choix
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column gap-3">
+        <h3 class="h6 fw-semibold mb-0">Exercer vos droits RGPD</h3>
+        <div class="d-flex flex-column flex-md-row gap-2">
+          <a [routerLink]="dataExportPath" class="btn btn-outline-secondary">
+            <i class="bi bi-download me-2"></i>Exporter mes données
+          </a>
+          <a [routerLink]="deleteAccountPath" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-2"></i>Supprimer mon compte
+          </a>
+        </div>
+        <p class="text-secondary small mb-0">Conformément au RGPD (Art. 17 et 20), vous pouvez demander la suppression ou l'export de vos données à tout moment.</p>
+      </div>
+    </div>
+  }
+
+  @if (!loading() && !consents()) {
+    <div class="alert alert-warning" role="alert">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Impossible de charger vos consentements. Veuillez réessayer.
+    </div>
+  }
+
+</section>

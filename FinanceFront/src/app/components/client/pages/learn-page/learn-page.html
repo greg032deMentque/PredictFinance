@@ -1,0 +1,107 @@
+<section class="d-flex flex-column gap-4">
+
+  <div>
+    <p class="text-uppercase text-secondary fw-semibold small mb-2">Pédagogie</p>
+    <h1 class="h3 mb-1">Apprendre</h1>
+    <p class="text-secondary mb-0">Contenu de référence à lire hors flux de tâche. Ce guide ne remplace pas le glossaire contextuel disponible dans les analyses.</p>
+  </div>
+
+  @if (loading()) {
+    <!-- Skeleton -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column gap-3">
+        <div class="placeholder-glow">
+          <span class="placeholder col-3 rounded mb-1"></span>
+          <span class="placeholder col-6 rounded d-block"></span>
+        </div>
+      </div>
+    </div>
+    <div class="row g-3">
+      @for (_ of [1,2,3]; track $index) {
+        <div class="col-12 col-md-4">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body placeholder-glow d-flex flex-column gap-2">
+              <span class="placeholder col-8 rounded"></span>
+              <span class="placeholder col-12 rounded"></span>
+              <span class="placeholder col-10 rounded"></span>
+              <span class="placeholder col-4 rounded mt-2"></span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (!loading() && overview()) {
+    <!-- Runtime scope header -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex flex-column flex-md-row gap-3 align-items-md-center justify-content-between">
+        <div>
+          <div class="fw-semibold mb-1">Périmètre d'analyse actif</div>
+          <p class="text-secondary small mb-0">{{ overview()!.RuntimeScope.MarketScopeLabel }}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="badge bg-secondary-subtle text-secondary-emphasis">
+            <i class="bi bi-clock me-1"></i>{{ overview()!.RuntimeScope.TimeGranularity }}
+          </span>
+          @if (overview()!.RuntimeScope.EtfSupportEnabled) {
+            <span class="badge bg-info-subtle text-info-emphasis">ETF supportés</span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Onboarding block si applicable -->
+    @if (overview()!.Onboarding && overview()!.Onboarding!.ShouldDisplay) {
+      <div class="alert alert-primary d-flex gap-2 align-items-start" role="alert">
+        <i class="bi bi-rocket-takeoff flex-shrink-0 mt-1"></i>
+        <div>
+          <div class="fw-semibold">{{ overview()!.Onboarding!.Title }}</div>
+          <p class="mb-1 mt-1 small">{{ overview()!.Onboarding!.Summary }}</p>
+          @for (step of overview()!.Onboarding!.SuggestedSteps; track step.StepCode) {
+            <a [routerLink]="toCommands(step.RoutePath)" class="btn btn-outline-primary btn-sm me-2 mb-1">
+              {{ step.Label }}
+            </a>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Topics -->
+    @if (overview()!.Topics.length > 0) {
+      <div class="row g-3">
+        @for (topic of overview()!.Topics; track topic.TopicId) {
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body d-flex flex-column gap-2">
+                <span class="fw-semibold">{{ topic.Title }}</span>
+                <p class="text-secondary small mb-0 flex-grow-1">{{ topic.Summary }}</p>
+                <a [routerLink]="toCommands(topic.RoutePath)" class="btn btn-outline-primary btn-sm align-self-start mt-1">
+                  Lire <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        Aucun contenu pédagogique disponible pour le moment.
+      </div>
+    }
+  }
+
+  @if (!loading() && !overview()) {
+    <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+      <i class="bi bi-exclamation-triangle flex-shrink-0 mt-1"></i>
+      <div>
+        <p class="mb-1">Impossible de charger le contenu pédagogique.</p>
+        <button type="button" class="btn btn-outline-warning btn-sm" (click)="retry()">
+          <i class="bi bi-arrow-clockwise me-1"></i>Réessayer
+        </button>
+      </div>
+    </div>
+  }
+
+</section>

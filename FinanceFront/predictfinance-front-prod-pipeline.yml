@@ -1,0 +1,48 @@
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  nodeVersion: '20.x'
+  buildConfiguration: 'production'
+
+steps:
+- checkout: self
+  fetchDepth: 0
+
+- task: NodeTool@0
+  displayName: "Install Node.js $(nodeVersion)"
+  inputs:
+    versionSpec: $(nodeVersion)
+
+- task: Npm@1
+  displayName: 'npm install'
+  inputs:
+    command: 'install'
+    workingDir: 'FinanceFront'
+
+- task: Npm@1
+  displayName: 'npm run lint'
+  inputs:
+    command: 'custom'
+    workingDir: 'FinanceFront'
+    customCommand: 'run lint'
+
+- task: Npm@1
+  displayName: 'npm run build:prod'
+  inputs:
+    command: 'custom'
+    workingDir: 'FinanceFront'
+    customCommand: 'run build:prod'
+
+- task: CopyFiles@2
+  displayName: 'Copy dist to artifact staging'
+  inputs:
+    sourceFolder: 'FinanceFront/dist'
+    contents: '**'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish build artifact'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)'
+    artifact: 'app_service_front-prod'

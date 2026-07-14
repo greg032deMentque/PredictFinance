@@ -1,0 +1,57 @@
+<section class="page-shell">
+  <div class="page-heading mb-4">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-sliders"></i> Scoring policy</span>
+      <h1 class="h2 fw-bold mb-2">Politique de scoring fondamentale</h1>
+      <p class="muted mb-0">Univers couverts, métriques de scoring et versioning des politiques.</p>
+    </div>
+    <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="load()">Rafraîchir</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-skeleton-group"><div class="skeleton-card"><div class="skeleton-line skeleton-w-55"></div><div class="skeleton-line skeleton-w-90"></div></div></div>
+  } @else if (error) {
+    <div class="error-panel">{{ error }}</div>
+  } @else if (policy) {
+    <div class="split-cards">
+      <div class="page-card">
+        <div class="section-title">Cadre de policy</div>
+        <div class="compact-list">
+          <div class="compact-row"><span>Univers</span><span class="code-chip">{{ policy.SupportedUniverseId }}</span></div>
+          <div class="compact-row"><span>Version scoring</span><span class="code-chip">{{ policy.ScoringVersion }}</span></div>
+          <div class="compact-row"><span>Version éligibilité</span><span class="code-chip">{{ policy.EligibilityPolicyVersion }}</span></div>
+          <div class="compact-row"><span>Provider</span><span class="code-chip">{{ policy.ProviderId }}</span></div>
+        </div>
+      </div>
+      <div class="page-card">
+        <div class="section-title">Couverture minimale</div>
+        <div class="compact-list">
+          <div class="compact-row"><span>Floor</span><span class="code-chip">{{ policy.MinimumCategoriesRequiredFloor }}</span></div>
+          <div class="compact-row"><span>Ceiling</span><span class="code-chip">{{ policy.MinimumCategoriesRequiredCeiling }}</span></div>
+          <div class="compact-row"><span>Pénalité couverture</span><span class="chip" [class.chip-success]="policy.CoveragePenaltySupported" [class.chip-warning]="!policy.CoveragePenaltySupported">{{ policy.CoveragePenaltySupported ? 'Supportée' : 'Non supportée' }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="split-cards mt-3">
+      <div class="page-card">
+        <div class="section-title">Catégories</div>
+        <div class="alt-pattern-list">
+          @for (item of policy.CategoryCodes; track item) {
+            <span class="chip chip-navy">{{ item }}</span>
+          }
+        </div>
+      </div>
+      <div class="page-card">
+        <div class="section-title">Métriques</div>
+        <div class="alt-pattern-list">
+          @for (item of policy.MetricCodes; track item) {
+            <span class="chip chip-info">{{ item }}</span>
+          }
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="empty-state"><div class="fw-semibold">Aucune policy chargée</div></div>
+  }
+</section>

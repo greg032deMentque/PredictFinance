@@ -1,0 +1,141 @@
+<section class="d-flex flex-column gap-4">
+  <section class="hero">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-8">
+        <span class="chip bg-white text-dark mb-3"><i class="bi bi-people"></i> KPI</span>
+        <h1 class="display-6 fw-bold mb-3">Engagement utilisateurs</h1>
+        <p class="mb-0 text-white-50 fs-5">Activité, rétention et santé opérationnelle de la plateforme sur la période sélectionnée.</p>
+      </div>
+      <div class="col-lg-4">
+        <div class="surface bg-white p-4">
+          <div class="fw-bold text-dark mb-3">Fenêtre d'analyse</div>
+          <div class="filter-bar">
+            <button type="button" class="filter-pill" [class.active-pill]="selectedWindow === 'D7'" (click)="selectWindow('D7')">7 jours</button>
+            <button type="button" class="filter-pill" [class.active-pill]="selectedWindow === 'D30'" (click)="selectWindow('D30')">30 jours</button>
+            <button type="button" class="filter-pill" [class.active-pill]="selectedWindow === 'D90'" (click)="selectWindow('D90')">90 jours</button>
+          </div>
+          <button type="button" class="btn btn-outline-dark w-100 mt-3" [disabled]="loading || exporting || !kpi" (click)="exportCsv()">
+            <i class="bi bi-download me-1"></i>{{ exporting ? 'Export…' : 'Exporter CSV' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  @if (loading) {
+    <div class="loading-skeleton-group">
+      <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div>
+      <div class="skeleton-card"><div class="skeleton-line skeleton-w-55"></div><div class="skeleton-line skeleton-w-90"></div></div>
+    </div>
+  } @else if (error) {
+    <div class="error-panel">
+      <div class="fw-semibold">Chargement impossible</div>
+      <div>{{ error }}</div>
+      <button type="button" class="btn btn-outline-danger w-auto" (click)="loadKpi()">Réessayer</button>
+    </div>
+  } @else if (kpi) {
+    <section class="page-shell">
+
+      <!-- Cartes activité -->
+      <div class="kpi-grid mb-4">
+        <div class="metric-card">
+          <div class="small muted mb-1">DAU (actifs 24h)</div>
+          <div class="h3 mb-0">{{ kpi.Dau }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">WAU (actifs 7j)</div>
+          <div class="h3 mb-0">{{ kpi.Wau }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">MAU (actifs 30j)</div>
+          <div class="h3 mb-0">{{ kpi.Mau }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Stickiness (DAU/MAU)</div>
+          <div class="h3 mb-0">{{ formatRate(kpi.Stickiness) }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Utilisateurs actifs (fenêtre)</div>
+          <div class="h3 mb-0">{{ kpi.ActiveUsers }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Taux lecture notifications</div>
+          <div class="h3 mb-0">{{ formatRate(kpi.NotificationReadRate) }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Succès analyses</div>
+          <div class="h3 mb-0">{{ formatOpsSuccessRate(kpi.OpsSuccessRate) }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Durée moy. analyse</div>
+          <div class="h3 mb-0">{{ formatDuration(kpi.OpsAvgDurationMs) }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="small muted mb-1">Assets obsolètes</div>
+          <div class="h3 mb-0">{{ kpi.StaleAssets }}</div>
+        </div>
+      </div>
+
+      <!-- Funnel d'activation -->
+      <div class="page-card mb-4">
+        <div class="section-title mb-3">Funnel d'activation</div>
+        @if (kpi.ActivationFunnel.length === 0) {
+          <div class="empty-state"><div class="muted">Aucune donnée disponible.</div></div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Étape</th>
+                  <th>Libellé</th>
+                  <th class="text-end">Utilisateurs</th>
+                  <th class="text-end">Taux</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (step of kpi.ActivationFunnel; track step.Step) {
+                  <tr>
+                    <td><span class="chip chip-navy">{{ step.Step }}</span></td>
+                    <td>{{ step.Label }}</td>
+                    <td class="text-end">{{ step.Count }}</td>
+                    <td class="text-end fw-semibold">{{ formatRate(step.Rate) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Cohortes de rétention -->
+      <div class="page-card">
+        <div class="section-title mb-3">Cohortes de rétention</div>
+        @if (kpi.RetentionCohorts.length === 0) {
+          <div class="empty-state"><div class="muted">Aucune donnée disponible.</div></div>
+        } @else {
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Cohorte</th>
+                  <th class="text-end">Taux de rétention</th>
+                  <th class="text-end">Échantillon</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (cohort of kpi.RetentionCohorts; track cohort.Label) {
+                  <tr>
+                    <td><span class="chip chip-navy">{{ cohort.Label }}</span></td>
+                    <td class="text-end fw-semibold">{{ formatRate(cohort.Rate) }}</td>
+                    <td class="text-end">{{ cohort.SampleSize }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+    </section>
+  }
+</section>

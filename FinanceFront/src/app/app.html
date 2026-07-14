@@ -1,49 +1,55 @@
 <div class="app-root d-flex flex-column min-vh-100">
-  <header class="navbar navbar-light bg-light shadow-sm">
+  <header class="navbar app-header">
     <div class="container-fluid d-flex align-items-center justify-content-between">
       <div class="d-flex align-items-center gap-2">
         <img src="assets/money.svg" alt="Logo app" class="login-logo" />
       </div>
 
-      <span class="fw-bold text-vert text-center" style="font-size: 25px; cursor: pointer">
+      <span class="app-header-title text-center">
         {{ headerTitle() }}
       </span>
 
       @if (showPrivateShell()) {
-        <div class="dropdown">
-          <i
-            class="bi bi-person-circle fs-2 text-primary"
-            role="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            style="cursor: pointer"
-          ></i>
+        <div class="d-flex align-items-center gap-2">
+          <div class="dropdown">
+            <i
+              class="bi bi-person-circle fs-2 app-profile-toggle"
+              role="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            ></i>
 
-          <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2" style="min-width: 280px">
-            <li class="px-2 py-2">
-              <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-person-circle fs-2 text-primary"></i>
-                <div>
-                  <div class="fw-semibold">{{ userDisplayName() }}</div>
-                  <div class="text-muted small">{{ userSubtitle() }}</div>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2 app-profile-menu">
+              <li class="px-2 py-2">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-person-circle fs-2 text-primary"></i>
+                  <div>
+                    <div class="fw-semibold">{{ userDisplayName() }}</div>
+                    <div class="text-muted small">{{ userSubtitle() }}</div>
+                  </div>
                 </div>
-              </div>
-            </li>
-
-            <li><hr class="dropdown-divider my-2" /></li>
-
-            @for (l of profileLinks(); track l.label) {
-              <li>
-                <a class="dropdown-item d-flex align-items-center gap-2 rounded-2" [routerLink]="l.commands">
-                  <i class="bi" [class]="l.icon"></i>
-                  {{ l.label }}
-                </a>
               </li>
-            }
-          </ul>
+
+              <li><hr class="dropdown-divider my-2" /></li>
+
+              @for (l of profileLinks(); track l.label) {
+                <li>
+                  <a class="dropdown-item d-flex align-items-center gap-2 rounded-2" [routerLink]="l.commands">
+                    <i class="bi" [class]="l.icon"></i>
+                    {{ l.label }}
+                  </a>
+                </li>
+              }
+            </ul>
+          </div>
+
+          <button type="button" class="btn btn-outline-secondary rounded-pill app-logout-btn" (click)="logout()" aria-label="Déconnexion">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="d-none d-sm-inline ms-2">Déconnexion</span>
+          </button>
         </div>
       } @else {
-        <div style="width: 115px"></div>
+        <div class="app-header-spacer"></div>
       }
     </div>
   </header>
@@ -53,10 +59,12 @@
       <router-outlet></router-outlet>
     </div>
   } @else {
-    <main class="flex-fill overflow-auto pb-5" style="overflow-x: hidden !important">
+    <main class="app-public-main flex-fill overflow-auto pb-5">
       <router-outlet></router-outlet>
     </main>
   }
 
-  <footer class="footer text-center py-2 shadow-sm">(c) Moi in 2026</footer>
+  <footer class="footer text-center py-2">
+    <i class="bi bi-graph-up-arrow"></i> FinInsight
+  </footer>
 </div>

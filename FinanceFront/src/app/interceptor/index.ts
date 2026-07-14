@@ -1,2 +1,2 @@
-﻿export * from './ApiErrorInterceptor';
+export * from './ApiErrorInterceptor';
 export * from './TokenInterceptor';

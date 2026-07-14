@@ -1,7 +1,13 @@
 @use "./variables" as *;
 
-.mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label, .mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label--float-above {
-    font-size: 16px!important;
-    color:  $finance-navy !important;
-    font-weight: bold!important;
-  }
+.section-eyebrow,
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: $finance-blue;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

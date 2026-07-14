@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirmation d'inscription — PredictFinance V1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="../assets/css/app.css" rel="stylesheet">
+</head>
+<body>
+  <pf-shell>
+    <section class="hero on-dark">
+      <div class="pf-row-between">
+        <div>
+          <div class="card-eyebrow" style="color:rgba(255,255,255,.75)">Anonymous · B.4 variante — cible non construite</div>
+          <h1 class="pf-h2 mt-1 mb-2">Email de confirmation envoyé</h1>
+          <p class="muted mb-0" style="color:rgba(255,255,255,.82);max-width:78ch">Étape intermédiaire post-inscription : email envoyé, compte en statut PENDING.</p>
+        </div>
+        <span class="pf-btn pf-btn-on-dark"><i class="bi bi-signpost"></i> /register → confirm [CIBLE 🔴]</span>
+      </div>
+    </section>
+    <div class="pf-row gap-2 pf-wrap mb-3">
+      <span class="build-badge build-todo">Cible non construite — FLUX-C-01 étape 4</span>
+    </div>
+    <pf-state default="ready">
+      <div data-state="ready">
+        <div class="with-rail">
+          <div class="pf-stack pf-stack-5">
+
+            <section class="page-card">
+              <div class="section-title"><i class="bi bi-code-square"></i> Traçabilité code / spec</div>
+              <div class="table-card"><table class="pf-table"><thead><tr><th>Point</th><th>Spécification</th></tr></thead><tbody>
+                <tr><td>Déclencheur</td><td>POST /register success → compte PENDING créé, email de confirmation envoyé</td></tr>
+                <tr><td>Route</td><td>Redirection après POST /register, ou composant inline dans RegisterComponent</td></tr>
+                <tr><td>Spec produit</td><td>03 §B.4 — 07 FLUX-C-01 étapes 3–4</td></tr>
+              </tbody></table></div>
+            </section>
+
+            <section class="page-card">
+              <div class="section-title"><i class="bi bi-layout-text-window-reverse"></i> Structure visuelle obligatoire</div>
+              <ul class="mb-0">
+                <li>Aucune navigation métier (RM-21) — même coque que /login et /register.</li>
+                <li>Icône ou illustration de courrier envoyé.</li>
+                <li>Message clair : « Vérifiez votre boîte mail. Cliquez sur le lien de confirmation pour activer votre compte. »</li>
+                <li>Rappel de l'email saisi (les 3 premiers chars + domaine masqué partiellement : ex. <code>cam***@gmail.com</code>).</li>
+                <li>Bouton secondaire : « Renvoyer l'email » (avec anti-spam : désactivé 60 s après clic).</li>
+                <li>Lien retour vers /login.</li>
+              </ul>
+            </section>
+
+            <section class="page-card">
+              <div class="section-title"><i class="bi bi-cursor"></i> Actions</div>
+              <div class="table-card"><table class="pf-table"><thead><tr><th>Action</th><th>Type</th><th>Effet</th></tr></thead><tbody>
+                <tr><td>Renvoyer l'email de confirmation</td><td>Secondaire</td><td>POST renvoi token → même message affiché ; bouton désactivé 60 s</td></tr>
+                <tr><td>Retour à la connexion</td><td>Secondaire</td><td>→ /login</td></tr>
+              </tbody></table></div>
+            </section>
+
+            <section class="page-card">
+              <div class="section-title"><i class="bi bi-envelope-check"></i> Ce qui se passe côté email</div>
+              <ul class="mb-0">
+                <li>Email envoyé avec un lien tokenisé horodaté.</li>
+                <li>Clic sur le lien → validation token → compte passe à <code class="code-chip">ACTIVE</code> → redirect /login.</li>
+                <li>Token expiré (> 24h) : message d'erreur avec bouton « Renvoyer un email » → variante <code class="code-chip">reset-password-invalid-token.html</code> comme référence UX.</li>
+              </ul>
+            </section>
+
+          </div>
+          <aside class="right-rail">
+
+            <section class="page-card">
+              <div class="section-title"><i class="bi bi-toggles"></i> États à prévoir</div>
+              <ul class="mb-0">
+                <li><strong>Default</strong> : message de confirmation avec rappel email.</li>
+                <li><strong>Renvoi en cours</strong> : spinner sur le bouton renvoi.</li>
+                <li><strong>Renvoi réussi</strong> : message « Email renvoyé. Vérifiez votre boîte mail. »</li>
+                <li><strong>Anti-spam</strong> : bouton renvoi désactivé + countdown visible (60 s).</li>
+              </ul>
+            </section>
+
+            <section class="page-card">
+              <div class="section-title"><i class="bi bi-diagram-3"></i> Entrées / sorties</div>
+              <div class="table-card"><table class="pf-table"><thead><tr><th>Entrée</th><th>Sortie</th></tr></thead><tbody>
+                <tr><td>POST /register success</td><td>/login (lien retour)</td></tr>
+                <tr><td>—</td><td>Email → clic lien → /login (activation)</td></tr>
+              </tbody></table></div>
+            </section>
+
+          </aside>
+        </div>
+      </div>
+
+      <div data-state="loading"><div class="skeleton-group"><div class="skeleton-card"><div class="skeleton-line sk-55"></div><div class="skeleton-line sk-90"></div><div class="skeleton-line sk-70"></div></div></div></div>
+      <div data-state="error"><div class="error-panel"><div class="fw-bold"><i class="bi bi-wifi-off"></i> Renvoi indisponible</div><p class="mb-0">Impossible de renvoyer l'email pour l'instant. Réessayez dans quelques minutes.</p><button class="pf-btn"><i class="bi bi-arrow-clockwise"></i> Réessayer</button></div></div>
+      <div data-state="non-executable"><div class="non-exec-panel"><span class="non-exec-tag">État métier</span><div class="fw-bold">Lien de confirmation expiré</div><p class="mb-0">Ce lien n'est plus valide. Cliquez sur « Renvoyer l'email » pour en recevoir un nouveau.</p></div></div>
+
+    </pf-state>
+  </pf-shell>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../assets/js/pf.bundle.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@
   UnitPrice = 0;
   Fees = 0;
   TimestampUtc = '';
+  PortfolioId = '';
 
   constructor(init?: Partial<ClientTransactionCreateRequest>) {
     Object.assign(this, init);

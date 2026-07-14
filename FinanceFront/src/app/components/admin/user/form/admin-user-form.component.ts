@@ -1,12 +1,13 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { User } from '../../../../Models/User';
+import { AdminUserUpsertRequest } from '../../../../Models/admin-user-upsert-request';
 import { UserRole } from '../../../../Models/user-role';
-import { AdminPaths } from '../../../../Routes/app.routes.constants';
+import { AdminPaths, toCommands } from '../../../../Routes/app.routes.constants';
 import { GeneralService } from '../../../../services/general-service.service';
 import { ToastService } from '../../../../services/toastr.service';
 import { environment } from '../../../../../environments/environment';
@@ -37,29 +38,32 @@ export class AdminUserFormComponent implements OnInit {
     firstName: ['', [Validators.required, Validators.minLength(2)]],
     lastName: ['', [Validators.required, Validators.minLength(2)]],
     email: ['', [Validators.required, Validators.email]],
+    phoneNumber: [''],
     password: ['', [Validators.minLength(6)]],
-    roleId: ['', [Validators.required]]
+    roleId: ['', [Validators.required]],
+    isActive: [true]
   });
 
   ngOnInit(): void {
     this.loadRoles();
 
-    const id = GeneralService.getRouteParamDeep('id', this.route);
-    const normalizedId = (id ?? '').trim();
-    if (!normalizedId) {
+    const routeUserId = GeneralService.getRouteParamDeep('id', this.route);
+    const normalizedUserId = (routeUserId ?? '').trim();
+    if (!normalizedUserId) {
       this.isEdit = false;
       return;
     }
 
     this.isEdit = true;
-    this.editedUserId = normalizedId;
+    this.editedUserId = normalizedUserId;
     this.form.controls.password.clearValidators();
+    this.form.controls.password.addValidators(Validators.minLength(6));
     this.form.controls.password.updateValueAndValidity();
-    this.loadUser(normalizedId);
+    this.loadUser(normalizedUserId);
   }
 
   private loadRoles(): void {
-    this.http.get<UserRole[]>(`${environment.apiUrl}User/GetUserRoles`).subscribe({
+    this.http.get<UserRole[]>(`${environment.apiUrl}admin/users/roles`).subscribe({
       next: (roles) => {
         this.roleOptions.splice(0, this.roleOptions.length, ...(roles ?? []));
 
@@ -68,16 +72,16 @@ export class AdminUserFormComponent implements OnInit {
         }
       },
       error: () => {
-        this.toastService.error('Impossible de charger la liste des roles.');
+        this.toastService.error('Impossible de charger la liste des rôles.');
       }
     });
   }
 
-  private loadUser(id: string): void {
+  private loadUser(userId: string): void {
     this.loading = true;
 
     this.http
-      .get<User>(`${environment.apiUrl}User/GetUserById?userId=${encodeURIComponent(id)}`)
+      .get<User>(`${environment.apiUrl}admin/users/${encodeURIComponent(userId)}`)
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (user) => {
@@ -85,12 +89,14 @@ export class AdminUserFormComponent implements OnInit {
             firstName: user.FirstName,
             lastName: user.LastName,
             email: user.Email,
-            roleId: user.Roles?.[0]?.RoleId ?? ''
+            phoneNumber: user.PhoneNumber ?? '',
+            roleId: user.Roles?.[0]?.RoleId ?? '',
+            isActive: user.IsActive
           });
         },
         error: () => {
           this.toastService.error('Utilisateur introuvable.');
-          void this.router.navigate(['/', this.adminPaths.UsersList]);
+          void this.router.navigate(toCommands(this.adminPaths.UsersList));
         }
       });
   }
@@ -101,66 +107,52 @@ export class AdminUserFormComponent implements OnInit {
       return;
     }
 
-    const payload = this.form.getRawValue();
-    const selectedRole = this.roleOptions.find((role) => role.RoleId === payload.roleId);
-
+    const formValue = this.form.getRawValue();
+    const selectedRole = this.roleOptions.find((role) => role.RoleId === formValue.roleId);
     if (!selectedRole) {
-      this.toastService.error('Role invalide.');
+      this.toastService.error('Rôle invalide.');
       return;
     }
 
-    const user = new User();
-    user.Id = this.editedUserId;
-    user.FirstName = payload.firstName.trim();
-    user.LastName = payload.lastName.trim();
-    user.FullName = `${user.FirstName} ${user.LastName}`.trim();
-    user.Email = payload.email.trim().toLowerCase();
-    user.UserName = user.Email;
-    user.Password = payload.password.trim();
-    user.Roles = [selectedRole];
+    const password = formValue.password.trim();
+    if (!this.isEdit && password.length < 6) {
+      this.form.controls.password.setErrors({ minlength: true });
+      this.toastService.error('Le mot de passe initial est requis et doit contenir au moins 6 caractères.');
+      return;
+    }
+
+    const payload: AdminUserUpsertRequest = {
+      userId: this.isEdit ? this.editedUserId : undefined,
+      firstName: formValue.firstName.trim(),
+      lastName: formValue.lastName.trim(),
+      email: formValue.email.trim().toLowerCase(),
+      password: password ? password : undefined,
+      role: selectedRole.RoleName,
+      isActive: formValue.isActive,
+      phoneNumber: formValue.phoneNumber.trim()
+    };
 
     this.submitting = true;
 
-    if (this.isEdit) {
-      this.http
-        .put(`${environment.apiUrl}User/UpdateUser`, user)
-        .pipe(finalize(() => (this.submitting = false)))
-        .subscribe({
-          next: () => {
-            this.toastService.success('Utilisateur mis a jour.');
-            void this.router.navigate(['/', this.adminPaths.UsersList]);
-          },
-          error: () => {
-            this.toastService.error('Echec de la mise a jour.');
-          }
-        });
-      return;
-    }
+    const request$ = this.isEdit
+      ? this.http.put(`${environment.apiUrl}admin/users/${encodeURIComponent(this.editedUserId)}`, payload)
+      : this.http.post(`${environment.apiUrl}admin/users`, payload);
 
-    const password = payload.password.trim();
-    if (!password || password.length < 6) {
-      this.submitting = false;
-      this.form.controls.password.setErrors({ minlength: true });
-      this.toastService.error('Le mot de passe est requis (6 caracteres min).');
-      return;
-    }
-
-    this.http
-      .post(`${environment.apiUrl}User/CreateUser`, user)
+    request$
       .pipe(finalize(() => (this.submitting = false)))
       .subscribe({
         next: () => {
-          this.toastService.success('Utilisateur ajoute.');
-          void this.router.navigate(['/', this.adminPaths.UsersList]);
+          this.toastService.success(this.isEdit ? 'Utilisateur mis à jour.' : 'Utilisateur ajouté.');
+          void this.router.navigate(toCommands(this.adminPaths.UsersList));
         },
         error: () => {
-          this.toastService.error('Echec de la creation utilisateur.');
+          this.toastService.error(this.isEdit ? 'Échec de la mise à jour.' : 'Échec de la création utilisateur.');
         }
       });
   }
 
   cancel(): void {
-    void this.router.navigate(['/', this.adminPaths.UsersList]);
+    void this.router.navigate(toCommands(this.adminPaths.UsersList));
   }
 
   get title(): string {
@@ -168,6 +160,6 @@ export class AdminUserFormComponent implements OnInit {
   }
 
   get submitLabel(): string {
-    return this.isEdit ? 'Mettre a jour' : 'Creer';
+    return this.isEdit ? 'Mettre à jour' : 'Créer';
   }
 }

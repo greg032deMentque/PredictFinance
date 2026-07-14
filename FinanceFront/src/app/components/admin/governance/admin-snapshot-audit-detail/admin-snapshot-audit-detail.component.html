@@ -1,0 +1,84 @@
+<section class="page-shell">
+  <div class="page-heading mb-4 gap-3">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-clock-history"></i> Snapshot audit</span>
+      <h1 class="h2 fw-bold mb-2">Détail d’un snapshot</h1>
+      <p class="muted mb-0">Lecture fine du run persisté, de ses versions et de la charge brute sauvegardée.</p>
+    </div>
+    <a class="btn btn-outline-secondary rounded-pill" [routerLink]="toCommands(adminPaths.SnapshotAudit)">Retour à la liste</a>
+  </div>
+
+  @if (loading) {
+    <div class="loading-skeleton-group"><div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div></div>
+  } @else if (error) {
+    <div class="error-panel">{{ error }}</div>
+  } @else if (detail) {
+    <div class="d-flex flex-column gap-4">
+      <section class="page-card">
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+          <h2 class="h4 mb-0">{{ detail.Symbol }} · {{ detail.AnalysisRunId }}</h2>
+          <span class="chip chip-info">{{ detail.Status }}</span>
+          <span class="code-chip">{{ detail.AnalysisEngineVersion || 'Version n/a' }}</span>
+        </div>
+        <dl class="row mb-0">
+          <dt class="col-md-3 muted">TraceId</dt>
+          <dd class="col-md-9">{{ detail.TraceId }}</dd>
+          <dt class="col-md-3 muted">UserId</dt>
+          <dd class="col-md-9">{{ detail.UserId }}</dd>
+          <dt class="col-md-3 muted">AssetId</dt>
+          <dd class="col-md-9">{{ detail.AssetId }}</dd>
+          <dt class="col-md-3 muted">Période</dt>
+          <dd class="col-md-9">{{ detail.StartedAtUtc | date:'dd/MM/yyyy HH:mm' }} → {{ detail.CompletedAtUtc ? (detail.CompletedAtUtc | date:'dd/MM/yyyy HH:mm') : 'en cours' }}</dd>
+        </dl>
+      </section>
+
+      <section class="page-card">
+        <h3 class="h5 mb-3">Décision et modèle</h3>
+        <div class="row g-4">
+          <div class="col-lg-6"><h4 class="h6">RecommendationAction</h4><p class="mb-0">{{ detail.RecommendationAction || '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">ModelStatus</h4><p class="mb-0">{{ detail.ModelStatus ?? '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">DecisionAction</h4><p class="mb-0">{{ detail.DecisionAction || '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">DecisionSummary</h4><p class="mb-0">{{ detail.DecisionSummary || '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">RecommendationPolicyVersion</h4><p class="mb-0">{{ detail.RecommendationPolicyVersion || '—' }}</p></div>
+          <div class="col-lg-6"><h4 class="h6">ExplanationPolicyVersion</h4><p class="mb-0">{{ detail.ExplanationPolicyVersion || '—' }}</p></div>
+        </div>
+        @if (detail.ModelMessage || detail.ErrorMessage) {
+          <div class="alert alert-warning mt-4 mb-0" role="alert">
+            <div class="fw-semibold mb-1">Messages</div>
+            <div>{{ detail.ModelMessage || '—' }}</div>
+            @if (detail.ErrorMessage) {
+              <div class="mt-2">{{ detail.ErrorMessage }}</div>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="page-card">
+        <h3 class="h5 mb-3">Patterns</h3>
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <h4 class="h6">Demandés</h4>
+            <div class="d-flex flex-wrap gap-1">
+              @for (patternId of detail.RequestedPatternIds; track patternId) {
+                <span class="chip chip-info">{{ patternId }}</span>
+              }
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <h4 class="h6">Exécutés</h4>
+            <div class="d-flex flex-wrap gap-1">
+              @for (patternId of detail.ExecutedPatternIds; track patternId) {
+                <span class="chip chip-info">{{ patternId }}</span>
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-card">
+        <h3 class="h5 mb-3">RawPayload</h3>
+        <pre class="bg-body-tertiary border rounded p-3 mb-0 small overflow-auto">{{ detail.RawPayload }}</pre>
+      </section>
+    </div>
+  }
+</section>

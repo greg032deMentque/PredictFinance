@@ -1,0 +1,20 @@
+using BackPredictFinance.Common.AnalysisV1;
+
+namespace BackPredictFinance.Patterns.Contracts
+{
+    public sealed class ExecutedPatternArtifact
+    {
+        public string PatternId { get; set; } = string.Empty;
+        public string Phase { get; set; } = string.Empty;
+        public decimal Probability { get; set; }
+        public decimal Confidence { get; set; }
+        public decimal CurrentPrice { get; set; }
+        public decimal? NecklinePrice { get; set; }
+        public decimal? TargetPrice { get; set; }
+        public decimal? InvalidationPrice { get; set; }
+        public DateTime? FirstPeakAtUtc { get; set; }
+        public DateTime? SecondPeakAtUtc { get; set; }
+        public bool IsPrimary { get; set; }
+        public PatternAssessmentContract ContractAssessment { get; set; } = new();
+    }
+}

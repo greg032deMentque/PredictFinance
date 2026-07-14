@@ -2,6 +2,6 @@
 
 export class UserRole{
     RoleId = "";
-    UserRole = UserRoleEnum.internalConsultant;
+    UserRole = UserRoleEnum.user;
     RoleName = "";
 }

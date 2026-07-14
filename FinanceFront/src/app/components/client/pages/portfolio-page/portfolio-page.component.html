@@ -1,0 +1,140 @@
+<section class="container-fluid px-0 d-flex flex-column gap-4">
+
+  <!-- En-tête -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+      <div>
+        <p class="text-uppercase text-muted small mb-1">Client</p>
+        <h1 class="h3 mb-2">Mes portefeuilles</h1>
+        <p class="text-body-secondary mb-0">Gérez vos portefeuilles d'investissement.</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-secondary" [routerLink]="toCommands(userPaths.Watchlist)">Watchlist</a>
+        <a class="btn btn-primary" [routerLink]="toCommands(userPaths.AnalysisEntry)">Nouvelle analyse</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des portefeuilles -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Mes portefeuilles</h2>
+
+      @if (portfoliosLoading()) {
+        <p class="text-muted small">Chargement des portefeuilles…</p>
+      } @else if (portfolios().length === 0) {
+        <div class="alert alert-info">
+          Tu n'as pas encore de portefeuille. Crée-en un ci-dessous pour commencer à enregistrer des transactions.
+        </div>
+      } @else {
+        <div class="table-responsive mb-4">
+          <table class="table align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Nom</th>
+                <th>Type</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of portfolios(); track p.Id) {
+                <tr>
+                  <td>
+                    @if (renamingPortfolioId() === p.Id) {
+                      <form [formGroup]="renameForm" (ngSubmit)="submitRename(p.Id)" class="d-flex gap-2 align-items-start">
+                        <div>
+                          <input class="form-control form-control-sm"
+                            formControlName="name"
+                            [class.is-invalid]="renameForm.controls.name.invalid && renameForm.controls.name.touched"
+                            placeholder="Nouveau nom" />
+                          @if (renameNameError()) {
+                            <div class="text-danger small mt-1">{{ renameNameError() }}</div>
+                          }
+                          @if (renameForm.controls.name.invalid && renameForm.controls.name.touched) {
+                            <div class="invalid-feedback">Le nom est obligatoire.</div>
+                          }
+                        </div>
+                        <button class="btn btn-sm btn-primary" type="submit" [disabled]="formLoading()">
+                          {{ formLoading() ? '…' : 'OK' }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" (click)="cancelRename()">
+                          Annuler
+                        </button>
+                      </form>
+                    } @else {
+                      <span class="fw-semibold">{{ p.Name }}</span>
+                    }
+                  </td>
+                  <td>
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                      {{ getPortfolioTypeLabel(p.PortfolioType) }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-primary" type="button" (click)="navigateToDetail(p.Id)">
+                        Ouvrir
+                      </button>
+                      <button class="btn btn-outline-secondary" type="button"
+                        [disabled]="renamingPortfolioId() !== null || formLoading()"
+                        (click)="startRename(p)">
+                        Renommer
+                      </button>
+                      <button class="btn btn-outline-danger" type="button"
+                        data-bs-toggle="modal" data-bs-target="#deletePortfolioModal"
+                        [disabled]="formLoading()"
+                        (click)="requestDeletePortfolio(p.Id)">
+                        Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Formulaire création -->
+      <h3 class="h6 text-uppercase text-muted mb-2">Créer un portefeuille</h3>
+      @if (createError()) {
+        <div class="alert alert-warning py-2">{{ createError() }}</div>
+      }
+      <form [formGroup]="createForm" (ngSubmit)="submitCreatePortfolio()" class="row g-2 align-items-end">
+        <div class="col-12 col-md-5">
+          <label class="form-label small">Nom <span class="text-danger">*</span></label>
+          <input class="form-control form-control-sm" formControlName="name" placeholder="ex. PEA Boursorama"
+            [class.is-invalid]="createForm.controls.name.invalid && createForm.controls.name.touched" />
+          @if (createForm.controls.name.invalid && createForm.controls.name.touched) {
+            <div class="invalid-feedback">Le nom est obligatoire.</div>
+          }
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label small">Type <span class="text-danger">*</span></label>
+          <select class="form-select form-select-sm" formControlName="portfolioType">
+            @for (type of portfolioTypes; track type) {
+              <option [value]="type">{{ getPortfolioTypeLabel(type) }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-md-3">
+          <button class="btn btn-sm btn-success w-100" type="submit" [disabled]="formLoading()">
+            {{ formLoading() ? 'Création...' : '+ Créer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</section>
+
+<!-- Modale confirmation suppression portefeuille -->
+<app-confirm-modal
+  modalId="deletePortfolioModal"
+  title="Supprimer le portefeuille"
+  [message]="'Confirmes-tu la suppression du portefeuille « ' + portfolioToDeleteName + ' » ? Cette action est irréversible.'"
+  confirmLabel="Supprimer"
+  cancelLabel="Annuler"
+  confirmClass="btn-danger"
+  (confirmed)="confirmDeletePortfolio()"
+  (cancelled)="portfolioToDeleteId.set(null)" />

@@ -16,11 +16,14 @@
 
       <div>
         <label class="form-label">Pattern</label>
-        <select class="form-select" formControlName="pattern">
-          @for (pattern of availablePatterns; track pattern) {
-            <option [value]="pattern">{{ pattern }}</option>
+        <select class="form-select" formControlName="pattern" [disabled]="availablePatterns().length === 0">
+          @for (pattern of availablePatterns(); track pattern.Id) {
+            <option [value]="pattern.Id">{{ pattern.Label }}</option>
           }
         </select>
+        @if (availablePatterns().length === 0) {
+          <small class="text-muted d-block mt-1">Aucun pattern actif n'est disponible pour le moment.</small>
+        }
       </div>
 
       <div>

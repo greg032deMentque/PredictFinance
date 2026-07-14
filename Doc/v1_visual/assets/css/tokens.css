@@ -1,0 +1,136 @@
+/* ============================================================
+   PredictFinance — Design tokens (v1_visual)
+   Direction artistique V1 navy/or.
+   - Tokens de marque (hue fixe) -> tokens de rôle (theme-able)
+   - Échelles d'espacement et de typographie
+   - Token neutre PEA-unknown (jamais positif)
+   - Mode sombre via [data-theme="dark"]
+   ============================================================ */
+
+:root {
+  /* ---- Marque (hue stable, ne change pas en dark) ---- */
+  --pf-navy: #16324f;
+  --pf-navy-2: #214f7c;
+  --pf-blue: #2f6ea7;
+  --pf-gold: #d8a53a;
+  --pf-gold-2: #b9882a;
+
+  /* ---- Sémantiques de base ---- */
+  --pf-success: #198754;
+  --pf-warning: #b7791f;
+  --pf-danger: #dc3545;
+  --pf-info: #2f6ea7;
+  --pf-neutral: #64748b;            /* PEA Unknown / état non établi — JAMAIS positif */
+
+  /* ---- Variantes douces (fonds de statut, mode clair) ---- */
+  --pf-soft-success: #eaf7f0;
+  --pf-soft-warning: #fdf5e3;
+  --pf-soft-danger: #fdeef0;
+  --pf-soft-info: #ecf4fb;
+  --pf-soft-navy: #eaf0f6;
+  --pf-soft-neutral: #eef1f5;       /* PEA Unknown — gris neutre, distinct du vert et du rouge */
+  --pf-soft-gold: #fbf3e0;
+
+  /* ---- Texte de statut (contraste AA sur soft) ---- */
+  --pf-on-success: #146c45;
+  --pf-on-warning: #8a5d12;
+  --pf-on-danger: #b02530;
+  --pf-on-info: #1d5388;
+  --pf-on-neutral: #475569;
+
+  /* ---- Rôles de surface (theme-able) ---- */
+  --pf-bg: #f4f7fb;                 /* fond d'app */
+  --pf-bg-2: #eef3f9;
+  --pf-surface: #ffffff;            /* cartes */
+  --pf-surface-2: #fbfdff;          /* cartes secondaires / dégradé */
+  --pf-elevated: #ffffff;           /* topbar, popovers */
+  --pf-text: #1f2a37;
+  --pf-text-muted: #64748b;
+  --pf-text-inverse: #ffffff;
+  --pf-border: #dce5ee;
+  --pf-border-strong: #c4d2e0;
+  --pf-ring: rgba(47, 110, 167, .35);   /* focus-visible */
+
+  /* ---- Sidebar (gradient de marque, stable) ---- */
+  --pf-sidebar-from: #17334f;
+  --pf-sidebar-to: #22466c;
+  --pf-sidebar-text: rgba(255, 255, 255, .82);
+  --pf-sidebar-text-strong: #ffffff;
+  --pf-sidebar-active: rgba(255, 255, 255, .14);
+
+  /* ---- Ombres (plus légères, superposées) ---- */
+  --pf-shadow: 0 12px 30px rgba(22, 50, 79, .07), 0 2px 6px rgba(22, 50, 79, .05);
+  --pf-shadow-sm: 0 6px 16px rgba(22, 50, 79, .06);
+  --pf-shadow-xs: 0 3px 10px rgba(22, 50, 79, .05);
+
+  /* ---- Rayons ---- */
+  --pf-radius-xs: .5rem;
+  --pf-radius-sm: .75rem;
+  --pf-radius: 1rem;
+  --pf-radius-lg: 1.25rem;
+  --pf-radius-xl: 1.5rem;
+  --pf-radius-pill: 999px;
+
+  /* ---- Échelle d'espacement (4 / 8 / 12 / 16 / 24 / 32 / 48) ---- */
+  --pf-space-1: .25rem;
+  --pf-space-2: .5rem;
+  --pf-space-3: .75rem;
+  --pf-space-4: 1rem;
+  --pf-space-5: 1.5rem;
+  --pf-space-6: 2rem;
+  --pf-space-7: 3rem;
+
+  /* ---- Échelle typographique ---- */
+  --pf-font-2xs: .72rem;
+  --pf-font-xs: .8rem;
+  --pf-font-sm: .9rem;
+  --pf-font-md: 1rem;
+  --pf-font-lg: 1.15rem;
+  --pf-font-xl: 1.4rem;
+  --pf-font-2xl: 1.8rem;
+  --pf-font-3xl: 2.4rem;
+  --pf-leading-tight: 1.25;
+  --pf-leading: 1.55;
+  --pf-font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* ---- Dimensions de layout ---- */
+  --pf-topbar-h: 76px;
+  --pf-sidebar-w: 286px;
+}
+
+/* ============================================================
+   Mode sombre — surcharge UNIQUEMENT les tokens de rôle.
+   Les hue de marque (navy/or) restent ; les fonds s'inversent.
+   ============================================================ */
+[data-theme="dark"] {
+  --pf-bg: #0d1722;
+  --pf-bg-2: #111e2c;
+  --pf-surface: #16273a;
+  --pf-surface-2: #1a2d42;
+  --pf-elevated: #18293d;
+  --pf-text: #e6edf5;
+  --pf-text-muted: #93a4b8;
+  --pf-text-inverse: #0d1722;
+  --pf-border: #27384c;
+  --pf-border-strong: #344a63;
+  --pf-ring: rgba(120, 170, 220, .45);
+
+  /* fonds de statut assombris (gardent la teinte sémantique) */
+  --pf-soft-success: #15302a;
+  --pf-soft-warning: #322a16;
+  --pf-soft-danger: #34201f;
+  --pf-soft-info: #16273c;
+  --pf-soft-navy: #1a2c40;
+  --pf-soft-neutral: #1f2a38;
+  --pf-soft-gold: #2e2716;
+
+  --pf-on-success: #6fd3a3;
+  --pf-on-warning: #e7be72;
+  --pf-on-danger: #f08c95;
+  --pf-on-info: #84b8e6;
+  --pf-on-neutral: #aab7c6;
+
+  --pf-shadow: 0 12px 30px rgba(0, 0, 0, .35), 0 2px 6px rgba(0, 0, 0, .25);
+  --pf-shadow-sm: 0 6px 16px rgba(0, 0, 0, .3);
+  --pf-shadow-xs: 0 3px 10px rgba(0, 0, 0, .25);
+}

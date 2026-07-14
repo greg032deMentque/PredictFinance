@@ -1,126 +1,104 @@
 <section class="d-flex flex-column gap-4">
-  <div class="finance-hero-card p-4">
-    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-start">
-      <div>
-        <p class="text-uppercase text-muted mb-1">Client</p>
-        <h1 class="h4 mb-2">Vue portefeuille et IA</h1>
-        <p class="mb-0 text-body-secondary">
-          Suivez vos positions, vos encours et lancez rapidement vos analyses.
-        </p>
+  <section class="hero">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-8">
+        <span class="chip bg-white text-dark mb-3"><i class="bi bi-house-door"></i> Accueil</span>
+        <h1 class="display-6 fw-bold mb-3">Votre centre de pilotage quotidien</h1>
+        <p class="mb-4 text-white-50 fs-5">Vos signaux prioritaires, le suivi de vos positions et vos dernières analyses, en un coup d’œil.</p>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-light rounded-pill px-4 fw-semibold" [routerLink]="toCommands(userPaths.AnalysisEntry)">Analyser maintenant</a>
+          <a class="btn btn-outline-light rounded-pill px-4" [routerLink]="toCommands(userPaths.Notifications)">Voir les notifications</a>
+        </div>
       </div>
-      <a class="btn btn-primary" [routerLink]="['/', userPaths.Finance]">Nouvelle analyse</a>
+      <div class="col-lg-4">
+        <div class="surface bg-white p-4">
+          <div class="fw-bold text-dark mb-3">Règle de lecture</div>
+          <div class="small text-dark mb-3">Commencer par l’urgent, puis arbitrer les positions détenues, puis seulement explorer de nouveaux cas.</div>
+          <a class="btn btn-primary rounded-pill w-100 cta-primary" [routerLink]="toCommands(userPaths.AnalysisEntry)">Voir la watchlist</a>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="row g-3">
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1">Valeur portefeuille</p>
-          <div class="h3 mb-0">{{ loading ? '...' : (overview.TotalPortfolioValue | currency: 'USD' : 'symbol' : '1.0-0') }}</div>
-        </div>
+  <section class="page-shell" id="urgent-now">
+    <div class="page-heading mb-4">
+      <div class="page-subtitle">
+        <span class="chip chip-navy mb-2"><i class="bi bi-lightning-charge"></i> À traiter</span>
+        <h2 class="h3 fw-bold mb-2">Ce qui demande une attention immédiate</h2>
+        <p class="muted mb-0">Vos positions et signaux à examiner en priorité.</p>
       </div>
     </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1">Capital investi</p>
-          <div class="h3 mb-0">{{ loading ? '...' : (overview.TotalInvested | currency: 'USD' : 'symbol' : '1.0-0') }}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1">Encours</p>
-          <div class="h3 mb-0">{{ loading ? '...' : (overview.TotalOutstanding | currency: 'USD' : 'symbol' : '1.0-0') }}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-muted mb-1">P/L du jour</p>
-          <div class="h3 mb-0" [class]="dayProfitLossClass">
-            {{ loading ? '...' : (overview.DayProfitLoss | currency: 'USD' : 'symbol' : '1.0-0') }}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <div class="card border-0 shadow-sm">
-    <div class="card-body">
-      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
-        <div>
-          <p class="text-uppercase text-muted small mb-1">Analyse IA recente</p>
-          <h2 class="h5 mb-2">
-            {{ latestInsight?.Symbol || 'Aucune analyse recente' }}
-          </h2>
-          <p class="mb-0 text-body-secondary">
-            {{ latestInsightSummary }}
-          </p>
-        </div>
+    <div class="kpi-grid">
+      <div class="metric-card">
+        <div class="small muted mb-1">Valeur portefeuille</div>
+        <div class="h3 mb-0">{{ loading ? '...' : (overview.TotalPortfolioValue | currency:'EUR':'symbol':'1.0-0':'fr-FR') }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="small muted mb-1">P/L jour</div>
+        <div class="h3 mb-0" [class]="dayProfitLossClass">{{ loading ? '...' : (overview.DayProfitLoss | currency:'EUR':'symbol':'1.0-0':'fr-FR') }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="small muted mb-1">Positions ouvertes</div>
+        <div class="h3 mb-0">{{ loading ? '...' : overview.OpenPositions }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="small muted mb-1">Watchlist</div>
+        <div class="h3 mb-0">{{ loading ? '...' : overview.WatchlistCount }}</div>
+      </div>
+    </div>
+  </section>
 
-        @if (latestInsight) {
-          <div class="d-flex flex-column align-items-lg-end gap-2">
-            <span class="badge" [class]="getBadgeClass(latestInsight.RecommendationAction)">
-              {{ formatRecommendation(latestInsight.RecommendationAction) }}
-            </span>
-            <div class="text-lg-end">
-              <div class="fw-semibold">{{ latestInsight.Probability | percent: '1.0-0' }}</div>
-              <small class="text-muted">{{ latestInsight.PredictedAt | date: 'dd/MM/yyyy HH:mm' }}</small>
+  <section class="home-data-grid">
+    <div class="page-shell">
+      <div class="page-heading mb-4">
+        <div class="page-subtitle">
+          <span class="chip chip-info mb-2"><i class="bi bi-stars"></i> Aperçu récent</span>
+          <h2 class="h3 fw-bold mb-2">Analyses récentes</h2>
+        </div>
+      </div>
+      @if (recentAnalyses.length === 0) {
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="bi bi-graph-up-arrow"></i></div>
+          <div class="fw-semibold">Aucune analyse récente</div>
+          <div class="muted">Lance une analyse depuis la page watchlist et portfolio.</div>
+        </div>
+      } @else {
+        <div class="compact-list">
+          @for (analysis of recentAnalyses; track analysis.Id) {
+            <div class="compact-row">
+              <div>
+                <div class="fw-semibold">{{ analysis.Symbol }} · {{ formatPattern(analysis.Pattern) }}</div>
+                <div class="small muted mb-2">{{ formatPhase(analysis.Phase) }}</div>
+                <div class="small muted">{{ analysis.PredictedAt | date:'dd/MM/yyyy HH:mm' }}</div>
+              </div>
+              <div class="text-end d-flex flex-column gap-2 align-items-end">
+                <span class="badge" [class]="getBadgeClass(analysis.RecommendationAction)">{{ formatRecommendation(analysis.RecommendationAction) }}</span>
+                <span class="code-chip">{{ analysis.Probability | percent:'1.0-0' }}</span>
+              </div>
             </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="right-rail">
+      <div class="page-card">
+        <div class="section-title mb-3">Dernière lecture utile</div>
+        <div class="small muted mb-3">{{ latestInsightSummary }}</div>
+        @if (latestInsight) {
+          <div class="alt-pattern-list">
+            <span class="chip chip-info">{{ latestInsight.Symbol }}</span>
+            <span class="chip chip-navy">{{ formatRecommendation(latestInsight.RecommendationAction) }}</span>
+            <span class="chip chip-warning">{{ latestInsight.ModelStatus || 'n/a' }}</span>
           </div>
-        } @else {
-          <a class="btn btn-outline-primary" [routerLink]="['/', userPaths.Finance]">Lancer une analyse</a>
         }
       </div>
-    </div>
-  </div>
 
-  <div class="card border-0 shadow-sm">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h6 text-uppercase text-muted mb-0">Dernieres analyses</h2>
-        <a class="btn btn-sm btn-outline-primary" [routerLink]="['/', userPaths.Finance]">Voir tout</a>
-      </div>
-
-      <div class="table-responsive">
-        <table class="table align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Valeur</th>
-              <th>Pattern</th>
-              <th>Probabilite</th>
-              <th>Conseil</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (analysis of recentAnalyses; track analysis.Id) {
-              <tr>
-                <td>
-                  <div class="fw-semibold">{{ analysis.Symbol }}</div>
-                  <small class="text-muted">{{ analysis.CompanyName }}</small>
-                </td>
-                <td>{{ formatPattern(analysis.Pattern) }}</td>
-                <td>{{ analysis.Probability | percent: '1.0-0' }}</td>
-                <td>
-                  <span class="badge" [class]="getBadgeClass(analysis.RecommendationAction)">
-                    {{ formatRecommendation(analysis.RecommendationAction) }}
-                  </span>
-                </td>
-                <td>{{ analysis.PredictedAt | date: 'dd/MM HH:mm' }}</td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="5" class="text-center text-muted py-4">Aucune analyse disponible.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      <div class="helper-panel">
+        <div class="fw-semibold mb-2">Bon à savoir</div>
+        <div class="mini-note">Chaque recommandation est expliquée et traçable jusqu’à sa source de données.</div>
       </div>
     </div>
-  </div>
+  </section>
 </section>

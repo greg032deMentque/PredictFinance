@@ -1,0 +1,9 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+.register-card {
+  width: min(520px, 100%);
+}

@@ -43,30 +43,50 @@ export class MenuService {
   }
 
   private readonly adminMenu: readonly MenuBlock[] = [
-    this.block('Administration', [
-      this.link('Dashboard', adminTo(AppRoutes.Dashboard), 'bi-speedometer2'),
-      this.link('Analyse IA', adminTo(AppRoutes.Analysis), 'bi-graph-up'),
+    this.block('Pilotage', [
+      this.link('Overview', adminTo(AppRoutes.Dashboard), 'bi-speedometer2'),
       this.link('Utilisateurs', adminTo(AppRoutes.Users), 'bi-people', true, [
-        {
-          label: 'Liste',
-          icon: 'bi-list',
-          commands: adminTo(AppRoutes.Users),
-          exact: true
-        },
-        {
-          label: 'Ajouter',
-          icon: 'bi-plus-lg',
-          commands: adminTo(AppRoutes.Users, AppRoutes.Add),
-          exact: true
-        }
+        { label: 'Liste', icon: 'bi-list', commands: adminTo(AppRoutes.Users), exact: true },
+        { label: 'Ajouter', icon: 'bi-plus-lg', commands: adminTo(AppRoutes.Users, AppRoutes.Add), exact: true }
       ])
+    ]),
+    this.block('Gouvernance', [
+      this.link('Instrument registry', adminTo(AppRoutes.InstrumentRegistry), 'bi-building-gear'),
+      this.link('PEA registry', adminTo(AppRoutes.PeaRegistry), 'bi-patch-check'),
+      this.link('Scoring policy', adminTo(AppRoutes.ScoringPolicy), 'bi-sliders'),
+      this.link('Parameter dictionary', adminTo(AppRoutes.ParameterDictionary), 'bi-journal-text'),
+      this.link('Wording versions', adminTo(AppRoutes.WordingVersions), 'bi-chat-left-text'),
+      this.link('Snapshot audit', adminTo(AppRoutes.SnapshotAudit), 'bi-clock-history'),
+      this.link('Data quality', adminTo(AppRoutes.DataQuality), 'bi-database-check')
+    ]),
+    this.block('Contenu', [
+      this.link('Éducation', adminTo(AppRoutes.Education), 'bi-book', true, [
+        { label: 'Liste', icon: 'bi-list', commands: adminTo(AppRoutes.Education), exact: true },
+        { label: 'Ajouter', icon: 'bi-plus-lg', commands: adminTo(AppRoutes.Education, AppRoutes.Add), exact: true }
+      ]),
+      this.link('Glossaire produits', adminTo(AppRoutes.Glossary), 'bi-card-text'),
+      this.link('FAQ', adminTo(AppRoutes.Faq), 'bi-question-circle'),
+      this.link('Légal', adminTo(AppRoutes.LegalCards), 'bi-shield-lock'),
+      this.link('Learn topics', adminTo(AppRoutes.LearnTopics), 'bi-mortarboard')
     ])
   ];
 
   private readonly clientMenu: readonly MenuBlock[] = [
     this.block('Mon espace', [
-      this.link('Dashboard', clientTo(AppRoutes.Dashboard), 'bi-house'),
-      this.link('Liste de mes valeurs', clientTo(AppRoutes.Finance), 'bi-graph-up-arrow')
+      this.link('Accueil', clientTo(AppRoutes.Dashboard), 'bi-house-door'),
+      this.link('Watchlist', clientTo(AppRoutes.Watchlist), 'bi-stars'),
+      this.link('Portfolio', clientTo(AppRoutes.Portfolio), 'bi-briefcase'),
+      this.link('Analyse', clientTo(AppRoutes.Analysis), 'bi-graph-up-arrow'),
+      this.link('Patterns', clientTo(AppRoutes.Patterns), 'bi-diagram-3'),
+      this.link('Historique', clientTo(AppRoutes.History), 'bi-clock-history'),
+      this.link('Simulation', clientTo(AppRoutes.Simulation), 'bi-bar-chart-steps'),
+      this.link('Notifications', clientTo(AppRoutes.Notifications), 'bi-bell'),
+      this.link('Contact', clientTo(AppRoutes.Contact), 'bi-envelope-paper'),
+      this.link('Compte', clientTo(AppRoutes.Account, AppRoutes.Profile), 'bi-person-gear')
+    ]),
+    this.block('Ressources', [
+      this.link('Éducation', clientTo(AppRoutes.Education), 'bi-book'),
+      this.link('Glossaire produits', clientTo(AppRoutes.Glossary), 'bi-card-text')
     ])
   ];
 

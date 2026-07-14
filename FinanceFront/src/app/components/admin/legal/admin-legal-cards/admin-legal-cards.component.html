@@ -1,0 +1,167 @@
+<section class="page-shell">
+  <div class="page-heading mb-4">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-shield-lock"></i> Légal</span>
+      <h1 class="h2 fw-bold mb-2">Cartes légales</h1>
+      <p class="muted mb-0">Documents réglementaires exposés dans le centre légal utilisateurs.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="load()">Rafraîchir</button>
+      <button type="button" class="btn btn-primary rounded-pill" (click)="openAdd()">
+        <i class="bi bi-plus-lg me-1"></i>Ajouter
+      </button>
+    </div>
+  </div>
+
+  @if (isPanelOpen) {
+    <div class="page-card mb-4">
+      <h2 class="h5 mb-3">{{ isEditing ? 'Modifier la carte' : 'Nouvelle carte' }}</h2>
+      <form [formGroup]="itemForm" (ngSubmit)="submit()" novalidate>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="lc-key">Clé unique <span class="text-danger">*</span></label>
+            <input
+              id="lc-key"
+              type="text"
+              class="form-control"
+              formControlName="key"
+              [class.is-invalid]="itemForm.controls.key.invalid && itemForm.controls.key.touched"
+              autocomplete="off"
+              placeholder="ex : cgu"
+            />
+            @if (itemForm.controls.key.invalid && itemForm.controls.key.touched) {
+              <div class="invalid-feedback">La clé est requise.</div>
+            }
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="lc-icon">Icône Bootstrap <span class="text-danger">*</span></label>
+            <input
+              id="lc-icon"
+              type="text"
+              class="form-control"
+              formControlName="icon"
+              [class.is-invalid]="itemForm.controls.icon.invalid && itemForm.controls.icon.touched"
+              autocomplete="off"
+              placeholder="ex : bi-file-text"
+            />
+            @if (itemForm.controls.icon.invalid && itemForm.controls.icon.touched) {
+              <div class="invalid-feedback">L'icône est requise.</div>
+            }
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold" for="lc-order">Ordre</label>
+            <input id="lc-order" type="number" class="form-control" formControlName="displayOrder" min="0" />
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <div class="form-check mb-2">
+              <input id="lc-published" type="checkbox" class="form-check-input" formControlName="isPublished" />
+              <label class="form-check-label" for="lc-published">Publié</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="lc-title">Titre <span class="text-danger">*</span></label>
+            <input
+              id="lc-title"
+              type="text"
+              class="form-control"
+              formControlName="title"
+              [class.is-invalid]="itemForm.controls.title.invalid && itemForm.controls.title.touched"
+              autocomplete="off"
+            />
+            @if (itemForm.controls.title.invalid && itemForm.controls.title.touched) {
+              <div class="invalid-feedback">Le titre est requis.</div>
+            }
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="lc-desc">Description <span class="text-danger">*</span></label>
+            <textarea
+              id="lc-desc"
+              class="form-control"
+              formControlName="description"
+              rows="2"
+              [class.is-invalid]="itemForm.controls.description.invalid && itemForm.controls.description.touched"
+            ></textarea>
+            @if (itemForm.controls.description.invalid && itemForm.controls.description.touched) {
+              <div class="invalid-feedback">La description est requise.</div>
+            }
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" for="lc-date">Date d'effet (YYYY-MM-DD)</label>
+            <input id="lc-date" type="text" class="form-control" formControlName="effectiveDate" autocomplete="off" placeholder="ex : 2024-01-01" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" for="lc-route">Route cible</label>
+            <input id="lc-route" type="text" class="form-control" formControlName="targetRoute" autocomplete="off" placeholder="ex : /client/account/delete" />
+          </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-3">
+          <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="closePanel()">Annuler</button>
+          <button type="submit" class="btn btn-primary rounded-pill" [disabled]="submitting()">
+            @if (submitting()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+            {{ isEditing ? 'Mettre à jour' : 'Ajouter' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="loading-skeleton-group">
+      <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div>
+    </div>
+  } @else if (error()) {
+    <div class="error-panel">{{ error() }}</div>
+  } @else if (items().length === 0) {
+    <div class="empty-state"><div class="fw-semibold">Aucune carte légale disponible.</div></div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Titre</th>
+            <th>Clé</th>
+            <th>Icône</th>
+            <th>Ordre</th>
+            <th>Statut</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ item.title }}</div>
+                <div class="small muted text-truncate" style="max-width:320px;">{{ item.description }}</div>
+              </td>
+              <td><code>{{ item.key }}</code></td>
+              <td><i class="bi {{ item.icon }}"></i> <span class="small ms-1 muted">{{ item.icon }}</span></td>
+              <td>{{ item.displayOrder }}</td>
+              <td>
+                @if (item.isPublished) {
+                  <span class="badge bg-success-subtle text-success-emphasis">Publié</span>
+                } @else {
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">Brouillon</span>
+                }
+              </td>
+              <td class="text-end">
+                <div class="d-flex gap-2 justify-content-end">
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="openEdit(item)">
+                    <i class="bi bi-pencil me-1"></i>Modifier
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger rounded-pill"
+                    [disabled]="deletingId() === item.id"
+                    (click)="delete(item)"
+                  >
+                    <i class="bi bi-trash me-1"></i>Supprimer
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

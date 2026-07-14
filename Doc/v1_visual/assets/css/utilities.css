@@ -1,0 +1,60 @@
+/* ============================================================
+   Utilities — helpers non couverts par Bootstrap (ou theme-aware)
+   ============================================================ */
+
+.pf-stack { display: flex; flex-direction: column; }
+.pf-stack-2 { gap: var(--pf-space-2); } .pf-stack-3 { gap: var(--pf-space-3); }
+.pf-stack-4 { gap: var(--pf-space-4); } .pf-stack-5 { gap: var(--pf-space-5); }
+.pf-row { display: flex; align-items: center; }
+.pf-row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--pf-space-3); flex-wrap: wrap; }
+.pf-wrap { flex-wrap: wrap; }
+.pf-gap-2 { gap: var(--pf-space-2); } .pf-gap-3 { gap: var(--pf-space-3); } .pf-gap-4 { gap: var(--pf-space-4); }
+
+.pf-text-muted { color: var(--pf-text-muted); }
+.pf-fw-700 { font-weight: 700; } .pf-fw-800 { font-weight: 800; }
+.pf-fs-xs { font-size: var(--pf-font-xs); } .pf-fs-sm { font-size: var(--pf-font-sm); }
+.pf-fs-lg { font-size: var(--pf-font-lg); } .pf-fs-xl { font-size: var(--pf-font-xl); }
+.pf-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pf-divider { border-top: 1px solid var(--pf-border); margin: var(--pf-space-4) 0; }
+
+/* surfaces theme-aware réutilisables */
+.pf-surface { background: var(--pf-surface); }
+.pf-border { border: 1px solid var(--pf-border); }
+.pf-rounded { border-radius: var(--pf-radius); }
+.pf-rounded-lg { border-radius: var(--pf-radius-lg); }
+
+/* badge de statut de build pour la galerie */
+.build-badge { font-size: var(--pf-font-2xs); font-weight: 800; padding: .2rem .5rem; border-radius: var(--pf-radius-pill); }
+.build-done    { background: var(--pf-soft-success); color: var(--pf-on-success); }
+.build-partial { background: var(--pf-soft-warning); color: var(--pf-on-warning); }
+.build-todo    { background: var(--pf-soft-neutral); color: var(--pf-on-neutral); }
+
+/* barre dev de commutation d'états */
+.pf-devbar {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 2000;
+  display: flex; gap: var(--pf-space-2); align-items: center; flex-wrap: wrap; justify-content: center;
+  background: var(--pf-elevated); border: 1px solid var(--pf-border); border-radius: var(--pf-radius-pill);
+  box-shadow: var(--pf-shadow); padding: .4rem .55rem; max-width: calc(100% - 24px);
+}
+.pf-devbar-label { font-size: var(--pf-font-2xs); font-weight: 800; color: var(--pf-text-muted); text-transform: uppercase; letter-spacing: .05em; padding-left: .3rem; }
+.pf-devbar button {
+  border: 1px solid var(--pf-border); background: var(--pf-surface); color: var(--pf-text);
+  border-radius: var(--pf-radius-pill); padding: .3rem .7rem; font-size: var(--pf-font-2xs); font-weight: 700; cursor: pointer;
+}
+.pf-devbar button.active { background: var(--pf-navy); color: #fff; border-color: transparent; }
+.pf-devbar .sep { width: 1px; height: 18px; background: var(--pf-border); margin: 0 .2rem; }
+@media (max-width: 767.98px) { .pf-devbar { bottom: 84px; } }
+
+/* overlay mode flux */
+.flow-overlay {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(360px, 92vw); z-index: 2100;
+  background: var(--pf-elevated); border-left: 1px solid var(--pf-border); box-shadow: var(--pf-shadow);
+  padding: var(--pf-space-5); overflow: auto; transform: translateX(100%); transition: transform .2s ease;
+}
+.flow-overlay.open { transform: translateX(0); }
+.flow-rel-group { margin-top: var(--pf-space-4); }
+.flow-rel-link {
+  display: flex; align-items: center; gap: .5rem; padding: .55rem .7rem; border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-sm); margin-top: .4rem; background: var(--pf-surface); color: var(--pf-text); font-weight: 600; font-size: var(--pf-font-sm);
+}

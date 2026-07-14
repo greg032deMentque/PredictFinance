@@ -1,0 +1,178 @@
+<section class="d-flex flex-column gap-4">
+
+  <div>
+    <p class="text-uppercase text-secondary fw-semibold small mb-2">Historique</p>
+    <h1 class="h3 mb-1">Comparaison d'analyses</h1>
+    <p class="text-secondary mb-0">Comparez deux vérités persistées côte à côte. Les données affichées correspondent aux snapshots enregistrés à leur instant respectif.</p>
+  </div>
+
+  @if (missingParams()) {
+    <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+      <i class="bi bi-exclamation-triangle flex-shrink-0 mt-1"></i>
+      <div>
+        <strong>Sélectionnez deux analyses à comparer</strong>
+        <p class="mb-1 mt-1">Cette page nécessite deux identifiants de snapshot (<code>left</code> et <code>right</code>) passés en paramètres d'URL.</p>
+        <a [routerLink]="historyPath" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-clock-history me-1"></i>Revenir à l'historique
+        </a>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="d-flex justify-content-center py-5">
+      <div class="spinner-border text-primary" role="status" aria-label="Chargement de la comparaison"></div>
+    </div>
+  }
+
+  @if (!loading() && !missingParams() && comparison()) {
+    @if (comparison()!.NonComparabilityReasons.length > 0) {
+      <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+        <i class="bi bi-exclamation-triangle flex-shrink-0 mt-1"></i>
+        <div>
+          <strong>Comparabilité limitée</strong>
+          <ul class="mb-0 mt-1 ps-3">
+            @for (reason of comparison()!.NonComparabilityReasons; track $index) {
+              <li>{{ reason }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    <!-- Market changes -->
+    @if (comparison()!.MarketChanges.length > 0) {
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom fw-semibold">
+          <i class="bi bi-graph-up me-2"></i>Lecture de marché
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Champ</th>
+                <th>Avant</th>
+                <th>Après</th>
+                <th>Évolution</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of comparison()!.MarketChanges; track item.FieldCode) {
+                <tr>
+                  <td class="ps-3">{{ item.DisplayLabel }}</td>
+                  <td class="text-secondary">{{ item.LeftValue ?? '—' }}</td>
+                  <td>{{ item.RightValue ?? '—' }}</td>
+                  <td>
+                    <span class="badge"
+                      [class.bg-success-subtle]="item.ChangeKind === 'Improvement'"
+                      [class.text-success-emphasis]="item.ChangeKind === 'Improvement'"
+                      [class.bg-danger-subtle]="item.ChangeKind === 'Degradation'"
+                      [class.text-danger-emphasis]="item.ChangeKind === 'Degradation'"
+                      [class.bg-secondary-subtle]="item.ChangeKind === 'Neutral'"
+                      [class.text-secondary-emphasis]="item.ChangeKind === 'Neutral'"
+                    >{{ item.ChangeKind }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Support changes -->
+    @if (comparison()!.SupportChanges.length > 0) {
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom fw-semibold">
+          <i class="bi bi-layers me-2"></i>Lecture support
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Champ</th>
+                <th>Avant</th>
+                <th>Après</th>
+                <th>Évolution</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of comparison()!.SupportChanges; track item.FieldCode) {
+                <tr>
+                  <td class="ps-3">{{ item.DisplayLabel }}</td>
+                  <td class="text-secondary">{{ item.LeftValue ?? '—' }}</td>
+                  <td>{{ item.RightValue ?? '—' }}</td>
+                  <td>
+                    <span class="badge"
+                      [class.bg-success-subtle]="item.ChangeKind === 'Improvement'"
+                      [class.text-success-emphasis]="item.ChangeKind === 'Improvement'"
+                      [class.bg-danger-subtle]="item.ChangeKind === 'Degradation'"
+                      [class.text-danger-emphasis]="item.ChangeKind === 'Degradation'"
+                      [class.bg-secondary-subtle]="item.ChangeKind === 'Neutral'"
+                      [class.text-secondary-emphasis]="item.ChangeKind === 'Neutral'"
+                    >{{ item.ChangeKind }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Recommendation changes -->
+    @if (comparison()!.RecommendationChanges.length > 0) {
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-bottom fw-semibold">
+          <i class="bi bi-lightbulb me-2"></i>Recommandation
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Champ</th>
+                <th>Avant</th>
+                <th>Après</th>
+                <th>Évolution</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of comparison()!.RecommendationChanges; track item.FieldCode) {
+                <tr>
+                  <td class="ps-3">{{ item.DisplayLabel }}</td>
+                  <td class="text-secondary">{{ item.LeftValue ?? '—' }}</td>
+                  <td>{{ item.RightValue ?? '—' }}</td>
+                  <td>
+                    <span class="badge"
+                      [class.bg-success-subtle]="item.ChangeKind === 'Improvement'"
+                      [class.text-success-emphasis]="item.ChangeKind === 'Improvement'"
+                      [class.bg-danger-subtle]="item.ChangeKind === 'Degradation'"
+                      [class.text-danger-emphasis]="item.ChangeKind === 'Degradation'"
+                      [class.bg-secondary-subtle]="item.ChangeKind === 'Neutral'"
+                      [class.text-secondary-emphasis]="item.ChangeKind === 'Neutral'"
+                    >{{ item.ChangeKind }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    @if (comparison()!.MarketChanges.length === 0 && comparison()!.SupportChanges.length === 0 && comparison()!.RecommendationChanges.length === 0) {
+      <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle me-2"></i>
+        Aucune différence détectée entre les deux analyses.
+      </div>
+    }
+  }
+
+  @if (!loading() && !missingParams() && !comparison()) {
+    <div class="alert alert-warning" role="alert">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Impossible de charger la comparaison. Vérifiez les identifiants et réessayez.
+    </div>
+  }
+
+</section>

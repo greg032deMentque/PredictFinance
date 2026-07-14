@@ -1,4 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api-pl.dynames-test.fr/api/'
+  apiUrl: '/api/',
+  termsUrl: '/legal/terms',
+  privacyUrl: '/legal/privacy'
 };

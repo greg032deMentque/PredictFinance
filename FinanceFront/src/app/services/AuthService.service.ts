@@ -7,6 +7,7 @@ import { environment } from '../../environments/environment';
 import { TokenResponse } from '../Models/token-response';
 import { AppRoutes } from '../Routes/app.routes.constants';
 import { StorageService } from './storage.service';
+import { AuthStore } from '../core/auth.store';
 
 
 @Injectable({ providedIn: 'root' })
@@ -18,8 +19,23 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private storageService: StorageService,
-    private router: Router
+    private router: Router,
+    private authStore: AuthStore
   ) { }
+
+  login(model: { Email: string; Password: string }): Observable<void> {
+    return this.http.post<TokenResponse>(environment.apiUrl + 'Account/Login', model).pipe(
+      tap((token) => this.initSession(token)),
+      map(() => undefined)
+    );
+  }
+
+  initSession(token: TokenResponse): void {
+    this.storageService.SetToken(token.Token);
+    this.storageService.SetRefreshToken(token.RefreshToken);
+    this.authStore.syncFromStorage();
+    this.scheduleTokenRefresh(token.Token, token.RefreshToken);
+  }
 
   logout() {
     const token = this.storageService.GetToken();
@@ -34,6 +50,7 @@ export class AuthService {
 
     this.storageService.RemoveToken();
     this.storageService.RemoveRefreshToken();
+    this.authStore.clear(false);
 
     void this.router.navigate([AppRoutes.Login]);
   }
@@ -86,7 +103,7 @@ export class AuthService {
         this.scheduleTokenRefresh(res.Token, res.RefreshToken);
       },
       error: (err) => {
-        console.error('[Scheduler] Ã‰chec du refresh automatique', err);
+        console.error('[Scheduler] Échec du refresh automatique', err);
       },
     });
   }
@@ -176,16 +193,8 @@ export class AuthService {
     return Array.isArray(roles) ? roles : [roles];
   }
 
-  isSuperAdmin(token?: string): boolean {
-    const roles = this.getUserRolesFromToken(token);
-    return roles.some(r => r?.toLowerCase() === 'superadmin');
-  }
-
   isAdmin(token?: string): boolean {
     const roles = this.getUserRolesFromToken(token).map(r => (r ?? '').toLowerCase());
-    return roles.includes('superadmin') || roles.includes('admin');
+    return roles.includes('admin');
   }
-
-
-
 }
