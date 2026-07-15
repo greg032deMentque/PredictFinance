@@ -1,5 +1,7 @@
+using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Portfolio;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace BackPredictFinance.Services.ClientFinanceServices
 {
@@ -22,9 +24,17 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
         private static readonly string[] BenchmarkSymbols = ["^FCHI", "URTH", "ACWI"];
 
-        public PortfolioAllocationService(IServiceProvider serviceProvider)
+        private readonly IClientFinanceAssetSupportService _assetSupportService;
+        private readonly ILogger<PortfolioAllocationService> _holdingLogger;
+
+        public PortfolioAllocationService(
+            IServiceProvider serviceProvider,
+            IClientFinanceAssetSupportService assetSupportService,
+            ILogger<PortfolioAllocationService> holdingLogger)
             : base(serviceProvider)
         {
+            _assetSupportService = assetSupportService;
+            _holdingLogger = holdingLogger;
         }
 
         public async Task<PortfolioAllocationViewModel> ComputeAllocationAsync(
@@ -44,6 +54,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             }
 
             var assetIds = userAssets.Select(x => x.AssetId).ToList();
+            var userAssetIds = userAssets.Select(x => x.Id).ToList();
 
             var latestCandles = await _financeDbContext.AssetCandleSnapshots
                 .AsNoTracking()
@@ -54,11 +65,47 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var latestPriceByAssetId = latestCandles.ToDictionary(c => c.AssetId, c => c.Close);
 
+            // Transactions scopées au portefeuille demandé, ou vérité globale (tous portefeuilles,
+            // archivés inclus) quand portfolioId est vide — même convention que
+            // ClientFinanceWatchlistPortfolioService.BuildWatchlistAsync, pour rester cohérent avec
+            // le pitfall documenté sur la reconstruction FIFO.
+            var transactionQuery = _financeDbContext.AssetTransactions
+                .AsNoTracking()
+                .Where(x => userAssetIds.Contains(x.UserAssetId));
+
+            if (!string.IsNullOrWhiteSpace(portfolioId))
+            {
+                transactionQuery = transactionQuery.Where(x => x.PortfolioId == portfolioId);
+            }
+
+            var transactions = await transactionQuery.ToListAsync(ct);
+            var groupedTransactions = transactions
+                .GroupBy(x => x.UserAssetId)
+                .ToDictionary(x => x.Key, x => (IReadOnlyCollection<AssetTransaction>)x.ToList());
+
+            var distinctCurrencies = userAssets
+                .Select(x => x.Asset.Currency)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var forexRateByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            foreach (var currency in distinctCurrencies)
+            {
+                forexRateByCurrency[currency] = await _assetSupportService.GetForexRateToEurAsync(currency, ct);
+            }
+
             var positions = new List<PositionSlice>(userAssets.Count);
             foreach (var ua in userAssets)
             {
                 latestPriceByAssetId.TryGetValue(ua.AssetId, out var price);
-                var valueEur = ua.Quantity * price;
+                var forexRate = forexRateByCurrency.GetValueOrDefault(ua.Asset.Currency, 1m);
+
+                groupedTransactions.TryGetValue(ua.Id, out var history);
+                history ??= [];
+                var holding = PortfolioHoldingCalculator.Compute(history, _holdingLogger);
+
+                var quantity = string.IsNullOrWhiteSpace(portfolioId) ? ua.Quantity : holding.Quantity;
+                var valueEur = quantity * price * forexRate;
+                var costBasisEur = decimal.Round(holding.InvestedAmount * forexRate, 2);
 
                 positions.Add(new PositionSlice
                 {
@@ -66,7 +113,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                     Sector = string.IsNullOrWhiteSpace(ua.Asset.Sector) ? "Autres" : ua.Asset.Sector,
                     Country = string.IsNullOrWhiteSpace(ua.Asset.Country) ? "Inconnu" : ua.Asset.Country,
                     Currency = string.IsNullOrWhiteSpace(ua.Asset.Currency) ? "USD" : ua.Asset.Currency,
-                    ValueEur = valueEur
+                    ValueEur = valueEur,
+                    CostBasisEur = costBasisEur
                 });
             }
 

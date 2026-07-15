@@ -56,4 +56,26 @@ public sealed class FreshnessClassifierTests
         var result = FreshnessClassifier.Classify(wednesday, friday);
         Assert.Equal(FreshnessStatusEnum.Aging, result);
     }
+
+    [Fact]
+    public void Classify_WhenChristmasFallsInRange_ExcludesFixedHolidayFromTradingDays()
+    {
+        var checkedAt = new DateTime(2026, 12, 22, 12, 0, 0, DateTimeKind.Utc);
+        var reference = new DateTime(2026, 12, 28, 12, 0, 0, DateTimeKind.Utc);
+
+        var result = FreshnessClassifier.Classify(checkedAt, reference);
+
+        Assert.Equal(FreshnessStatusEnum.Aging, result);
+    }
+
+    [Fact]
+    public void Classify_WhenEasterMondayFallsInRange_ExcludesMobileHolidaysFromTradingDays()
+    {
+        var checkedAt = new DateTime(2026, 4, 2, 12, 0, 0, DateTimeKind.Utc);
+        var reference = new DateTime(2026, 4, 8, 12, 0, 0, DateTimeKind.Utc);
+
+        var result = FreshnessClassifier.Classify(checkedAt, reference);
+
+        Assert.Equal(FreshnessStatusEnum.Aging, result);
+    }
 }
