@@ -110,10 +110,13 @@ internal static class TestInfrastructure
             (legalCardServiceMock ?? new Mock<ILegalCardService>(MockBehavior.Strict)).Object);
 
     public static ClientFinanceContactController CreateClientFinanceContactController(
-        Mock<IClientFinanceContactService>? contactServiceMock = null,
+        Mock<IClientFinanceContactService>? contactServiceMock = null) => new(
+            (contactServiceMock ?? CreateContactServiceMock()).Object);
+
+    public static ClientFinanceAlertsController CreateClientFinanceAlertsController(
         Mock<IClientAlertService>? clientAlertServiceMock = null) => new(
-            (contactServiceMock ?? CreateContactServiceMock()).Object,
             (clientAlertServiceMock ?? new Mock<IClientAlertService>(MockBehavior.Strict)).Object);
+
     public static AccountController CreateAccountController(
         Mock<IAccountService> mock,
         Mock<ICurrentUserSessionService>? currentUserSessionServiceMock = null,
