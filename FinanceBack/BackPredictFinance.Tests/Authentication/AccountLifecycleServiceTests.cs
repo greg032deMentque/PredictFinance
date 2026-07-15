@@ -236,6 +236,72 @@ public sealed class AccountLifecycleServiceTests
     }
 
     [Fact]
+    public async Task Login_AfterFiveFailedAttempts_LocksTemporarily_AndUnlocksAfterWindow()
+    {
+        await using var testContext = await AccountServiceTestContext.CreateAsync(jwtSetup: mock =>
+        {
+            mock.Setup(x => x.GenerateJwtToken(It.IsAny<User>())).ReturnsAsync("access-token");
+            mock.Setup(x => x.GenerateUserRefreshToken(It.IsAny<User>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new RefreshTokenResult("refresh-token", DateTime.UtcNow.AddDays(7)));
+        });
+
+        var accountService = testContext.Services.GetRequiredService<IAccountService>();
+        var userManager = testContext.Services.GetRequiredService<UserManager<User>>();
+
+        var user = new User
+        {
+            UserName = "lockout@example.com",
+            Email = "lockout@example.com",
+            IsActive = true,
+            EmailConfirmed = true,
+            RefreshToken = string.Empty
+        };
+
+        var createResult = await userManager.CreateAsync(user, "Password1");
+        Assert.True(createResult.Succeeded);
+        await userManager.AddToRoleAsync(user, UserRoleEnum.User.ToString());
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var result = await accountService.Login(new LoginViewModel
+            {
+                Email = "lockout@example.com",
+                Password = "WrongPassword1"
+            });
+
+            Assert.Null(result);
+        }
+
+        var lockedOutUser = await userManager.FindByEmailAsync("lockout@example.com");
+        Assert.NotNull(lockedOutUser);
+        Assert.True(await userManager.IsLockedOutAsync(lockedOutUser!));
+
+        var lockoutEnd = await userManager.GetLockoutEndDateAsync(lockedOutUser!);
+        Assert.NotNull(lockoutEnd);
+        Assert.NotEqual(DateTimeOffset.MaxValue, lockoutEnd!.Value);
+        Assert.True(lockoutEnd.Value < DateTimeOffset.UtcNow.AddHours(1));
+
+        var resultWhileLocked = await accountService.Login(new LoginViewModel
+        {
+            Email = "lockout@example.com",
+            Password = "Password1"
+        });
+
+        Assert.Null(resultWhileLocked);
+
+        await userManager.SetLockoutEndDateAsync(lockedOutUser!, DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        var resultAfterWindow = await accountService.Login(new LoginViewModel
+        {
+            Email = "lockout@example.com",
+            Password = "Password1"
+        });
+
+        Assert.NotNull(resultAfterWindow);
+        Assert.Equal("refresh-token", resultAfterWindow!.RefreshToken);
+    }
+
+    [Fact]
     public async Task ResendConfirmationEmail_ReturnsSilently_ForUnknownOrConfirmedAccounts()
     {
         await using var testContext = await AccountServiceTestContext.CreateAsync();

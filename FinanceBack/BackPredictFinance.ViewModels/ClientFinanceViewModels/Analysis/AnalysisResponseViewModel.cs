@@ -1,8 +1,6 @@
 ﻿using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BackPredictFinance.Common.MarketData;
 
 namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis
 {
@@ -24,5 +22,11 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis
         public List<string> Warnings { get; set; } = [];
         public ModelStatusEnum ModelStatus { get; set; } = ModelStatusEnum.NoGo;
         public string ModelMessage { get; set; } = string.Empty;
+        public List<TickerCandle> Candles { get; set; } = [];
+        public List<SupportResistanceZoneViewModel> SupportResistanceZones { get; set; } = [];
+        public AnalysisRiskContext? RiskContext { get; set; }
+        public AnalysisTechnicalContext? TechnicalContext { get; set; }
+        public FreshnessStatusEnum DataFreshnessStatus { get; set; } = FreshnessStatusEnum.Fresh;
+        public DateTime? DataFreshnessCheckedAtUtc { get; set; }
     }
 }   

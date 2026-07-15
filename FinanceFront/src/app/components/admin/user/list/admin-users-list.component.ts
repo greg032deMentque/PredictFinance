@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -12,15 +12,16 @@ import { PaginateSettings } from '../../../../Models/Paginate/paginate-settings'
 import { AppRoutes } from '../../../../Routes/app.routes.constants';
 import { ToastService } from '../../../../services/toastr.service';
 import { environment } from '../../../../../environments/environment';
+import { SearchBarComponent } from '../../../shared/search-bar/search-bar.component';
 
 @Component({
   selector: 'app-admin-users-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SearchBarComponent],
   templateUrl: './admin-users-list.component.html',
   styleUrl: './admin-users-list.component.scss'
 })
-export class AdminUsersListComponent {
+export class AdminUsersListComponent implements OnInit {
   readonly users = signal<User[]>([]);
   readonly total = signal(0);
   readonly pageIndex = signal(0);

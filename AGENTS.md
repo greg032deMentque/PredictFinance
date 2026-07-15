@@ -14,6 +14,13 @@ An agent must never silently reconcile contradictions.
 An agent must never present a proposal as if it were already implemented.
 An agent must never use convenience to break project boundaries.
 
+## Before you start (operational entry points)
+
+This contract is authoritative. For the *how* — workflow, where things live, and mistakes already made here — read the in-repo wiki under [`Documentation/`](Documentation/README.md):
+- [`Documentation/agent-guide.md`](Documentation/agent-guide.md) — how to work in this repo (golden rules, boundaries, conventions, build/test).
+- [`Documentation/pitfalls.md`](Documentation/pitfalls.md) — **mistakes not to reproduce** (real traps + the correct approach). Read it before touching the analysis engine, persistence, config, or CI.
+- `Documentation/` also covers architecture, data model, API surface, CI/CD, deployment, and secrets.
+
 ## Repository purpose
 
 This repository contains the PredictFinance V1 implementation baseline:

@@ -6,6 +6,12 @@ using BackPredictFinance.Patterns.Common;
 
 namespace BackPredictFinance.Patterns.Definitions
 {
+    /// <summary>
+    /// Miroir baissier de <see cref="BullFlagContinuationAnalysisPatternDefinition"/> : impulsion
+    /// baissière (le "pole") suivie d'un rebond de consolidation court (le "flag"). Confirmé par un
+    /// breakout sous le support du flag, invalidé si le prix repasse au-dessus de la résistance du
+    /// flag ou si le rebond retrace trop de l'impulsion pour rester lisible comme simple pause.
+    /// </summary>
     public sealed class BearFlagContinuationAnalysisPatternDefinition : ContinuationPatternDefinitionBase
     {
         public BearFlagContinuationAnalysisPatternDefinition(IPatternMarketDataProvider marketDataProvider)
@@ -19,6 +25,7 @@ namespace BackPredictFinance.Patterns.Definitions
         protected override int MinimumRequiredCandles => 40;
         protected override string DisplayName => "Bear flag continuation";
         protected override string PedagogicalDescription => "Impulsion baissiere suivie d'une consolidation courte et ordonnee, baissiere seulement apres breakout confirme sous le support du flag.";
+        protected override decimal HistoricalReliability => BulkowskiReliability.BearFlag;
 
         protected override ContinuationPatternAnalysisState Analyze(AnalysisRequest request, IReadOnlyList<TickerCandle> candles)
         {
@@ -30,7 +37,7 @@ namespace BackPredictFinance.Patterns.Definitions
                     PhaseLabel = "Historique insuffisant",
                     Status = PatternStatus.Forming,
                     IsCompatible = false,
-                    StatusReason = "Le moteur n'a pas recu assez de bougies pour evaluer ce pattern de maniere deterministe.",
+                    StatusReason = "Le moteur n'a pas reçu assez de bougies pour évaluer ce pattern de manière déterministe.",
                     ValidationReason = "Une profondeur historique minimale est requise avant toute validation.",
                     InvalidationReason = "Aucune invalidation n'est interpretable avec un historique insuffisant.",
                     Confidence = 0m,
@@ -38,6 +45,8 @@ namespace BackPredictFinance.Patterns.Definitions
                     ScoreReasons = ["Le nombre minimal de bougies n'est pas atteint pour ce pattern."]
                 };
             }
+            // Même découpage positionnel que le bull flag (12 bougies de pole + 10 de flag sur une
+            // fenêtre de 22), en miroir baissier.
             var patternWindow = PatternTechnicals.Tail(candles, 22).ToList();
             var pole = patternWindow.Take(12).ToList();
             var flag = patternWindow.Skip(12).ToList();
@@ -47,10 +56,14 @@ namespace BackPredictFinance.Patterns.Definitions
             var flagResistance = flag.Max(candle => candle.High);
             var flagSupport = flag.Min(candle => candle.Low);
             var flagHeight = flagResistance - flagSupport;
+            // Retracement du rebond par rapport à la hauteur du pole (0 = le flag n'a rien repris de
+            // la chute, 1 = le flag est remonté jusqu'en haut du pole).
             var flagRetracement = poleHeight <= 0m ? 1m : (flagResistance - pole[^1].Close) / poleHeight;
             var flagSlope = PatternTechnicals.ComputeSlope(flag.Select(candle => candle.Close).ToList());
             var averageFlagClose = PatternTechnicals.AverageClose(flag);
             var atr = PatternTechnicals.VolatilityUnit(patternWindow, currentPrice);
+            // Marge de breakout exprimée en multiples d'ATR (adaptative à la volatilité du titre),
+            // symétrique au bull flag.
             var breakoutDown = currentPrice < flagSupport - (PatternThresholds.BreakoutAtrMultiple * atr);
             var breakoutUp = currentPrice > flagResistance + (PatternThresholds.BreakoutAtrMultiple * atr);
             var hasStructure = poleDropPct <= -PatternThresholds.FlagMinPoleMovePct
@@ -144,6 +157,9 @@ namespace BackPredictFinance.Patterns.Definitions
             };
         }
 
+        // Score additif borné [0,1], symétrique au bull flag : base faible, bonus pour structure
+        // propre / pole marqué / flag resserré / breakout confirmé, malus si le prix casse déjà à la
+        // hausse (invalidation potentielle du scénario baissier).
         private static decimal BuildConfidence(bool hasStructure, bool breakoutDown, bool breakoutUp, decimal poleDropPct, decimal flagRetracement)
         {
             var confidence = 0.15m;

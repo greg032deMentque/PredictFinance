@@ -21,19 +21,20 @@
 
           <div>
             <label for="register-password" class="form-label fw-semibold">Mot de passe</label>
-            <input id="register-password" type="password" class="form-control form-control-lg" formControlName="Password" />
-            <div class="small muted mt-1">6 caractères minimum.</div>
+            <app-password-field inputId="register-password" autocomplete="new-password" formControlName="Password" />
+            <div class="small muted mt-1">6 caractères minimum, avec au moins une majuscule, une minuscule et un chiffre.</div>
             @if (form.controls.Password.invalid && form.controls.Password.touched) {
               <div class="text-danger small mt-1">
                 @if (form.controls.Password.hasError('required')) { Mot de passe requis. }
-                @if (form.controls.Password.hasError('minlength')) { 6 caractères minimum. }
+                @else if (form.controls.Password.hasError('minlength')) { 6 caractères minimum. }
+                @else if (form.controls.Password.hasError('pattern')) { Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre. }
               </div>
             }
           </div>
 
           <div>
             <label for="register-confirm-password" class="form-label fw-semibold">Confirmation du mot de passe</label>
-            <input id="register-confirm-password" type="password" class="form-control form-control-lg" formControlName="ConfirmPassword" />
+            <app-password-field inputId="register-confirm-password" autocomplete="new-password" formControlName="ConfirmPassword" />
             @if (form.controls.ConfirmPassword.invalid && form.controls.ConfirmPassword.touched) {
               <div class="text-danger small mt-1">
                 @if (form.controls.ConfirmPassword.hasError('required')) { Confirmation requise. }

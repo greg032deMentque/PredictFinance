@@ -12,6 +12,9 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Portfolio
         public decimal AverageCost { get; set; }
         public decimal Fees { get; set; }
         public decimal OutstandingAmount { get; set; }
+        public decimal CurrentPriceNative { get; set; }
+        public string Currency { get; set; } = "EUR";
+        public decimal ForexRateUsed { get; set; } = 1m;
         public MarketReadingSummaryViewModel MarketReading { get; set; } = new();
         public SupportReadingSummaryViewModel SupportReading { get; set; } = new();
         public RecommendationSummaryViewModel Recommendation { get; set; } = new();

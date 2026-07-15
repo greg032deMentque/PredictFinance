@@ -2,8 +2,7 @@
   <div class="page-heading mb-4 gap-3">
     <div class="page-subtitle">
       <span class="chip chip-dark mb-2"><i class="bi bi-people"></i> User management</span>
-      <h1 class="h2 fw-bold mb-2">Gestion des utilisateurs</h1>
-      <p class="muted mb-0">Gestion centralisée des comptes administrateurs et utilisateurs sans logique métier déplacée dans le front.</p>
+      <h1 class="h2 fw-bold mb-0">Gestion des utilisateurs</h1>
     </div>
 
     <button class="btn btn-primary rounded-pill" type="button" (click)="goToCreate()" [disabled]="!canAdd()">
@@ -15,18 +14,11 @@
   <div class="page-card mb-4">
     <div class="row g-3 align-items-end">
       <div class="col-xl-5 col-lg-6">
-        <label class="form-label" for="admin-user-filter">Recherche</label>
-        <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-search"></i></span>
-          <input
-            id="admin-user-filter"
-            type="text"
-            class="form-control"
-            placeholder="Nom, email ou téléphone"
-            [value]="filter()"
-            (input)="setFilter(($any($event.target).value ?? '').toString())"
-          />
-        </div>
+        <app-search-bar
+          placeholder="Nom, email ou téléphone"
+          [value]="filter()"
+          (valueChange)="setFilter($event)">
+        </app-search-bar>
       </div>
       <div class="col-xl-7 col-lg-6">
         <div class="d-flex flex-wrap gap-2 justify-content-lg-end">

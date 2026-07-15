@@ -16,10 +16,15 @@ export class SessionService {
 
   login(email: string, password: string): boolean {
     const normalizedEmail = email.trim().toLowerCase();
+    // Règle minimale locale (longueur >= 6) : ce service ne parle pas au back, donc il ne peut pas s'aligner
+    // sur la politique réelle du serveur (voir components/auth/password-policy.ts pour le vrai formulaire
+    // d'authentification applicatif). Ne pas durcir cette règle ici sans vérifier où ce service est encore utilisé.
     if (!normalizedEmail || password.trim().length < 6) {
       return false;
     }
 
+    // Nom d'affichage dérivé de la partie locale de l'email (avant le @), capitalisée — heuristique de confort
+    // UI uniquement, aucune garantie que ça corresponde au vrai nom de l'utilisateur.
     const localPart = normalizedEmail.split('@')[0] ?? 'user';
     const displayName = localPart.charAt(0).toUpperCase() + localPart.slice(1);
     const payload: StoredSession = {
@@ -45,11 +50,14 @@ export class SessionService {
 
     try {
       const parsed = JSON.parse(raw) as Partial<StoredSession>;
+      // localStorage peut contenir une valeur corrompue, tronquée ou écrite par une version antérieure du
+      // schéma : on vérifie la forme avant de faire confiance au contenu plutôt que de propager un objet partiel.
       if (typeof parsed.email !== 'string' || typeof parsed.displayName !== 'string') {
         return null;
       }
       return { email: parsed.email, displayName: parsed.displayName };
     } catch {
+      // JSON invalide : on démarre non authentifié plutôt que de faire planter le constructeur du service.
       return null;
     }
   }

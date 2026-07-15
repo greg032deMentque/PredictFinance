@@ -1,3 +1,4 @@
+using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Services.ClientFinanceServices.Analysis;
@@ -6,22 +7,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BackPredictFinance.Services.BackgroundJobs
 {
     public sealed class MarketDataRefreshJob : BackgroundService
     {
-        // Exécution quotidienne à 19h00 UTC — les marchés européens ferment vers 17h30 UTC,
-        // le délai de 90 min laisse le temps aux données journalières d'être publiées par Yahoo Finance.
-        private const int ScheduledHourUtc = 19;
-
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<MarketDataRefreshJob> _logger;
+        private readonly IOptions<MarketDataOptions> _options;
 
-        public MarketDataRefreshJob(IServiceScopeFactory scopeFactory, ILogger<MarketDataRefreshJob> logger)
+        public MarketDataRefreshJob(IServiceScopeFactory scopeFactory, ILogger<MarketDataRefreshJob> logger, IOptions<MarketDataOptions> options)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _options = options;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,10 +41,10 @@ namespace BackPredictFinance.Services.BackgroundJobs
             }
         }
 
-        private static TimeSpan ComputeDelayUntilNextRun()
+        private TimeSpan ComputeDelayUntilNextRun()
         {
             var now = DateTime.UtcNow;
-            var nextRunUtc = now.Date.AddHours(ScheduledHourUtc);
+            var nextRunUtc = now.Date.AddHours(_options.Value.RefreshScheduledHourUtc);
             if (nextRunUtc <= now)
             {
                 nextRunUtc = nextRunUtc.AddDays(1);
@@ -67,6 +67,7 @@ namespace BackPredictFinance.Services.BackgroundJobs
             foreach (var assetId in assetIds)
             {
                 await RefreshSingleAssetAsync(db, priceProvider, persistenceService, assetId, ct);
+                await Task.Delay(TimeSpan.FromMilliseconds(_options.Value.RefreshThrottleMilliseconds), ct);
             }
         }
 

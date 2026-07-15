@@ -1,0 +1,115 @@
+.simulation-result {
+  display: flex;
+  flex-direction: column;
+}
+
+// Graphe trajectoires
+.scenario-chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scenario-canvas-container {
+  position: relative;
+  height: 220px;
+  width: 100%;
+}
+
+canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+// Légende différenciée style + couleur (WCAG 1.4.1)
+.sim-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  font-size: 0.78rem;
+  color: var(--pf-text-soft);
+}
+
+.sim-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sim-legend__line {
+  display: inline-block;
+  width: 24px;
+  height: 0;
+  flex-shrink: 0;
+}
+
+// Styles de trait différenciés (pas couleur seule)
+.sim-legend__line--target {
+  border-top: 2px solid #127a5a; // trait plein vert
+}
+
+.sim-legend__line--neutral {
+  border-top: 2px dashed #2f6ea7; // tirets bleu
+}
+
+.sim-legend__line--invalidation {
+  border-top: 2px dotted #b13a3a; // pointillés rouge
+}
+
+.sim-legend__line--current {
+  border-top: 2px dashed rgba(0, 0, 0, 0.2); // tirets gris
+}
+
+// Cartes scénarios
+.scenario-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.scenario-card {
+  border: 1px solid var(--pf-border);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(255, 255, 255, 0.95);
+
+  &--target {
+    border-left: 3px solid #127a5a;
+    background: var(--pf-soft-success);
+  }
+
+  &--neutral {
+    border-left: 3px dashed #2f6ea7;
+    background: var(--pf-soft-info);
+  }
+
+  &--invalidation {
+    border-left: 3px dotted #b13a3a;
+    background: var(--pf-soft-danger);
+  }
+}
+
+.scenario-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.82rem;
+
+  .scenario-card--target & { color: #127a5a; }
+  .scenario-card--neutral & { color: #2f6ea7; }
+  .scenario-card--invalidation & { color: #b13a3a; }
+}
+
+.scenario-card__prob {
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.scenario-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+}

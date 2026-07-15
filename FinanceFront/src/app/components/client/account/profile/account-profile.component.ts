@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AccountService } from '../../../../services/account.service';
@@ -16,6 +17,7 @@ export class AccountProfileComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly accountService = inject(AccountService);
   private readonly toastService = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected loading = false;
   protected submitting = false;
@@ -35,7 +37,7 @@ export class AccountProfileComponent implements OnInit {
     this.loading = true;
     this.accountService
       .getProfile()
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => (this.loading = false)), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (profile) => {
           this.form.patchValue({

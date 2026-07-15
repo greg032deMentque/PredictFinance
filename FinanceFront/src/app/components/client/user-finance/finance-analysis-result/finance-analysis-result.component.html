@@ -1,93 +1,376 @@
-<div class="card border-0 shadow-sm">
-  <div class="card-body">
-    <h2 class="h6 text-uppercase text-muted mb-3">3. Resultat IA</h2>
+<div class="analysis-result">
+  <!-- ÉTAT : chargement -->
+  @if (loading) {
+    <div class="surface p-4" role="status" aria-live="polite" aria-label="Analyse en cours">
+      <div class="loading-skeleton-group">
+        <div class="skeleton-card" style="height: 320px;"></div>
+        <div class="skeleton-line skeleton-w-90"></div>
+        <div class="skeleton-line skeleton-w-70"></div>
+        <div class="skeleton-line skeleton-w-55"></div>
+      </div>
+      <p class="text-muted mt-3 mb-0">Analyse en cours. Cela peut prendre quelques instants.</p>
+    </div>
 
-    @if (loading) {
-      <div class="text-muted">Analyse en cours. Cela peut prendre quelques instants.</div>
-    } @else if (result) {
-      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+  <!-- ÉTAT : aucun résultat -->
+  } @else if (!result) {
+    <div class="empty-state">
+      <span class="empty-state-icon bi bi-cpu" aria-hidden="true"></span>
+      <p class="mb-0 text-body-secondary">
+        Aucune analyse lancée pour le moment. Sélectionne une valeur puis lance l'analyse IA.
+      </p>
+    </div>
+
+  <!-- ÉTAT : instrument/contexte non supporté — état vide explicite -->
+  } @else if (isUnsupported()) {
+    <div class="surface p-4" role="alert">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-slash-circle fs-4 text-secondary" aria-hidden="true"></i>
         <div>
-          <div class="h5 mb-1">{{ result.Symbol }} - {{ result.CompanyName }}</div>
-          <div class="text-muted"><span appGlossaryTerm="Pattern">Pattern</span> detecte: {{ patternLabel }}</div>
-          <div class="text-muted">Phase actuelle: {{ phaseLabel }}</div>
+          <h2 class="h6 mb-0">{{ getOutcomeLabel() }}</h2>
+          <small class="text-muted">{{ result.Symbol }} · {{ result.CompanyName }}</small>
         </div>
-        <span class="badge" [class]="recommendationClass">{{ recommendationLabel }}</span>
       </div>
+      <p class="text-body-secondary mb-0">{{ result.OutcomeMessage }}</p>
+      @if (result.ModelMessage) {
+        <p class="text-muted mt-2 mb-0"><small>{{ result.ModelMessage }}</small></p>
+      }
+    </div>
 
-      <div class="finance-soft-panel mb-3">
-        <div class="fw-semibold mb-2">Analyse IA</div>
-        <div class="row g-3">
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block" appGlossaryTerm="Probabilite">Probabilite</small>
-            <strong>{{ result.Probability | percent: '1.0-0' }}</strong>
+  <!-- ÉTAT : données insuffisantes -->
+  } @else if (result.Outcome === 'InsufficientData') {
+    <div class="surface p-4" role="alert" aria-live="polite">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-database-x fs-4 text-warning" aria-hidden="true"></i>
+        <div>
+          <h2 class="h6 mb-0">Données insuffisantes</h2>
+          <small class="text-muted">{{ result.Symbol }} · {{ result.CompanyName }}</small>
+        </div>
+      </div>
+      <p class="text-body-secondary mb-3">{{ result.OutcomeMessage }}</p>
+
+      @if (result.AnalysisWindow) {
+        <div class="quality-summary">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="fw-semibold">Bougies disponibles</span>
+            <span class="text-muted">{{ result.AnalysisWindow.ActualCandles }} / {{ result.AnalysisWindow.RequiredCandles }}</span>
           </div>
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block">Cours actuel</small>
-            <strong>{{ result.CurrentPrice | currency: 'USD' }}</strong>
+          <div
+            class="quality-bar"
+            role="progressbar"
+            [attr.aria-valuenow]="result.AnalysisWindow.ActualCandles"
+            [attr.aria-valuemax]="result.AnalysisWindow.RequiredCandles"
+            aria-valuemin="0"
+            [attr.aria-label]="result.AnalysisWindow.ActualCandles + ' bougies disponibles sur ' + result.AnalysisWindow.RequiredCandles + ' requises'"
+          >
+            <div
+              class="quality-bar__fill quality-bar__fill--low"
+              [style.width.%]="(result.AnalysisWindow.ActualCandles / result.AnalysisWindow.RequiredCandles) * 100 | number: '1.0-0'"
+            ></div>
           </div>
-          @if (result.NecklinePrice !== null) {
-            <div class="col-6 col-lg-3">
-              <small class="text-muted d-block" appGlossaryTerm="Neckline">Neckline</small>
-              <strong>{{ result.NecklinePrice | currency: 'USD' }}</strong>
+        </div>
+      }
+
+      <!-- Graphe partiel si priceSeries non vide -->
+      @if (result.PriceSeries.length > 0) {
+        <div class="mt-4">
+          <app-analysis-price-chart
+            [priceSeries]="result.PriceSeries"
+            [pattern]="null"
+            chartTitle="Données partielles disponibles"
+          ></app-analysis-price-chart>
+        </div>
+      }
+    </div>
+
+  <!-- ÉTAT : no credible pattern — graphe + patterns explorés-rejetés -->
+  } @else if (result.Outcome === 'NoCrediblePattern') {
+    <div class="surface p-4" role="region" aria-label="Résultat : aucune figure crédible">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-dash-circle fs-4 text-warning" aria-hidden="true"></i>
+        <div>
+          <h2 class="h6 mb-0">Aucune figure crédible</h2>
+          <small class="text-muted">{{ result.Symbol }} · {{ result.CompanyName }}</small>
+        </div>
+      </div>
+      <p class="text-body-secondary mb-4">{{ result.OutcomeMessage }}</p>
+
+      <!-- Graphe des prix même sans pattern crédible -->
+      @if (result.PriceSeries.length > 0) {
+        <div class="mb-4">
+          <app-analysis-price-chart
+            [priceSeries]="result.PriceSeries"
+            [pattern]="null"
+            [chartTitle]="result.Symbol + ' – Cours de référence'"
+          ></app-analysis-price-chart>
+        </div>
+      }
+
+      <!-- Figures explorées mais rejetées — pédagogie -->
+      @if (result.AlternativePatterns.length > 0) {
+        <div class="mt-3">
+          <h3 class="h6 text-muted mb-3">
+            <i class="bi bi-search me-1" aria-hidden="true"></i>
+            {{ result.AlternativePatterns.length }} figure(s) analysée(s) et écartée(s)
+          </h3>
+
+          <div aria-live="polite" aria-atomic="false">
+            <app-pattern-list
+              [patterns]="result.AlternativePatterns"
+              [selectedPatternId]="selectedPattern()?.PatternId ?? null"
+              (patternSelected)="onPatternSelected($event)"
+            ></app-pattern-list>
+          </div>
+
+          @if (selectedPattern()) {
+            <div class="mt-3" aria-live="polite" aria-atomic="true" [attr.aria-label]="'Détails de ' + selectedPattern()!.DisplayName">
+              <app-pattern-explanation-panel
+                [pattern]="selectedPattern()"
+                [analysisWindow]="result.AnalysisWindow"
+              ></app-pattern-explanation-panel>
             </div>
-          }
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block">Date prediction</small>
-            <strong>{{ result.PredictedAt | date: 'dd/MM HH:mm' }}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div class="finance-soft-panel mb-3">
-        <div class="fw-semibold mb-2">Conseil produit</div>
-        <div class="row g-3 mb-3">
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block" appGlossaryTerm="Posture">Posture</small>
-            <strong>{{ recommendationLabel }}</strong>
-          </div>
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block">Risque</small>
-            <strong>{{ riskLevelLabel }}</strong>
-          </div>
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block">Horizon</small>
-            <strong>{{ result.RecommendationHorizonDays }} jours</strong>
-          </div>
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block">Actionnable</small>
-            <strong>{{ result.IsActionable ? 'Oui' : 'Non' }}</strong>
-          </div>
-        </div>
-
-        <p class="mb-0 text-body-secondary">{{ formattedReason }}</p>
-      </div>
-
-      <div class="row g-3 mb-3">
-        @if (result.TargetPrice !== null) {
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block">Cible</small>
-            <strong>{{ result.TargetPrice | currency: 'USD' }}</strong>
-          </div>
-        }
-        @if (result.InvalidationPrice !== null) {
-          <div class="col-6 col-lg-3">
-            <small class="text-muted d-block">Invalidation</small>
-            <strong>{{ result.InvalidationPrice | currency: 'USD' }}</strong>
-          </div>
-        }
-      </div>
-
-      @if (result.ModelStatus || result.ModelMessage) {
-        <div class="alert alert-light border mb-0">
-          <div class="fw-semibold mb-1">Statut modele</div>
-          <div>{{ modelStatusLabel }}</div>
-          @if (result.ModelMessage) {
-            <small class="text-muted d-block mt-1">{{ result.ModelMessage }}</small>
           }
         </div>
       }
-    } @else {
-      <div class="text-muted">Aucune analyse lancee pour le moment. Selectionne une valeur puis lance l'analyse IA.</div>
-    }
-  </div>
+    </div>
+
+  <!-- ÉTAT : dossier complet (CrediblePatternFound / MultipleCompatiblePatterns) -->
+  } @else {
+    <div class="dossier" role="region" aria-label="Dossier d'analyse">
+
+      <!-- En-tête dossier -->
+      <div class="dossier__header surface p-4 mb-3">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <i [class]="'bi ' + getOutcomeIcon() + ' fs-5'" aria-hidden="true"></i>
+              <h2 class="h5 mb-0">{{ result.Symbol }} — {{ result.CompanyName }}</h2>
+            </div>
+            <p class="text-body-secondary mb-2">{{ result.OutcomeMessage }}</p>
+            <small class="text-muted">
+              Analysé le {{ result.PredictedAt | date: 'dd/MM/yyyy à HH:mm' }}
+            </small>
+          </div>
+
+          @if (result.MainPattern) {
+            <div class="d-flex flex-column align-items-end gap-2">
+              <span
+                [class]="getRecommendationBadgeClass(result.MainPattern.RecommendationAction)"
+                role="status"
+                [attr.aria-label]="'Conseil : ' + getRecommendationLabel(result.MainPattern.RecommendationAction)"
+              >
+                <i [class]="'bi ' + getRecommendationIcon(result.MainPattern.RecommendationAction)" aria-hidden="true"></i>
+                {{ getRecommendationLabel(result.MainPattern.RecommendationAction) }}
+              </span>
+              @if (result.MainPattern.IsActionable) {
+                <span class="chip chip-info" aria-label="Signal actionnable">
+                  <i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>
+                  Actionnable
+                </span>
+              }
+              @if (hasEarningsRisk()) {
+                <span
+                  class="chip chip-warning"
+                  role="status"
+                  [attr.aria-label]="'Résultats prévus le ' + (result.RiskContext!.NextEarningsDateUtc | date: 'dd/MM') + ' — signal à risque accru'"
+                >
+                  <i class="bi bi-calendar-exclamation" aria-hidden="true"></i>
+                  Résultats le {{ result.RiskContext!.NextEarningsDateUtc | date: 'dd/MM' }}
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        @if (result.GlobalSummary) {
+          <p class="mt-3 mb-0 text-body-secondary border-top pt-3">{{ result.GlobalSummary }}</p>
+        }
+      </div>
+
+      <!-- PRIMAIRE : Graphe + Pattern principal -->
+      <div class="dossier__primary surface p-4 mb-3">
+        <h3 class="section-title">
+          <i class="bi bi-graph-up me-2" aria-hidden="true"></i>
+          Graphe de prix
+          @if (chartPattern()) {
+            <span class="fw-normal text-body-secondary ms-1">— {{ chartPattern()!.DisplayName }}</span>
+          }
+        </h3>
+
+        <!-- Le graphe se recharge sur le pattern sélectionné -->
+        <div aria-live="polite" aria-atomic="true" [attr.aria-label]="'Graphe de prix pour ' + (chartPattern()?.DisplayName ?? result.Symbol)">
+          <app-analysis-price-chart
+            [priceSeries]="chartPriceSeries()"
+            [pattern]="chartPattern()"
+            [chartTitle]="result.Symbol + (chartPattern() ? ' – ' + chartPattern()!.DisplayName : '')"
+          ></app-analysis-price-chart>
+        </div>
+
+        <!-- Récap pattern principal sous le graphe -->
+        @if (result.MainPattern) {
+          <div class="pattern-primary-recap mt-4" aria-label="Récapitulatif figure principale">
+            <div class="row g-3">
+              <div class="col-6 col-md-3">
+                <small class="text-muted d-block">Score</small>
+                <strong>{{ result.MainPattern.ConfidenceLabel }}</strong>
+                <small class="text-muted d-block">{{ (result.MainPattern.ConfidenceScore) | percent: '1.0-0' }}</small>
+              </div>
+              <div class="col-6 col-md-3">
+                <small class="text-muted d-block">Phase</small>
+                <strong>{{ result.MainPattern.PhaseLabel || result.MainPattern.PhaseCode }}</strong>
+              </div>
+              @if (result.MainPattern.SuggestedTakeProfit !== null) {
+                <div class="col-6 col-md-3">
+                  <small class="text-muted d-block">Cible</small>
+                  <strong class="text-success">{{ result.MainPattern.SuggestedTakeProfit | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                </div>
+              }
+              @if (result.MainPattern.SuggestedStopLoss !== null) {
+                <div class="col-6 col-md-3">
+                  <small class="text-muted d-block">Stop-loss</small>
+                  <strong class="text-danger">{{ result.MainPattern.SuggestedStopLoss | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                </div>
+              }
+              @if (result.MainPattern.InvalidationLevel !== null) {
+                <div class="col-6 col-md-3">
+                  <small class="text-muted d-block">Invalidation</small>
+                  <strong>{{ result.MainPattern.InvalidationLevel | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+                </div>
+              }
+              @if (result.MainPattern.RiskRewardRatio !== null) {
+                <div class="col-6 col-md-3">
+                  <small class="text-muted d-block">Risque / Rendement</small>
+                  <strong>1 : {{ result.MainPattern.RiskRewardRatio | number: '1.2-2' }}</strong>
+                </div>
+              }
+            </div>
+
+            @if (result.MainPattern.ScoreReasons && result.MainPattern.ScoreReasons.length > 0) {
+              <div class="mt-3 pt-3 border-top">
+                <small class="text-muted d-block mb-2">Raisons du score</small>
+                <ul class="list-unstyled mb-0 d-flex flex-column gap-1">
+                  @for (reason of result.MainPattern.ScoreReasons; track reason) {
+                    <li class="d-flex align-items-start gap-2">
+                      <i class="bi bi-dot fs-5 text-body-secondary flex-shrink-0" aria-hidden="true"></i>
+                      <span class="text-body-secondary">{{ reason }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- ACCORDÉON : Explication détaillée (pattern sélectionné) -->
+      <details class="dossier__accordion surface mb-3" [open]="true">
+        <summary class="accordion-summary" aria-label="Afficher ou masquer l'explication détaillée">
+          <span class="accordion-summary__label">
+            <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+            Explication détaillée
+            @if (selectedPattern()) {
+              <span class="text-body-secondary fw-normal ms-1">— {{ selectedPattern()!.DisplayName }}</span>
+            }
+          </span>
+          <i class="bi bi-chevron-down accordion-summary__chevron" aria-hidden="true"></i>
+        </summary>
+        <div class="accordion-body" aria-live="polite" aria-atomic="true">
+          <app-pattern-explanation-panel
+            [pattern]="selectedPattern()"
+            [analysisWindow]="result.AnalysisWindow"
+          ></app-pattern-explanation-panel>
+        </div>
+      </details>
+
+      <!-- SECONDAIRE : Liste des alternatives (repliable) -->
+      @if (alternativeCount() > 0) {
+        <details
+          class="dossier__accordion surface mb-3"
+          [open]="alternativesExpanded()"
+          (toggle)="toggleAlternatives()"
+        >
+          <summary class="accordion-summary" [attr.aria-label]="alternativeCount() + ' autre(s) figure(s) explorée(s) — cliquez pour ' + (alternativesExpanded() ? 'masquer' : 'afficher')">
+            <span class="accordion-summary__label">
+              <i class="bi bi-layers me-2" aria-hidden="true"></i>
+              {{ alternativeCount() }} autre(s) figure(s) explorée(s)
+            </span>
+            <i class="bi bi-chevron-down accordion-summary__chevron" aria-hidden="true"></i>
+          </summary>
+
+          <div class="accordion-body">
+            <p class="text-body-secondary mb-3">
+              Ces figures ont été analysées. Cliquer sur une carte recharge le graphe et l'explication avec ses données.
+            </p>
+            <div aria-live="polite" aria-atomic="false">
+              <app-pattern-list
+                [patterns]="result.AlternativePatterns"
+                [selectedPatternId]="selectedPattern()?.PatternId ?? null"
+                (patternSelected)="onPatternSelected($event)"
+              ></app-pattern-list>
+            </div>
+          </div>
+        </details>
+      }
+
+      <!-- NIVEAUX CLÉS S/R -->
+      @if (result.SrZones.length) {
+        <details class="dossier__accordion surface mb-3">
+          <summary class="accordion-summary" aria-label="Afficher ou masquer les niveaux clés support et résistance">
+            <span class="accordion-summary__label">
+              <i class="bi bi-bar-chart-steps me-2" aria-hidden="true"></i>
+              Niveaux clés
+            </span>
+            <i class="bi bi-chevron-down accordion-summary__chevron" aria-hidden="true"></i>
+          </summary>
+          <div class="accordion-body">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Niveau</th>
+                    <th>Type</th>
+                    <th>Touches</th>
+                    <th>Force</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (zone of result.SrZones; track zone.PriceMid) {
+                    <tr>
+                      <td class="fw-semibold">
+                        {{ zone.PriceMid | number:'1.2-2' }}
+                        <small class="text-muted d-block">{{ zone.PriceLow | number:'1.2-2' }} – {{ zone.PriceHigh | number:'1.2-2' }}</small>
+                      </td>
+                      <td>
+                        @if (zone.ZoneType === 'resistance') {
+                          <span class="badge bg-danger-subtle text-danger-emphasis">Résistance</span>
+                        } @else if (zone.ZoneType === 'support') {
+                          <span class="badge bg-success-subtle text-success-emphasis">Support</span>
+                        } @else {
+                          <span class="badge bg-warning-subtle text-warning-emphasis">Double</span>
+                        }
+                      </td>
+                      <td>{{ zone.TouchCount }}</td>
+                      <td>{{ zone.Strength | percent:'1.0-0' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      }
+
+      <!-- Statut modèle -->
+      @if (result.ModelStatus || result.ModelMessage) {
+        <div class="surface p-3">
+          <small class="text-muted d-block">
+            <i class="bi bi-cpu me-1" aria-hidden="true"></i>
+            Statut modèle : {{ result.ModelStatus }}
+            @if (result.ModelMessage) {
+              · {{ result.ModelMessage }}
+            }
+          </small>
+        </div>
+      }
+    </div>
+  }
 </div>

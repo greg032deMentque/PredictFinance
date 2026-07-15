@@ -11,37 +11,9 @@
 
       @if (showPrivateShell()) {
         <div class="d-flex align-items-center gap-2">
-          <div class="dropdown">
-            <i
-              class="bi bi-person-circle fs-2 app-profile-toggle"
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            ></i>
-
-            <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2 app-profile-menu">
-              <li class="px-2 py-2">
-                <div class="d-flex align-items-center gap-2">
-                  <i class="bi bi-person-circle fs-2 text-primary"></i>
-                  <div>
-                    <div class="fw-semibold">{{ userDisplayName() }}</div>
-                    <div class="text-muted small">{{ userSubtitle() }}</div>
-                  </div>
-                </div>
-              </li>
-
-              <li><hr class="dropdown-divider my-2" /></li>
-
-              @for (l of profileLinks(); track l.label) {
-                <li>
-                  <a class="dropdown-item d-flex align-items-center gap-2 rounded-2" [routerLink]="l.commands">
-                    <i class="bi" [class]="l.icon"></i>
-                    {{ l.label }}
-                  </a>
-                </li>
-              }
-            </ul>
-          </div>
+          <a [routerLink]="['/', appRoutes.ClientRoot, appRoutes.Account, appRoutes.Profile]" aria-label="Mon profil">
+            <i class="bi bi-person-circle fs-2 app-profile-toggle" role="img"></i>
+          </a>
 
           <button type="button" class="btn btn-outline-secondary rounded-pill app-logout-btn" (click)="logout()" aria-label="Déconnexion">
             <i class="bi bi-box-arrow-right"></i>

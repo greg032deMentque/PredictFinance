@@ -39,7 +39,7 @@ namespace BackPredictFinance.API.Controllers.Admin
         {
             var payload = await _adminWordingVersionService.GetVersionDetailAsync(wordingVersionId, ct);
 
-            return Ok(new AdminWordingVersionVersionDetailViewModel
+            return Ok(new AdminWordingVersionScenariosViewModel
             {
                 WordingVersionId = payload.WordingVersionId,
                 DisplayName = payload.DisplayName,

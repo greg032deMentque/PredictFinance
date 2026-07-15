@@ -1,5 +1,5 @@
 ﻿import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, Subscription, debounceTime, distinctUntilChanged, finalize, interval, switchMap } from 'rxjs';
 import {
@@ -7,13 +7,15 @@ import {
   ClientAnalysisResult,
   ClientDashboardOverview,
   ClientLiveQuote,
-  ClientSimulationRequest,
-  ClientSimulationResult,
+  ClientMultiSimulationRequest,
   ClientTransactionCreateRequest,
   ClientTransactionItem,
   ClientWatchlistItem,
   MarketAssetOption
 } from '../../../../Models/client-finance-models/client-finance-models';
+// Note : ClientSimulationResult (ancien modèle plat) non importé ici — MultiSimulationDossier le remplace.
+import type { AnalysisDossier } from '../../../../Models/client-finance-models/client-analysis-dossier.model';
+import type { MultiSimulationDossier } from '../../../../Models/client-finance-models/client-simulation-dossier.model';
 import { ClientFinanceService } from '../../../../services/client-finance.service';
 import { ToastService } from '../../../../services/toastr.service';
 import { FinanceAnalysisHistoryComponent } from '../finance-analysis-history/finance-analysis-history.component';
@@ -50,12 +52,24 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
   selectedQuote: ClientLiveQuote | null = null;
 
   searchResults: MarketAssetOption[] = [];
-  watchlist: ClientWatchlistItem[] = [];
+  readonly watchlist = signal<ClientWatchlistItem[]>([]);
   transactions: ClientTransactionItem[] = [];
 
-  lastResult: ClientAnalysisResult | null = null;
+  readonly trendingOptions = computed(() =>
+    this.watchlist().slice(0, 5).map(
+      (item) => new MarketAssetOption({
+        Symbol: item.Symbol,
+        CompanyName: item.CompanyName,
+        Market: item.Market,
+        LastPrice: item.LastPrice,
+        DayVariationPct: item.DayVariationPct
+      })
+    )
+  );
+
+  lastResult: AnalysisDossier | null = null;
   history: ClientAnalysisResult[] = [];
-  simulationResult: ClientSimulationResult | null = null;
+  simulationResult: MultiSimulationDossier | null = null;
   overview = new ClientDashboardOverview();
 
   searchLoading = false;
@@ -104,8 +118,8 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (item) => {
-          if (!this.watchlist.some((x) => x.UserAssetId === item.UserAssetId)) {
-            this.watchlist = [item, ...this.watchlist];
+          if (!this.watchlist().some((x) => x.UserAssetId === item.UserAssetId)) {
+            this.watchlist.set([item, ...this.watchlist()]);
           }
 
           this.selectedSymbol = item.Symbol;
@@ -153,7 +167,7 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          this.watchlist = this.watchlist.filter((item) => item.Symbol !== symbol);
+          this.watchlist.set(this.watchlist().filter((item) => item.Symbol !== symbol));
           if (this.selectedSymbol === symbol) {
             this.selectedSymbol = '';
             this.selectedQuote = null;
@@ -180,7 +194,7 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (transaction) => {
           this.transactions = [transaction, ...this.transactions].slice(0, 50);
-          this.toastService.success('Transaction enregistree.');
+          this.toastService.success("Transaction enregistrée.");
           this.loadWatchlist();
           this.loadOverview();
           this.fetchQuote(request.Symbol);
@@ -211,7 +225,7 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.transactions = this.transactions.filter((item) => item.Id !== transactionId);
-          this.toastService.success('Transaction supprimee.');
+          this.toastService.success("Transaction supprimée.");
           this.loadWatchlist();
           this.loadOverview();
           if (this.selectedSymbol) {
@@ -239,10 +253,32 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
         finalize(() => (this.analysisLoading = false))
       )
       .subscribe({
-        next: (result) => {
-          this.lastResult = result;
-          this.history = [result, ...this.history].slice(0, 20);
-          this.toastService.success('Analyse terminee.');
+        next: (dossier) => {
+          this.lastResult = dossier;
+          // Alimenter l'historique (modèle plat) depuis le dossier
+          const mainPattern = dossier.MainPattern;
+          const historyEntry = new ClientAnalysisResult({
+            Id: dossier.Id,
+            Symbol: dossier.Symbol,
+            CompanyName: dossier.CompanyName,
+            Pattern: mainPattern?.PatternId ?? '',
+            Phase: mainPattern?.PhaseCode ?? '',
+            Probability: mainPattern?.ConfidenceScore ?? 0,
+            RecommendationAction: (mainPattern?.RecommendationAction ?? '') as ClientAnalysisResult['RecommendationAction'],
+            RecommendationReason: mainPattern?.RecommendationReason ?? '',
+            RiskLevel: (mainPattern?.RiskLevel ?? '') as ClientAnalysisResult['RiskLevel'],
+            RecommendationHorizonDays: mainPattern?.RecommendationHorizonDays ?? 0,
+            PredictedAt: dossier.PredictedAt,
+            IsActionable: mainPattern?.IsActionable ?? false,
+            ModelStatus: '' as ClientAnalysisResult['ModelStatus'],
+            ModelMessage: dossier.ModelMessage,
+            CurrentPrice: mainPattern?.CurrentPrice ?? 0,
+            NecklinePrice: null,
+            TargetPrice: mainPattern?.SuggestedTakeProfit ?? null,
+            InvalidationPrice: mainPattern?.InvalidationLevel ?? null
+          });
+          this.history = [historyEntry, ...this.history].slice(0, 20);
+          this.toastService.success("Analyse terminée.");
           this.loadOverview();
         },
         error: () => {
@@ -251,18 +287,18 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
       });
   }
 
-  launchSimulation(request: ClientSimulationRequest): void {
+  launchSimulation(request: ClientMultiSimulationRequest): void {
     this.simulationLoading = true;
 
     this.clientFinanceService
-      .runSimulation(request)
+      .runMultiSimulation(request)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => (this.simulationLoading = false))
       )
       .subscribe({
-        next: (result) => {
-          this.simulationResult = result;
+        next: (dossier) => {
+          this.simulationResult = dossier;
           this.toastService.success('Simulation terminee.');
         },
         error: () => {
@@ -317,10 +353,8 @@ export class UserFinancePageComponent implements OnInit, OnDestroy {
         finalize(() => (this.watchlistLoading = false))
       )
       .subscribe({
-        next: (items) => (this.watchlist = items),
-        error: () => {
-          this.watchlist = [];
-        }
+        next: (items) => this.watchlist.set(items),
+        error: () => this.watchlist.set([])
       });
   }
 

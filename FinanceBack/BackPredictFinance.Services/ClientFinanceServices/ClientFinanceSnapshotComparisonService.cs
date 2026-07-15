@@ -39,12 +39,12 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             if (string.IsNullOrWhiteSpace(request.LeftSnapshotId))
             {
-                throw new ArgumentException("Le snapshot de gauche est obligatoire.", nameof(request.LeftSnapshotId));
+                throw new ArgumentException("Le snapshot de gauche est obligatoire.", nameof(request));
             }
 
             if (string.IsNullOrWhiteSpace(request.RightSnapshotId))
             {
-                throw new ArgumentException("Le snapshot de droite est obligatoire.", nameof(request.RightSnapshotId));
+                throw new ArgumentException("Le snapshot de droite est obligatoire.", nameof(request));
             }
 
             var requestedIds = new[]

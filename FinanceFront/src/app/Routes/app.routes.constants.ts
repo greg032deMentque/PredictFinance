@@ -51,7 +51,10 @@ export const AppRoutes = {
   Glossary: 'glossary',
   Faq: 'faq',
   LegalCards: 'legal-cards',
-  LearnTopics: 'learn-topics'
+  LearnTopics: 'learn-topics',
+  AnalysisContent: 'analysis-content',
+  Tax: 'tax',
+  Screener: 'screener'
 } as const;
 
 export const AuthPaths = {
@@ -94,7 +97,8 @@ export const AdminPaths = {
   LegalCardsEdit: (id: number) => buildRoute(AppRoutes.AdminRoot, 'legal-cards', AppRoutes.Edit, String(id)),
   LearnTopics: buildRoute(AppRoutes.AdminRoot, 'learn-topics'),
   LearnTopicsAdd: buildRoute(AppRoutes.AdminRoot, 'learn-topics', AppRoutes.Add),
-  LearnTopicsEdit: (id: number) => buildRoute(AppRoutes.AdminRoot, 'learn-topics', AppRoutes.Edit, String(id))
+  LearnTopicsEdit: (id: number) => buildRoute(AppRoutes.AdminRoot, 'learn-topics', AppRoutes.Edit, String(id)),
+  AnalysisContent: buildRoute(AppRoutes.AdminRoot, AppRoutes.AnalysisContent)
 } as const;
 
 export const UserPaths = {
@@ -126,7 +130,9 @@ export const UserPaths = {
   LegalCenter: buildRoute(AppRoutes.ClientRoot, AppRoutes.Legal),
   Education: buildRoute(AppRoutes.ClientRoot, AppRoutes.Education),
   EducationDetail: (slug: string) => buildRoute(AppRoutes.ClientRoot, AppRoutes.Education, slug),
-  Glossary: buildRoute(AppRoutes.ClientRoot, AppRoutes.Glossary)
+  Glossary: buildRoute(AppRoutes.ClientRoot, AppRoutes.Glossary),
+  Tax: buildRoute(AppRoutes.ClientRoot, AppRoutes.Tax),
+  Screener: buildRoute(AppRoutes.ClientRoot, AppRoutes.Screener)
 } as const;
 
 export const AppAreas = {

@@ -1,4 +1,6 @@
+using System.Net;
 using System.Text.Json;
+using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.MarketData;
 using BackPredictFinance.Datas.Context;
@@ -66,18 +68,15 @@ namespace BackPredictFinance.Services.TwelveDataServices
 
         public async Task<IReadOnlyList<string>> GetExchangesAsync(CancellationToken ct = default)
         {
-            var known = await _context.Assets
+            var exchanges = await _context.Assets
                 .AsNoTracking()
-                .Select(x => new
-                {
-                    x.Exchange,
-                    x.AssetType
-                })
+                .Where(x => x.AssetType == AssetTypeEnum.Stock || x.AssetType == AssetTypeEnum.Etf)
+                .Select(x => x.Exchange)
+                .Distinct()
                 .ToListAsync(ct);
 
-            return known
-                .Where(x => x.AssetType == AssetTypeEnum.Stock || x.AssetType == AssetTypeEnum.Etf)
-                .Select(x => NormalizeExchange(x.Exchange))
+            return exchanges
+                .Select(NormalizeExchange)
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
@@ -92,14 +91,16 @@ namespace BackPredictFinance.Services.TwelveDataServices
             }
 
             var normalizedExchange = NormalizeExchange(exchange);
-            var assets = await _context.Assets
+            var symbols = await _context.Assets
                 .AsNoTracking()
+                .Where(x => x.AssetType == AssetTypeEnum.Stock || x.AssetType == AssetTypeEnum.Etf)
+                .Where(x => x.Exchange.ToUpper() == normalizedExchange)
+                .Select(x => x.Symbol)
+                .Distinct()
                 .ToListAsync(ct);
 
-            return assets
-                .Where(x => x.AssetType == AssetTypeEnum.Stock || x.AssetType == AssetTypeEnum.Etf)
-                .Where(x => string.Equals(NormalizeExchange(x.Exchange), normalizedExchange, StringComparison.OrdinalIgnoreCase))
-                .Select(x => NormalizeSymbol(x.Symbol))
+            return symbols
+                .Select(NormalizeSymbol)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -107,13 +108,15 @@ namespace BackPredictFinance.Services.TwelveDataServices
 
         public async Task<IReadOnlyList<string>> GetAllSymbolsAsync(CancellationToken ct = default)
         {
-            var assets = await _context.Assets
+            var symbols = await _context.Assets
                 .AsNoTracking()
+                .Where(x => x.AssetType == AssetTypeEnum.Stock || x.AssetType == AssetTypeEnum.Etf)
+                .Select(x => x.Symbol)
+                .Distinct()
                 .ToListAsync(ct);
 
-            return assets
-                .Where(x => x.AssetType == AssetTypeEnum.Stock || x.AssetType == AssetTypeEnum.Etf)
-                .Select(x => NormalizeSymbol(x.Symbol))
+            return symbols
+                .Select(NormalizeSymbol)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -173,7 +176,7 @@ namespace BackPredictFinance.Services.TwelveDataServices
                         DayVariationPct = profile.DayVariationPct
                     });
                 }
-                catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or JsonException)
+                catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException or JsonException or CustomException)
                 {
                     _logger.LogWarning(ex, "TickerService.SearchAssetsAsync: symbole {Symbol} ignoré ({ExceptionType})", descriptor.Symbol, ex.GetType().Name);
                     continue;
@@ -226,19 +229,28 @@ namespace BackPredictFinance.Services.TwelveDataServices
 
             if (profile.AssetType == AssetTypeEnum.Crypto)
             {
-                throw new InvalidOperationException($"L'instrument {normalizedSymbol} est une crypto-monnaie et n'est pas pris en charge. Seules les actions et ETF cotes sont acceptes.");
+                throw new CustomException(
+                    $"Instrument {normalizedSymbol} rejete: crypto non prise en charge.",
+                    $"{normalizedSymbol} est une crypto-monnaie : seules les actions et ETF cotés sont pris en charge.",
+                    statusCode: HttpStatusCode.UnprocessableEntity);
             }
 
             if (profile.AssetType != AssetTypeEnum.Stock && profile.AssetType != AssetTypeEnum.Etf)
             {
-                throw new InvalidOperationException($"L'instrument {normalizedSymbol} n'est pas une action ou un ETF cote. Seuls les instruments de type action ou ETF sont pris en charge.");
+                throw new CustomException(
+                    $"Instrument {normalizedSymbol} rejete: type {profile.AssetType} non supporte.",
+                    $"{normalizedSymbol} n'est pas une action ou un ETF coté : ce type d'instrument n'est pas pris en charge.",
+                    statusCode: HttpStatusCode.UnprocessableEntity);
             }
 
             if (string.IsNullOrWhiteSpace(exchange) ||
                 string.IsNullOrWhiteSpace(currency) ||
                 profile.LastPrice <= 0m)
             {
-                throw new InvalidOperationException($"L'instrument {normalizedSymbol} ne dispose pas de donnees de marche exploitables (exchange, devise ou prix manquants).");
+                throw new CustomException(
+                    $"Instrument {normalizedSymbol} rejete: donnees marche incompletes (exchange='{exchange}', currency='{currency}', lastPrice={profile.LastPrice}).",
+                    $"Données de marché indisponibles pour {normalizedSymbol} (cours ou place de cotation manquants). Réessayez plus tard ou choisissez une autre valeur.",
+                    statusCode: HttpStatusCode.UnprocessableEntity);
             }
 
             return new MarketAssetProfileData

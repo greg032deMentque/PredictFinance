@@ -1,5 +1,5 @@
-using BackPredictFinance.Patterns;
 using BackPredictFinance.Services.ClientFinanceServices;
+using BackPredictFinance.Services.ClientFinanceServices.Analysis;
 using BackPredictFinance.Services.ClientFinanceServices.Patterns;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Patterns;
@@ -18,23 +18,25 @@ namespace BackPredictFinance.API.Controllers.ClientFinance
         IClientFinanceDashboardHistoryService dashboardHistoryService,
         IClientFinanceSnapshotComparisonService snapshotComparisonService,
         IClientFinanceParameterDetailService parameterDetailService,
-        IPatternExplorerService patternExplorerService) : ControllerBase
+        IPatternExplorerService patternExplorerService,
+        IExPostStatisticsService exPostStatisticsService) : ControllerBase
     {
         [HttpGet("patterns/catalog")]
-        public IActionResult GetPatternCatalog()
+        public async Task<IActionResult> GetPatternCatalog(CancellationToken ct)
         {
-            var payload = PatternCatalog.GetTargetPatterns()
-                .Select(pattern => new PatternCatalogViewModel
-                {
-                    Id = pattern.PatternId,
-                    Label = pattern.DisplayName,
-                    Family = pattern.Family,
-                    Description = pattern.Description,
-                    Direction = pattern.Direction
-                })
-                .ToList();
+            return Ok(await patternExplorerService.GetPatternCatalogAsync(ct));
+        }
 
-            return Ok(payload);
+        [HttpGet("patterns/statistics")]
+        public async Task<IActionResult> GetPatternStatistics(CancellationToken ct)
+        {
+            return Ok(await exPostStatisticsService.GetPatternStatisticsAsync(ct));
+        }
+
+        [HttpGet("analysis-concepts")]
+        public async Task<IActionResult> GetAnalysisConcepts(CancellationToken ct)
+        {
+            return Ok(await patternExplorerService.GetAnalysisConceptsAsync(ct));
         }
 
         [HttpGet("dashboard")]
@@ -51,7 +53,7 @@ namespace BackPredictFinance.API.Controllers.ClientFinance
         }
 
         [HttpPost("analysis/run")]
-        public async Task<IActionResult> RunAnalysis([FromBody] AnalysisRunRequestViewModel model, CancellationToken ct)
+        public async Task<ActionResult<AnalysisDossierViewModel>> RunAnalysis([FromBody] AnalysisRunRequestViewModel model, CancellationToken ct)
         {
             return Ok(await clientFinanceService.RunAnalysisAsync(model, ct));
         }
@@ -73,6 +75,12 @@ namespace BackPredictFinance.API.Controllers.ClientFinance
         public async Task<IActionResult> RunSimulation([FromBody] SimulationRequestViewModel model, CancellationToken ct)
         {
             return Ok(await clientFinanceService.RunSimulationAsync(model, ct));
+        }
+
+        [HttpPost("simulation/run-multi")]
+        public async Task<IActionResult> RunMultiSimulation([FromBody] SimulationRequestViewModel model, CancellationToken ct)
+        {
+            return Ok(await clientFinanceService.RunMultiSimulationAsync(model, ct));
         }
 
         [HttpGet("parameters/{analysisId}/{parameterId}")]

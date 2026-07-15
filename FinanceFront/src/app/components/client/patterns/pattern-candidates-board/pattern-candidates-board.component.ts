@@ -1,29 +1,39 @@
-import { CommonModule, DecimalPipe, PercentPipe } from '@angular/common';
+import { CommonModule, PercentPipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { ClientPatternCandidate } from '../../../../Models/client-finance-models/client-pattern-models';
+import { PatternExplorerRow } from '../../../../Models/client-finance-models/client-pattern-models';
 
 @Component({
   selector: 'app-pattern-candidates-board',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, PercentPipe],
+  imports: [CommonModule, PercentPipe],
   templateUrl: './pattern-candidates-board.component.html',
   styleUrl: './pattern-candidates-board.component.scss'
 })
 export class PatternCandidatesBoardComponent {
-  @Input() candidates: ClientPatternCandidate[] = [];
+  @Input() rows: PatternExplorerRow[] = [];
   @Input() selectedPatternId: string | null = null;
 
   @Output() selectPattern = new EventEmitter<string>();
 
-  get sortedCandidates(): ClientPatternCandidate[] {
-    return [...this.candidates].sort((a, b) => {
-      if (a.IsPrimary !== b.IsPrimary) return a.IsPrimary ? -1 : 1;
-      return b.Confidence - a.Confidence;
-    });
+  get detectedRows(): PatternExplorerRow[] {
+    return this.rows.filter((row) => row.candidate !== null);
   }
 
-  onSelect(patternId: string): void {
-    this.selectPattern.emit(patternId);
+  get otherRows(): PatternExplorerRow[] {
+    return this.rows.filter((row) => row.candidate === null);
+  }
+
+  onSelect(row: PatternExplorerRow): void {
+    if (row.candidate) {
+      this.selectPattern.emit(row.catalog.Id);
+    }
+  }
+
+  getReliabilityBadgeClass(label: string): string {
+    const l = label.toLowerCase();
+    if (l.includes('fiable')) return 'bg-success-subtle text-success-emphasis';
+    if (l.includes('modér')) return 'bg-warning-subtle text-warning-emphasis';
+    return 'bg-secondary-subtle text-secondary-emphasis';
   }
 
   getConfidenceBadgeClass(label: string): string {

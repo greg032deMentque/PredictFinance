@@ -37,6 +37,38 @@ namespace BackPredictFinance.Patterns
                     Family = "continuation",
                     Description = "Short rebound after a bearish impulse that validates on a downside breakout.",
                     Direction = "Bearish"
+                },
+                new PatternDescriptor
+                {
+                    PatternId = PatternIds.DoubleBottom,
+                    DisplayName = "Double Bottom",
+                    Family = "reversal",
+                    Description = "Two equivalent troughs separated by an intermediate rebound, bullish reversal confirmed by neckline breakout.",
+                    Direction = "Bullish"
+                },
+                new PatternDescriptor
+                {
+                    PatternId = PatternIds.DoubleTop,
+                    DisplayName = "Double Top",
+                    Family = "reversal",
+                    Description = "Two equivalent peaks separated by an intermediate trough, bearish reversal confirmed by neckline breakdown.",
+                    Direction = "Bearish"
+                },
+                new PatternDescriptor
+                {
+                    PatternId = PatternIds.InverseHeadAndShoulders,
+                    DisplayName = "Tête-Épaules Inversé",
+                    Family = "reversal",
+                    Description = "Three-trough structure (head deeper than shoulders) signaling bullish reversal on neckline breakout.",
+                    Direction = "Bullish"
+                },
+                new PatternDescriptor
+                {
+                    PatternId = PatternIds.HeadAndShoulders,
+                    DisplayName = "Tête-Épaules",
+                    Family = "reversal",
+                    Description = "Three-peak structure (head higher than shoulders) signaling bearish reversal on neckline breakdown.",
+                    Direction = "Bearish"
                 }
             ];
         }

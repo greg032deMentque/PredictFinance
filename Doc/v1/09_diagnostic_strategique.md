@@ -12,7 +12,7 @@
 
 | # | Force | Catégorie | Solidité | Note |
 |---|---|---|---|---|
-| F-01 | Moteur d'analyse solide (4 patterns, orchestration complète, snapshots versionnés et auditables) | Technique | Élevée | Dépasse ce que la spec décrivait ; base solide pour extensions |
+| F-01 | Moteur d'analyse solide (8 patterns continuation + retournement, contexte de risque ATR, boucle ex post, orchestration complète, snapshots versionnés et auditables) | Technique | Élevée | Dépasse ce que la spec décrivait ; base solide pour extensions |
 | F-02 | Auth & sécurité élevée (JWT + refresh, BCrypt, rate limiting, lockout, rôles) | Technique | Élevée | Non différenciant mais élimine un risque de dette critique |
 | F-03 | Gouvernance admin complète (8 surfaces, plus avancée que documentée) | Technique | Élevée | Outil de pilotage opérationnel fonctionnel dès V1 |
 | F-04 | Architecture extensible et API-first (.NET 10, clean layering, EF Core, tests intégration) | Technique | Élevée | Permet d'ajouter patterns, marchés, horizons sans refonte |

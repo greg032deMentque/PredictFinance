@@ -1,4 +1,4 @@
-﻿import { Component, computed, effect, inject, signal } from '@angular/core';
+﻿import { Component, computed, effect, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { AllModule } from './module/allModule.module';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -7,7 +7,7 @@ import { filter } from 'rxjs';
 import { AuthStore } from './core/auth.store';
 import { AuthService } from './services/AuthService.service';
 import { AppAreas, AppRoutes } from './Routes/app.routes.constants';
-type ProfileLink = { label: string; icon: string; commands: readonly (string | number)[] };
+interface ProfileLink { label: string; icon: string; commands: readonly (string | number)[] }
 
 @Component({
   standalone: true,
@@ -16,7 +16,9 @@ type ProfileLink = { label: string; icon: string; commands: readonly (string | n
   templateUrl: './app.html',
   styleUrls: ['./app.scss']
 })
-export class App {
+export class App implements OnInit {
+  readonly appRoutes = AppRoutes;
+
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthStore);
@@ -62,16 +64,7 @@ export class App {
   }
 
 
-  readonly userDisplayName = computed(() => {
-    const anyAuth = this.auth as any;
-    return (
-      anyAuth.user?.()?.FullName ??
-      anyAuth.user?.()?.Name ??
-      anyAuth.profile?.()?.fullName ??
-      anyAuth.profile?.()?.name ??
-      'Mon profil'
-    );
-  });
+  readonly userDisplayName = computed(() => 'Mon profil');
 
   readonly userSubtitle = computed(() => {
     const area = this.auth.area();

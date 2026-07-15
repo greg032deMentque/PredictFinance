@@ -17,20 +17,20 @@ namespace BackPredictFinance.Services
     /// </summary>
     public abstract class BaseService
     {
-        public ILogService _logger;
-        public IMapper _mapper;
-        public IServiceProvider _serviceProvider { get; }
-        public IConfiguration _configuration { get; }
-        public FinanceDbContext _financeDbContext { get; }
-        public IHttpContextAccessor? _httpContextAccessor { get; }
-        public List<IdentityUserRole<string>> _currentUserRoles { get; private set; } = [];
-        public string? _currentUserId { get; private set; }
-        public readonly UserManager<User> _userManager;
-        public readonly RoleManager<IdentityRole> _roleManager;
-        public readonly SignInManager<User> _signInManager;
-        public readonly IStringLocalizer<SharedResources> _localizer;
+        protected ILogService _logger;
+        protected IMapper _mapper;
+        protected IServiceProvider _serviceProvider { get; }
+        protected IConfiguration _configuration { get; }
+        protected FinanceDbContext _financeDbContext { get; }
+        protected IHttpContextAccessor? _httpContextAccessor { get; }
+        protected List<IdentityUserRole<string>> _currentUserRoles { get; private set; } = [];
+        protected string? _currentUserId { get; private set; }
+        protected readonly UserManager<User> _userManager;
+        protected readonly RoleManager<IdentityRole> _roleManager;
+        protected readonly SignInManager<User> _signInManager;
+        protected readonly IStringLocalizer<SharedResources> _localizer;
 
-        public BaseService(IServiceProvider serviceProvider)
+        protected BaseService(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
             _configuration = serviceProvider.GetRequiredService<IConfiguration>();

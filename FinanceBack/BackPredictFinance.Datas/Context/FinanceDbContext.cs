@@ -45,6 +45,7 @@ namespace BackPredictFinance.Datas.Context
         public DbSet<UserAsset> UserAssets { get; set; } = null!;
         public DbSet<Portfolio> Portfolios { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+        public DbSet<UserScreenerPreset> UserScreenerPresets { get; set; } = null!;
 
         #endregion
 
@@ -54,6 +55,7 @@ namespace BackPredictFinance.Datas.Context
         public DbSet<PriceHistory> PriceHistories { get; set; } = null!;
         public DbSet<AssetTransaction> AssetTransactions { get; set; } = null!;
         public DbSet<AssetQuoteSnapshot> AssetQuoteSnapshots { get; set; } = null!;
+        public DbSet<AssetFundamentalsSnapshot> AssetFundamentalsSnapshots { get; set; } = null!;
         public DbSet<AssetCandleSnapshot> AssetCandleSnapshots { get; set; } = null!;
         public DbSet<AnalysisRun> AnalysisRuns { get; set; } = null!;
         public DbSet<PatternAssessment> PatternAssessments { get; set; } = null!;
@@ -65,6 +67,8 @@ namespace BackPredictFinance.Datas.Context
         public DbSet<RecommendationWordingScenario> RecommendationWordingScenarios { get; set; } = null!;
         public DbSet<UserNotification> UserNotifications { get; set; } = null!;
         public DbSet<SignalOutcome> SignalOutcomes { get; set; } = null!;
+        public DbSet<PatternDefinition> PatternDefinitions { get; set; } = null!;
+        public DbSet<AnalysisConceptExplanation> AnalysisConceptExplanations { get; set; } = null!;
         #endregion
 
         #region Education
@@ -89,16 +93,6 @@ namespace BackPredictFinance.Datas.Context
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SetAuditableProperties();
-
-            /*
-            var auditEntries = HandleAuditingBeforeSaveChanges(CurrentUserId).ToList();
-
-            if (auditEntries.Any())
-            {
-                await AuditTrails.AddRangeAsync(auditEntries, cancellationToken);
-            }
-
-            */
 
             return await base.SaveChangesAsync(cancellationToken);
         }
@@ -129,71 +123,6 @@ namespace BackPredictFinance.Datas.Context
             return user?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
                 ?? user?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         }
-
-        /*
-        private IEnumerable<AuditTrail> HandleAuditingBeforeSaveChanges(string? userId)
-        {
-            foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
-            {
-                if (entry.Entity.GetType().Name.Contains("Analytic", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (entry.State == EntityState.Added || entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
-                {
-                    yield return CreateTrailEntry(userId, entry);
-                }
-            }
-        }
-
-        private static AuditTrail CreateTrailEntry(string? userId, EntityEntry<IAuditableEntity> entry)
-        {
-            var trailEntry = new AuditTrail
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityName = entry.Entity.GetType().Name,
-                UserId = userId,
-                DateUtc = DateTime.UtcNow,
-                OldValues = "{}",
-                NewValues = "{}",
-                EntityStateEnum = entry.State
-            };
-
-            var oldValuesDict = new Dictionary<string, object?>();
-            var newValuesDict = new Dictionary<string, object?>();
-
-            foreach (var property in entry.Properties)
-            {
-                if (property.Metadata.IsPrimaryKey())
-                {
-                    trailEntry.PrimaryKey = property.CurrentValue?.ToString();
-                    continue;
-                }
-
-                if (!property.IsModified || property.Metadata.Name == "PasswordHash")
-                {
-                    continue;
-                }
-
-                var original = entry.GetDatabaseValues()?.GetValue<object>(property.Metadata.Name);
-                var current = property.CurrentValue;
-
-                if ((original == null && current != null) || (original != null && !original.Equals(current)))
-                {
-                    trailEntry.ChangedColumns.Add(property.Metadata.Name);
-                    oldValuesDict[property.Metadata.Name] = original;
-                    newValuesDict[property.Metadata.Name] = current;
-                }
-            }
-
-            trailEntry.OldValues = JsonSerializer.Serialize(oldValuesDict);
-            trailEntry.NewValues = JsonSerializer.Serialize(newValuesDict);
-
-            return trailEntry;
-        }
-        */
-
     }
 }
 

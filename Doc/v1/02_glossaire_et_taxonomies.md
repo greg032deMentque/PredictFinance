@@ -75,47 +75,52 @@
 > **Confiance expliquée (RM-27)** : le `ConfidenceLabel` n'est jamais affiché seul ; il est accompagné d'une décomposition en critères dérivés des sous-objets `detection` / `validation` / `invalidation` de `PatternAssessment` ([05](05_contrats_donnees_api.md#25-patternassessment)). Chaque critère a un état pédagogique : ✅ rempli · ⚠️ partiel/non confirmé · ❌ absent. Cette décomposition explique le niveau, elle ne le recalcule pas.
 
 ### SignalOutcome (issue réalisée ex post)
-*Résultat **a posteriori** d'un signal persisté, calculé par le job d'évaluation ex post (RM-29). Cible — pas un enum encore présent dans le code, voir [06](06_ecarts_doc_code.md). Stockage à arbitrer (colonne `PatternAssessment` vs table `SignalOutcome`).*
+*Résultat **a posteriori** d'un signal persisté, calculé par le job d'évaluation ex post (RM-29). Fichier : `Common/enums/SignalOutcomeEnums.cs` (`SignalOutcomeEnum`). **Implémenté** : entité/table dédiée `SignalOutcome`, peuplée par `SignalOutcomeEvaluationJob` (batch quotidien 03:00 UTC).*
 
 | Code | Wording FR (admin) | Règle |
 |---|---|---|
-| `TARGET_HIT` | Cible atteinte | Le prix a atteint `TargetPrice` **avant** `InvalidationPrice` dans la fenêtre d'évaluation. |
-| `INVALIDATION_HIT` | Invalidation touchée | Le prix a atteint `InvalidationPrice` **avant** `TargetPrice`. |
-| `STILL_OPEN` | En cours | Ni cible ni invalidation atteinte dans la fenêtre. |
-| `NOT_EVALUABLE` | Non évaluable | Données de prix postérieures insuffisantes. |
+| `TargetHit` | Cible atteinte | Le prix a atteint `TargetPrice` **avant** `InvalidationPrice` dans la fenêtre d'évaluation. |
+| `InvalidationHit` | Invalidation touchée | Le prix a atteint `InvalidationPrice` **avant** `TargetPrice`. |
+| `StillOpen` | En cours | Ni cible ni invalidation atteinte dans la fenêtre. |
+| `TargetMiss` | Cible manquée | Fenêtre close sans franchissement de cible (issue terminale distincte de l'invalidation). |
+| `NotEvaluable` | Non évaluable | Données de prix postérieures (bougies journalières) insuffisantes. |
 
-> La fenêtre d'évaluation (basée sur `reviewHorizonDays` ou un horizon fixe) est **à arbitrer** ([06](06_ecarts_doc_code.md#4-d%C3%A9cisions-%C3%A0-arbitrer)). `SignalOutcome` alimente les alertes (RM-25) et les KPI de qualité des signaux ([03 §D.10](03_specification_ecrans.md#d10--pilotage-kpi)).
+> **Fenêtre d'évaluation résolue** : `EvaluationWindowDays = DecisionSignal.HorizonDays` (défaut **30 j** si absent), scannée sur les bougies `1d` du snapshot → `+HorizonDays+1` exclusif. Seuls les signaux `IsActionable` sont évalués. `SignalOutcome` porte `PolicyVersion`, `EvaluatedAtUtc`, `FirstHitAtUtc`, `ConfidenceLabel` ; il alimente une alerte proactive `LevelCrossed` (RM-25), les statistiques win-rate Wilson (`GET patterns/statistics`, échantillon min. 20, groupé par pattern × présence d'earnings) et les KPI qualité des signaux ([03 §D.10](03_specification_ecrans.md#d10--pilotage-kpi)).
 
 ---
 
 ## 3. Patterns pris en charge (V1)
 
-*Fichier : `BackPredictFinance.Patterns/PatternIds.cs`. Famille V1 : patterns de **continuation**.*
+*Fichier : `BackPredictFinance.Patterns/PatternIds.cs`. **8 patterns actifs** : 4 de continuation + 4 de retournement. Toute autre id est rejetée par `PatternIds.RequireActivePatternId` (whitelist stricte).*
 
-| Identifiant canonique | Label domaine | Biais | Lecture |
-|---|---|---|---|
-| `RECTANGLE_CONTINUATION` | RectangleContinuation | Continuation | Consolidation horizontale entre support et résistance, reprise dans le sens du mouvement préalable. |
-| `SYMMETRICAL_TRIANGLE_CONTINUATION` | SymmetricalTriangleContinuation | Continuation | Compression en triangle symétrique, sortie dans le sens de la tendance préalable. |
-| `BULL_FLAG_CONTINUATION` | BullFlagContinuation | Haussier après confirmation | Impulsion haussière (hampe) + consolidation courte et orderly, cassure au-dessus de la résistance du drapeau. |
-| `BEAR_FLAG_CONTINUATION` | BearFlagContinuation | Baissier après confirmation | Impulsion baissière + rebond consolidant court, cassure sous le support du drapeau. |
+| Identifiant canonique | Label domaine | Famille | Biais | Lecture |
+|---|---|---|---|---|
+| `RECTANGLE_CONTINUATION` | RectangleContinuation | Continuation | selon tendance | Consolidation horizontale entre support et résistance, reprise dans le sens du mouvement préalable. |
+| `SYMMETRICAL_TRIANGLE_CONTINUATION` | SymmetricalTriangleContinuation | Continuation | selon tendance | Compression en triangle symétrique, sortie dans le sens de la tendance préalable. |
+| `BULL_FLAG_CONTINUATION` | BullFlagContinuation | Continuation | Haussier après confirmation | Impulsion haussière (hampe) + consolidation courte, cassure au-dessus de la résistance du drapeau. |
+| `BEAR_FLAG_CONTINUATION` | BearFlagContinuation | Continuation | Baissier après confirmation | Impulsion baissière + rebond consolidant court, cassure sous le support du drapeau. |
+| `DOUBLE_BOTTOM` | DoubleBottom | Retournement | Haussier après confirmation | Double creux sur support, cassure de la résistance intermédiaire (neckline). |
+| `DOUBLE_TOP` | DoubleTop | Retournement | Baissier après confirmation | Double sommet sur résistance, cassure du support intermédiaire (neckline). |
+| `INVERSE_HEAD_AND_SHOULDERS` | InverseHeadAndShoulders | Retournement | Haussier après confirmation | Épaule-tête-épaule inversée, cassure de la neckline vers le haut. |
+| `HEAD_AND_SHOULDERS` | HeadAndShoulders | Retournement | Baissier après confirmation | Épaule-tête-épaule, cassure de la neckline vers le bas. |
 
-> **`DOUBLE_TOP` est retiré.** Il n'est plus un pattern actif ; le code rejette explicitement `DOUBLE_TOP` comme non pris en charge (test dédié dans `BackPredictFinance.Tests`). Aucune surface V1 ne doit le présenter comme supporté.
+> **Retournements ajoutés lors de la refonte du moteur.** `DOUBLE_TOP` — retiré dans la version antérieure — est de nouveau **actif** aux côtés de `DOUBLE_BOTTOM`, `HEAD_AND_SHOULDERS` et `INVERSE_HEAD_AND_SHOULDERS`. La direction (`PatternDirectionEnum` : `Bullish/Bearish/Unknown`) est résolue par la géométrie cible/invalidation, pas par l'id.
 
-Le détail de lecture / validation / invalidation de chaque pattern est documenté dans `Doc/_legacy/product/pattern_reference_pack/` (conservé comme référence métier).
+Le détail de lecture / validation / invalidation des patterns de continuation est documenté dans `Doc/_legacy/product/pattern_reference_pack/` (conservé comme référence métier).
 
 ---
 
 ## 4. Recommandation
 
 ### HoldingContext
-*Contexte de détention au moment de la recommandation.*
+*Contexte de détention au moment de la recommandation. Fichier : `Common/enums/...` (`HoldingStatusEnum`).*
 
-| Code | Wording FR | Sens |
+| Code (`HoldingStatusEnum`) | Wording FR | Sens |
 |---|---|---|
-| `NOT_HELD` | Non détenue | L'utilisateur ne détient aucune quantité de l'instrument. |
-| `HELD` | Détenue | L'utilisateur détient au moins une ligne ouverte. |
+| `NotHeld` | Non détenue | L'utilisateur ne détient aucune quantité de l'instrument. |
+| `Held` | Détenue | L'utilisateur détient au moins une ligne ouverte. |
 
-> ⚠️ **Dette technique** : dans le code actuel, `HoldingContext` est stocké comme **string**, pas comme enum. La cible est un enum. Voir [06](06_ecarts_doc_code.md).
+> ✅ **Dette levée** : `HoldingContext` est désormais un **enum** (`HoldingStatusEnum`) dans tout le code (recommandation, ViewModels de requête, entité `RecommendationWordingScenario.HoldingStatus` indexée) — plus stocké comme string.
 
 ### Recommandation — verbes
 *Fichier : `Common/enums/RecommendationKind.cs`. Le verbe autorisé dépend du `HoldingContext` (RM-10).*
@@ -169,9 +174,20 @@ Le détail de lecture / validation / invalidation de chaque pattern est document
 | `PROVIDER_DATA_INCOMPLETE` | Score composite indisponible : données fournisseur incomplètes ou indisponibles |
 
 ### Catégories fondamentales
-*Le composite est la moyenne des catégories valides (min. 3 requises).*
+*Fichier : `FundamentalScoringService.cs` / `FundamentalScoringPolicyDefaults.cs`. Version de scoring : `FUNDAMENTAL_PERCENTILE_V2`. **6 catégories** (le composite est la moyenne des catégories présentes, sous réserve du minimum requis et de l'éligibilité PEA `ConfirmedEligible`).*
 
-`Profitability` (Rentabilité) · `Valuation` (Valorisation) · `FinancialStrength` (Solidité financière) · `Growth` (Croissance) · `Income` (Rendement).
+| Code catégorie | Wording FR | Métriques (brutes fournisseur) |
+|---|---|---|
+| `profitability` | Rentabilité | ROE, marge opérationnelle |
+| `liquidity` | Liquidité | current ratio |
+| `debt` | Endettement | dette / capitaux propres |
+| `valuation` | Valorisation | PER, PEG, price-to-book |
+| `dividend` | Rendement | rendement du dividende |
+| `growth` | Croissance | croissance du CA, croissance des BPA |
+
+> **Percentile intra-secteur** : chaque métrique est classée en **percentile relatif au secteur** (`MarketFundamentalData.Sector`) quand la cohorte sectorielle atteint la taille minimale (5), sinon **repli sur l'univers global** (`UsedGlobalUniverseFallback = true`). Exposé au front via `PercentileGroupLabel` (« vs secteur … » / « vs univers global … ») et le rang `RankPosition / UniverseSize`. Univers V1 restreint à `PEA_FR_EQUITIES`.
+
+> **Consensus analystes — donnée informative, hors score.** `RecommendationKey`, `RecommendationMean`, `TargetMeanPrice` (portés par `MarketFundamentalData`) sont affichés dans une carte séparée « Consensus analystes (donnée externe, non garantie) » et **n'entrent jamais** dans le composite (ils ne font pas partie des métriques scorées).
 
 ### Disponibilité de la lecture support
 
@@ -226,6 +242,17 @@ Le détail de lecture / validation / invalidation de chaque pattern est document
 | `ACTIVE` | Actif | Compte utilisable. |
 | `PENDING` | En attente | Compte créé non encore activé. |
 | `DISABLED` | Désactivé | Accès suspendu. |
+
+### PortfolioType / PortfolioStatus
+*Portefeuilles multiples par utilisateur. Fichiers : `Common/enums/PortfolioTypeEnum.cs`, `PortfolioStatusEnum.cs`. L'analyse reste agrégée par utilisateur (contexte FIFO `(UserId, AssetId)`), la segmentation par portefeuille est une capacité de gestion, pas d'analyse.*
+
+| `PortfolioTypeEnum` | Wording FR | `PortfolioStatusEnum` | Wording FR |
+|---|---|---|---|
+| `CompteTitres` | Compte-titres | `Active` | Actif |
+| `Pea` | PEA | `Archived` | Archivé (soft-delete via `IsDeleted` + statut) |
+| `AssuranceVie` | Assurance-vie | | |
+| `Per` | PER | | |
+| `Autre` | Autre | | |
 
 ---
 

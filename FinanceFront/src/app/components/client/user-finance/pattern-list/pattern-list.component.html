@@ -1,0 +1,96 @@
+<div class="pattern-list" role="list" aria-label="Figures techniques analysées">
+  @for (pattern of sortedPatterns; track pattern.PatternId) {
+    <button
+      type="button"
+      class="pattern-card"
+      [class.pattern-card--selected]="isSelected(pattern)"
+      [class.pattern-card--credible]="pattern.IsCredible"
+      [class.pattern-card--rejected]="!pattern.IsCompatible"
+      [attr.aria-pressed]="isSelected(pattern)"
+      [attr.aria-label]="
+        pattern.DisplayName +
+        ', score ' + getScoreBarWidth(pattern.ConfidenceScore) + '%, ' +
+        (pattern.IsCredible ? 'crédible' : pattern.IsCompatible ? 'compatible' : 'rejeté') +
+        (isSelected(pattern) ? ', sélectionné' : '')
+      "
+      (click)="selectPattern(pattern)"
+      role="listitem"
+    >
+      <div class="pattern-card__header">
+        <div class="pattern-card__name">
+          <span class="fw-semibold">{{ pattern.DisplayName }}</span>
+          @if (pattern.IsCredible) {
+            <span class="chip chip-success chip--sm ms-2" aria-label="Figure crédible">
+              <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+              Crédible
+            </span>
+          } @else if (!pattern.IsCompatible) {
+            <span class="chip chip-danger chip--sm ms-2" aria-label="Figure rejetée">
+              <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+              Rejeté
+            </span>
+          } @else {
+            <span class="chip chip-navy chip--sm ms-2" aria-label="Figure compatible">
+              <i class="bi bi-circle-half" aria-hidden="true"></i>
+              Compatible
+            </span>
+          }
+          @if (pattern.IsActionable) {
+            <span class="chip chip-info chip--sm ms-1" aria-label="Actionnable">
+              <i class="bi bi-lightning-charge-fill" aria-hidden="true"></i>
+              Actionnable
+            </span>
+          }
+        </div>
+        <div class="pattern-card__score-value" aria-hidden="true">
+          {{ getScoreBarWidth(pattern.ConfidenceScore) }}%
+        </div>
+      </div>
+
+      <!-- Barre de score avec valeur chiffrée à côté (pas que la barre) -->
+      <div class="pattern-card__score-bar-row">
+        <div
+          class="score-bar"
+          role="progressbar"
+          [attr.aria-valuenow]="getScoreBarWidth(pattern.ConfidenceScore)"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-label]="'Score de confiance : ' + getScoreBarWidth(pattern.ConfidenceScore) + ' sur 100'"
+        >
+          <div
+            class="score-bar__fill"
+            [class.score-bar__fill--credible]="pattern.IsCredible"
+            [class.score-bar__fill--rejected]="!pattern.IsCompatible"
+            [style.width.%]="getScoreBarWidth(pattern.ConfidenceScore)"
+          ></div>
+        </div>
+        <span class="score-label">{{ pattern.ConfidenceLabel }}</span>
+      </div>
+
+      <div class="pattern-card__meta">
+        <span class="meta-chip">
+          <i class="bi bi-activity" aria-hidden="true"></i>
+          {{ pattern.PhaseLabel || pattern.PhaseCode }}
+        </span>
+        <span class="meta-chip">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          {{ pattern.Status }}
+        </span>
+        <span [class]="getRiskBadgeClass(pattern.RiskLevel)">
+          <i [class]="'bi ' + getRiskIcon(pattern.RiskLevel)" aria-hidden="true"></i>
+          {{ getRiskLabel(pattern.RiskLevel) }}
+        </span>
+      </div>
+
+      @if (isSelected(pattern)) {
+        <div class="pattern-card__selected-indicator" aria-hidden="true">
+          <i class="bi bi-chevron-right"></i>
+        </div>
+      }
+    </button>
+  } @empty {
+    <div class="empty-state" role="status">
+      <p class="mb-0 text-body-secondary">Aucune figure analysée.</p>
+    </div>
+  }
+</div>

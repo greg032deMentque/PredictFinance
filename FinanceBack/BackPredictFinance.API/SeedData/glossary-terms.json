@@ -1,0 +1,152 @@
+[
+  {
+    "Term": "Analyse technique",
+    "NormalizedTerm": "analyse technique",
+    "Definition": "Méthode d'évaluation des titres financiers fondée sur l'étude des cours passés et des volumes échangés, sans référence aux fondamentaux de l'entreprise. Elle repose sur l'idée que l'histoire se répète et que les prix anticipent toute l'information disponible.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Tendance haussière",
+    "NormalizedTerm": "tendance haussiere",
+    "Definition": "Mouvement durable à la hausse d'un cours, caractérisé par une succession de plus hauts et de plus bas croissants. Une tendance haussière est confirmée tant que ces critères restent valides.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Tendance baissière",
+    "NormalizedTerm": "tendance baissiere",
+    "Definition": "Mouvement durable à la baisse d'un cours, caractérisé par une succession de plus hauts et de plus bas décroissants. Elle est remise en cause par la cassure d'un plus haut précédent.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Support",
+    "NormalizedTerm": "support",
+    "Definition": "Niveau de prix sous le cours actuel où la pression acheteuse a historiquement dominé, freinant les baisses. Plus un support a été touché sans céder, plus il est jugé solide.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Résistance",
+    "NormalizedTerm": "resistance",
+    "Definition": "Niveau de prix au-dessus du cours actuel où la pression vendeuse a historiquement dominé, freinant les hausses. La cassure d'une résistance peut déclencher une accélération haussière.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Cassure (breakout)",
+    "NormalizedTerm": "cassure (breakout)",
+    "Definition": "Franchissement net d'un niveau de support ou de résistance par le cours, généralement accompagné d'un volume significatif. Une cassure valide est souvent le point d'entrée ou de sortie pour les traders.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Retracement",
+    "NormalizedTerm": "retracement",
+    "Definition": "Correction temporaire d'un cours dans le sens contraire à la tendance principale, avant une reprise du mouvement initial. Les niveaux de Fibonacci (38,2 %, 50 %, 61,8 %) sont souvent utilisés pour anticiper les zones de retracement.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Figure chartiste",
+    "NormalizedTerm": "figure chartiste",
+    "Definition": "Forme géométrique identifiable sur un graphique de cours qui, selon l'analyse technique, préfigure un mouvement futur probable (continuation ou retournement de tendance).",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Double sommet",
+    "NormalizedTerm": "double sommet",
+    "Definition": "Figure de retournement formée par deux pics successifs à des niveaux proches, séparés par un creux. Sa validation intervient lors de la cassure du creux intermédiaire (ligne de cou), signalant un potentiel retournement baissier.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Double creux",
+    "NormalizedTerm": "double creux",
+    "Definition": "Figure de retournement formée par deux creux successifs à des niveaux proches, séparés par un sommet. Sa validation à la cassure du sommet intermédiaire signale un potentiel retournement haussier.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Tête-épaules",
+    "NormalizedTerm": "tete-epaules",
+    "Definition": "Figure de retournement baissière composée d'un sommet central (la tête) flanqué de deux sommets moins élevés (les épaules). La cassure de la ligne de cou confirme le signal baissier.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Tête-épaules inversé",
+    "NormalizedTerm": "tete-epaules inverse",
+    "Definition": "Figure de retournement haussière constituée d'un creux central (la tête) flanqué de deux creux moins profonds (les épaules). La cassure de la ligne de cou confirme le signal haussier.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Triangle symétrique",
+    "NormalizedTerm": "triangle symetrique",
+    "Definition": "Figure de continuation formée par une convergence de la ligne de plus hauts décroissants et de plus bas croissants. La cassure, souvent dans le sens de la tendance préexistante, est le signal opérationnel.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Drapeau haussier",
+    "NormalizedTerm": "drapeau haussier",
+    "Definition": "Figure de continuation formée après une forte hausse (le mât) par une légère consolidation en canal légèrement descendant (le drapeau). La cassure haussière du canal donne un objectif de cours équivalent à la longueur du mât.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Drapeau baissier",
+    "NormalizedTerm": "drapeau baissier",
+    "Definition": "Figure de continuation formée après une forte baisse (le mât) par une légère consolidation en canal légèrement ascendant (le drapeau). La cassure baissière du canal donne un objectif équivalent à la longueur du mât.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Rectangle",
+    "NormalizedTerm": "rectangle",
+    "Definition": "Figure de continuation délimitée par deux lignes horizontales parallèles (support et résistance) entre lesquelles le cours oscille. La cassure de l'une de ces limites indique la reprise probable de la tendance antérieure.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "RSI (Relative Strength Index)",
+    "NormalizedTerm": "rsi (relative strength index)",
+    "Definition": "Oscillateur de momentum sur 14 séances mesurant la vitesse et l'amplitude des variations de cours. Valeurs sous 30 : zone de survente (signal haussier potentiel) ; au-dessus de 70 : zone de surachat (signal baissier potentiel).",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "MACD",
+    "NormalizedTerm": "macd",
+    "Definition": "Indicateur de suivi de tendance basé sur la différence entre deux moyennes mobiles exponentielles (12 et 26 périodes), lissée par une troisième (9 périodes). Le croisement de la ligne MACD et de la ligne signal génère des signaux d'achat ou de vente.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Bandes de Bollinger",
+    "NormalizedTerm": "bandes de bollinger",
+    "Definition": "Enveloppe de volatilité formée par une moyenne mobile (20 séances) encadrée de deux bandes à ± 2 écarts-types. Un cours en dehors des bandes signale une volatilité anormale ; un rétrécissement des bandes précède souvent un fort mouvement directionnel.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Moyenne mobile (MM)",
+    "NormalizedTerm": "moyenne mobile (mm)",
+    "Definition": "Calcul de la moyenne des cours de clôture sur N séances glissantes, permettant de lisser les fluctuations et d'identifier la tendance. Les MM 20, 50 et 200 séances sont les plus utilisées.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Volume",
+    "NormalizedTerm": "volume",
+    "Definition": "Nombre de titres échangés durant une séance. Un mouvement de cours accompagné d'un volume élevé est généralement considéré comme plus fiable. À l'inverse, une cassure sur faible volume est souvent suspecte.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "OBV (On-Balance Volume)",
+    "NormalizedTerm": "obv (on-balance volume)",
+    "Definition": "Indicateur cumulatif qui additionne le volume lors des séances haussières et le soustrait lors des séances baissières. Une divergence entre l'OBV et le cours peut anticiper un retournement de tendance.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Niveaux de Fibonacci",
+    "NormalizedTerm": "niveaux de fibonacci",
+    "Definition": "Ratios mathématiques (23,6 %, 38,2 %, 50 %, 61,8 %, 78,6 %) utilisés pour identifier des zones de support ou de résistance potentielles à l'issue d'un retracement. Ils sont tracés entre un point bas et un point haut significatifs.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Stop loss",
+    "NormalizedTerm": "stop loss",
+    "Definition": "Ordre de vente déclenché automatiquement lorsque le cours atteint un seuil prédéfini, permettant de limiter les pertes sur une position. Son placement est généralement calculé en référence à un niveau de support ou de résistance.",
+    "Category": "AnalyseTechnique"
+  },
+  {
+    "Term": "Objectif de cours",
+    "NormalizedTerm": "objectif de cours",
+    "Definition": "Niveau de prix cible calculé à partir d'une figure chartiste. Pour les figures en V ou W (double creux/sommet, tête-épaules), l'objectif est souvent la hauteur de la figure projetée depuis la cassure de la ligne de cou.",
+    "Category": "AnalyseTechnique"
+  }
+]

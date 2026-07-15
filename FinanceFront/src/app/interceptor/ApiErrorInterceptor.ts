@@ -4,91 +4,32 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ToastService } from '@app/services/toastr.service';
 
-type ApiClientErrorResponse = {
+interface ApiClientErrorResponse {
   statusCode?: number;
   traceId?: string;
   message?: string;
-  title?: string;
-  detail?: string | null;
   errors?: string[];
-};
-
-function extractTraceId(
-  err: HttpErrorResponse,
-  body: ApiClientErrorResponse | string | null | undefined
-): string {
-  if (body && typeof body === 'object') {
-    const traceId = (body.traceId ?? '').trim();
-    if (traceId.length > 0) {
-      return traceId;
-    }
-  }
-  return (err.headers.get('X-Trace-Id') ?? '').trim();
-}
-
-function withTraceId(message: string, traceId: string): string {
-  return traceId ? `${message} (ref: ${traceId})` : message;
 }
 
 function getGenericMessage(status: number): string {
   switch (status) {
-    case 400:
-      return 'Requête invalide.';
-    case 401:
-      return 'Veuillez vous reconnecter.';
-    case 403:
-      return 'Action non autorisée.';
-    case 404:
-      return 'Ressource introuvable.';
-    case 409:
-      return 'Conflit sur la ressource.';
-    case 422:
-      return 'Données invalides.';
-    case 429:
-      return 'Trop de requêtes. Patientez un instant.';
-    default:
-      return status >= 500 ? 'Service momentanément indisponible.' : 'Une erreur est survenue.';
+    case 400: return 'Requête invalide.';
+    case 401: return 'Veuillez vous reconnecter.';
+    case 403: return 'Action non autorisée.';
+    case 409: return 'Conflit sur la ressource.';
+    case 422: return 'Données invalides.';
+    case 429: return 'Trop de requêtes. Patientez un instant.';
+    case 504: return 'La requête a pris trop de temps. Réessayez plus tard.';
+    default: return status >= 500 ? 'Service momentanément indisponible.' : 'Une erreur est survenue.';
   }
 }
 
-function extractMessage(err: unknown): string {
-  if (!(err instanceof HttpErrorResponse)) {
-    return 'Une erreur est survenue.';
-  }
-
-  if (err.status === 0) {
-    return 'Impossible de contacter le serveur. Verifie ta connexion ou l API.';
-  }
-
-  const body = err.error as ApiClientErrorResponse | string | null | undefined;
-  const traceId = extractTraceId(err, body);
-
-  if (typeof body === 'string' && body.trim().length > 0) {
-    return withTraceId(body.trim(), traceId);
-  }
-
+function readTraceId(err: HttpErrorResponse, body: ApiClientErrorResponse | unknown): string {
   if (body && typeof body === 'object') {
-    const apiMessage = (body.message ?? '').trim();
-    const title = (body.title ?? '').trim();
-    const errors = Array.isArray(body.errors)
-      ? body.errors.filter((x) => !!x && x.trim().length > 0)
-      : [];
-
-    if (apiMessage.length > 0) {
-      return withTraceId(apiMessage, traceId);
-    }
-
-    if (errors.length > 0) {
-      const joined = errors.slice(0, 3).join(' | ');
-      return withTraceId(joined, traceId);
-    }
-
-    if (title.length > 0) {
-      return withTraceId(title, traceId);
-    }
+    const traceId = ((body as ApiClientErrorResponse).traceId ?? '').trim();
+    if (traceId.length > 0) return traceId;
   }
-
-  return withTraceId(getGenericMessage(err.status), traceId);
+  return (err.headers.get('X-Trace-Id') ?? '').trim();
 }
 
 export const apiErrorInterceptor: HttpInterceptorFn = (
@@ -99,10 +40,50 @@ export const apiErrorInterceptor: HttpInterceptorFn = (
 
   return next(req).pipe(
     catchError((err: unknown) => {
-      const message = extractMessage(err);
-      if (message) {
-        toastService.error(message);
+      if (!(err instanceof HttpErrorResponse)) {
+        toastService.error('Une erreur est survenue.');
+        return throwError(() => err);
       }
+
+      if (err.status === 0) {
+        if (err.error instanceof ProgressEvent && err.error.type === 'abort') {
+          return throwError(() => err);
+        }
+        toastService.error('Impossible de contacter le serveur. Vérifie ta connexion.');
+        return throwError(() => err);
+      }
+
+      if (err.status === 404) {
+        const traceId = readTraceId(err, err.error);
+        if (traceId) {
+          console.error(`[404] ${req.url} — traceId: ${traceId}`);
+        }
+        return throwError(() => err);
+      }
+
+      const body = err.error as ApiClientErrorResponse | null | undefined;
+      const traceId = readTraceId(err, body);
+
+      if (traceId) {
+        console.error(`[${err.status}] ${req.url} — traceId: ${traceId}`);
+      }
+
+      if (err.status === 400 || err.status === 422) {
+        if (body && Array.isArray(body.errors)) {
+          const validationErrors = body.errors.filter((x) => !!x && x.trim().length > 0);
+          if (validationErrors.length > 0) {
+            toastService.error(validationErrors[0].trim());
+            return throwError(() => err);
+          }
+        }
+        const customMessage = (body?.message ?? '').trim();
+        if (customMessage.length > 0) {
+          toastService.error(customMessage);
+          return throwError(() => err);
+        }
+      }
+
+      toastService.error(getGenericMessage(err.status));
       return throwError(() => err);
     })
   );

@@ -6,3 +6,30 @@
   border-radius: 4px;
   flex-shrink: 0;
 }
+
+.pf-badge-type {
+  background-color: #6c757d;
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 2px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.pf-option {
+  padding: 2px 0;
+}
+
+.pf-option-meta {
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.pf-zero-query-header {
+  border-bottom: 1px solid #e9ecef;
+  font-weight: 500;
+}
+
+.pf-filter-select {
+  max-width: 150px;
+}

@@ -132,7 +132,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .ToListAsync(ct);
 
             var peaStatus = await _projectionService.GetLatestPeaEligibilityStatusAsync(userAsset.AssetId, ct);
-            var items = new List<InstrumentHistoryItemViewModel>(analysisRuns.Count);
+            var items = new List<HistoryItemViewModel>(analysisRuns.Count);
             foreach (var analysisRun in analysisRuns)
             {
                 var snapshot = _projectionService.TryReadSnapshot(analysisRun.RawPayload);
@@ -142,24 +142,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 }
 
                 var historyItem = _projectionService.BuildHistoryItem(analysisRun.Asset, analysisRun.Id, snapshot, peaStatus);
-                items.Add(new InstrumentHistoryItemViewModel
-                {
-                    AnalysisId = historyItem.AnalysisId,
-                    SnapshotId = historyItem.SnapshotId,
-                    TimestampUtc = historyItem.TimestampUtc,
-                    Outcome = historyItem.Outcome,
-                    OutcomeDisplayLabel = historyItem.OutcomeDisplayLabel,
-                    PrimaryPatternLabel = historyItem.PrimaryPatternLabel,
-                    RecommendationSummary = historyItem.RecommendationSummary,
-                    SupportAvailabilitySummary = historyItem.SupportAvailabilitySummary,
-                    PeaEligibilityStatus = historyItem.PeaEligibilityStatus,
-                    PeaSummary = historyItem.PeaSummary,
-                    AnalysisEngineVersion = historyItem.AnalysisEngineVersion,
-                    RecommendationPolicyVersion = historyItem.RecommendationPolicyVersion,
-                    ExplanationPolicyVersion = historyItem.ExplanationPolicyVersion,
-                    DetailUrl = historyItem.DetailUrl,
-                    ComparisonUrl = historyItem.ComparisonUrl
-                });
+                historyItem.Instrument = null;
+                historyItem.HistoryUrl = null;
+                items.Add(historyItem);
             }
 
             return new PagedInstrumentHistoryViewModel

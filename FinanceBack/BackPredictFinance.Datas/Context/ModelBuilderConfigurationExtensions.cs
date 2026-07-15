@@ -12,6 +12,8 @@ namespace BackPredictFinance.Datas.Context
             ConfigureDomainConstraints(modelBuilder);
             ConfigureAnalysisDomain(modelBuilder);
             ConfigureParameterDictionary(modelBuilder);
+            ConfigurePatternDefinitions(modelBuilder);
+            ConfigureAnalysisConceptExplanations(modelBuilder);
             ConfigureWordingGovernance(modelBuilder);
             ConfigureNotifications(modelBuilder);
             ConfigureSignalOutcomes(modelBuilder);
@@ -19,6 +21,27 @@ namespace BackPredictFinance.Datas.Context
             ConfigureEducationDomain(modelBuilder);
             ConfigureContentDomain(modelBuilder);
             ConfigurePortfolios(modelBuilder);
+            ConfigureUserScreenerPresets(modelBuilder);
+        }
+
+        private static void ConfigureUserScreenerPresets(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<UserScreenerPreset>(entity =>
+            {
+                entity.ToTable("UserScreenerPresets");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.UserId).HasMaxLength(450).IsRequired();
+                entity.Property(x => x.Name).HasMaxLength(128).IsRequired();
+                entity.Property(x => x.QueryJson).HasMaxLength(4000).IsRequired();
+
+                entity.HasIndex(x => new { x.UserId, x.IsDeleted });
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
         }
 
         private static void ConfigurePortfolios(ModelBuilder modelBuilder)
@@ -31,6 +54,7 @@ namespace BackPredictFinance.Datas.Context
                 entity.Property(x => x.UserId).HasMaxLength(450).IsRequired();
                 entity.Property(x => x.Name).HasMaxLength(128).IsRequired();
                 entity.Property(x => x.PortfolioType).HasConversion<string>().HasMaxLength(32).IsRequired();
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
 
                 // Unicité du nom par utilisateur, restreinte aux portefeuilles non supprimés :
                 // un nom libéré par soft-delete peut être réutilisé.
@@ -173,6 +197,15 @@ namespace BackPredictFinance.Datas.Context
                 entity.HasIndex(x => new { x.AssetId, x.AsOfUtc });
             });
 
+            modelBuilder.Entity<AssetFundamentalsSnapshot>(entity =>
+            {
+                entity.Property(x => x.MarketCap).HasPrecision(24, 4);
+                entity.Property(x => x.TrailingPE).HasPrecision(9, 4);
+                entity.Property(x => x.DividendYield).HasPrecision(9, 6);
+                entity.Property(x => x.Source).HasMaxLength(64).IsRequired();
+                entity.HasIndex(x => new { x.AssetId, x.AsOfUtc });
+            });
+
             modelBuilder.Entity<AssetCandleSnapshot>(entity =>
             {
                 entity.Property(x => x.Interval).HasMaxLength(16).IsRequired();
@@ -194,6 +227,7 @@ namespace BackPredictFinance.Datas.Context
                 entity.Property(x => x.RawPayload).HasMaxLength(32000);
                 entity.Property(x => x.ErrorMessage).HasMaxLength(2048);
                 entity.HasIndex(x => new { x.UserId, x.StartedAtUtc });
+                entity.HasIndex(x => new { x.AssetId, x.StartedAtUtc });
             });
 
             modelBuilder.Entity<PatternAssessment>(entity =>
@@ -201,6 +235,7 @@ namespace BackPredictFinance.Datas.Context
                 entity.Property(x => x.PatternId).HasMaxLength(128).IsRequired();
                 entity.Property(x => x.Phase).HasMaxLength(64).IsRequired();
                 entity.Property(x => x.ProgressStatus).HasConversion<int>();
+                entity.Property(x => x.Direction).HasConversion<string>().HasMaxLength(16);
                 entity.Property(x => x.Probability).HasPrecision(9, 6);
                 entity.Property(x => x.Confidence).HasPrecision(9, 6);
                 entity.Property(x => x.CurrentPrice).HasPrecision(18, 8);
@@ -250,6 +285,223 @@ namespace BackPredictFinance.Datas.Context
 
                 entity.HasData(BuildSeedEntries());
             });
+        }
+
+        private static void ConfigurePatternDefinitions(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PatternDefinition>(entity =>
+            {
+                entity.HasKey(x => x.PatternId);
+                entity.Property(x => x.PatternId).HasMaxLength(128).IsRequired();
+                entity.Property(x => x.DisplayName).HasMaxLength(160).IsRequired();
+                entity.Property(x => x.Family).HasMaxLength(64).IsRequired();
+                entity.Property(x => x.Description).HasMaxLength(2048).IsRequired();
+                entity.Property(x => x.Direction).HasMaxLength(64).IsRequired();
+                entity.Property(x => x.FamilyLabel).HasMaxLength(64).IsRequired();
+                entity.Property(x => x.DirectionLabel).HasMaxLength(64).IsRequired();
+                entity.Property(x => x.AnalysisNarrative).HasMaxLength(2048).IsRequired();
+                entity.Property(x => x.Reliability).HasPrecision(4, 2);
+                entity.Property(x => x.ReliabilityLabel).HasMaxLength(32).IsRequired();
+
+                entity.HasData(BuildPatternDefinitionSeedEntries());
+            });
+        }
+
+        private static void ConfigureAnalysisConceptExplanations(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<AnalysisConceptExplanation>(entity =>
+            {
+                entity.HasKey(x => x.Code);
+                entity.Property(x => x.Code).HasMaxLength(64).IsRequired();
+                entity.Property(x => x.Label).HasMaxLength(128).IsRequired();
+                entity.Property(x => x.Explanation).HasMaxLength(1024).IsRequired();
+
+                entity.HasData(BuildAnalysisConceptSeedEntries());
+            });
+        }
+
+        private static AnalysisConceptExplanation[] BuildAnalysisConceptSeedEntries()
+        {
+            return
+            [
+                new AnalysisConceptExplanation
+                {
+                    Code = "support",
+                    Label = "Support",
+                    Explanation = "Niveau de prix situé sous le cours où les achats ont tendance à l'emporter, freinant la baisse. Plus il a été touché sans céder, plus il est jugé solide."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "resistance",
+                    Label = "Résistance",
+                    Explanation = "Niveau de prix situé au-dessus du cours où les ventes ont tendance à l'emporter, freinant la hausse. Une cassure franche peut ouvrir la voie à une poursuite du mouvement."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "touches",
+                    Label = "Touches",
+                    Explanation = "Nombre de fois où le cours est venu tester un niveau sans le franchir. Un niveau souvent touché est considéré comme plus significatif."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "strength",
+                    Label = "Force",
+                    Explanation = "Estimation de la solidité d'un niveau, fondée notamment sur le nombre de touches et leur netteté. Plus la force est élevée, plus le niveau est jugé fiable."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "double_zone",
+                    Label = "Zone « Double »",
+                    Explanation = "Niveau qui agit tantôt comme support, tantôt comme résistance selon la position du cours. Sa rupture est souvent surveillée de près."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "continuation",
+                    Label = "Continuation",
+                    Explanation = "Figure qui suggère une simple pause avant la reprise de la tendance déjà en place (hausse ou baisse)."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "reversal",
+                    Label = "Retournement",
+                    Explanation = "Figure qui suggère un changement de direction de la tendance en cours."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "bullish",
+                    Label = "Haussier",
+                    Explanation = "Orientation favorable à une hausse du cours : la figure anticipe une progression."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "bearish",
+                    Label = "Baissier",
+                    Explanation = "Orientation favorable à une baisse du cours : la figure anticipe un recul."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "trendfollowing",
+                    Label = "Suit la tendance",
+                    Explanation = "La figure ne donne pas de direction propre : elle anticipe la poursuite du mouvement (hausse ou baisse) déjà en place avant son apparition."
+                },
+                new AnalysisConceptExplanation
+                {
+                    Code = "reliability",
+                    Label = "Fiabilité historique",
+                    Explanation = "Taux de réussite observé sur un large échantillon passé pour ce type de figure (source Bulkowski). Plus il est élevé, plus la figure tend à se concrétiser une fois confirmée — ce n'est jamais une garantie."
+                }
+            ];
+        }
+
+        private static PatternDefinition[] BuildPatternDefinitionSeedEntries()
+        {
+            return
+            [
+                new PatternDefinition
+                {
+                    PatternId = "RECTANGLE_CONTINUATION",
+                    DisplayName = "Rectangle de continuation",
+                    Family = "continuation",
+                    Description = "Phase de consolidation horizontale entre un support et une résistance parallèles. La figure se valide lorsque le cours sort de la zone dans le sens de la tendance précédente, suggérant une reprise de celle-ci.",
+                    Direction = "TrendFollowing",
+                    FamilyLabel = "Continuation de tendance",
+                    DirectionLabel = "Suit la tendance",
+                    AnalysisNarrative = "Tant que le cours évolue dans le rectangle, la tendance est en pause : l'analyse surveille la sortie de zone pour confirmer la reprise dans le sens initial.",
+                    Reliability = 0.68m,
+                    ReliabilityLabel = "Modérée"
+                },
+                new PatternDefinition
+                {
+                    PatternId = "SYMMETRICAL_TRIANGLE_CONTINUATION",
+                    DisplayName = "Triangle symétrique de continuation",
+                    Family = "continuation",
+                    Description = "Resserrement progressif des cours entre une ligne de plus hauts décroissants et une ligne de plus bas croissants. La figure se valide lorsque le cours franchit l'un des côtés dans le sens de la tendance établie.",
+                    Direction = "TrendFollowing",
+                    FamilyLabel = "Continuation de tendance",
+                    DirectionLabel = "Suit la tendance",
+                    AnalysisNarrative = "L'analyse suit le resserrement des cours et attend la cassure d'un côté du triangle pour valider la poursuite de la tendance en place.",
+                    Reliability = 0.54m,
+                    ReliabilityLabel = "Faible"
+                },
+                new PatternDefinition
+                {
+                    PatternId = "BULL_FLAG_CONTINUATION",
+                    DisplayName = "Drapeau haussier",
+                    Family = "continuation",
+                    Description = "Brève phase de respiration baissière ou horizontale après une forte impulsion haussière. La figure se valide sur une cassure à la hausse, signalant la reprise probable du mouvement initial.",
+                    Direction = "Bullish",
+                    FamilyLabel = "Continuation de tendance",
+                    DirectionLabel = "Haussière",
+                    AnalysisNarrative = "Après une forte hausse, l'analyse évalue si la respiration en cours débouche sur une nouvelle jambe haussière une fois le drapeau cassé à la hausse.",
+                    Reliability = 0.67m,
+                    ReliabilityLabel = "Modérée"
+                },
+                new PatternDefinition
+                {
+                    PatternId = "BEAR_FLAG_CONTINUATION",
+                    DisplayName = "Drapeau baissier",
+                    Family = "continuation",
+                    Description = "Brève phase de rebond ou horizontale après une forte impulsion baissière. La figure se valide sur une cassure à la baisse, signalant la reprise probable du mouvement de baisse.",
+                    Direction = "Bearish",
+                    FamilyLabel = "Continuation de tendance",
+                    DirectionLabel = "Baissière",
+                    AnalysisNarrative = "Après une forte baisse, l'analyse évalue si le rebond en cours laisse place à une nouvelle jambe baissière une fois le drapeau cassé à la baisse.",
+                    Reliability = 0.67m,
+                    ReliabilityLabel = "Modérée"
+                },
+                new PatternDefinition
+                {
+                    PatternId = "DOUBLE_BOTTOM",
+                    DisplayName = "Double creux",
+                    Family = "reversal",
+                    Description = "Deux creux de niveau équivalent séparés par un rebond intermédiaire, dessinant un « W ». Figure de retournement haussier confirmée par le franchissement de la ligne de cou (le sommet du rebond).",
+                    Direction = "Bullish",
+                    FamilyLabel = "Retournement",
+                    DirectionLabel = "Haussière",
+                    AnalysisNarrative = "L'analyse compare les deux creux et surveille le franchissement de la ligne de cou, signal d'un possible retournement haussier.",
+                    Reliability = 0.65m,
+                    ReliabilityLabel = "Modérée"
+                },
+                new PatternDefinition
+                {
+                    PatternId = "DOUBLE_TOP",
+                    DisplayName = "Double sommet",
+                    Family = "reversal",
+                    Description = "Deux sommets de niveau équivalent séparés par un creux intermédiaire, dessinant un « M ». Figure de retournement baissier confirmée par la cassure de la ligne de cou (le bas du creux).",
+                    Direction = "Bearish",
+                    FamilyLabel = "Retournement",
+                    DirectionLabel = "Baissière",
+                    AnalysisNarrative = "L'analyse compare les deux sommets et surveille la cassure de la ligne de cou, signal d'un possible retournement baissier.",
+                    Reliability = 0.64m,
+                    ReliabilityLabel = "Modérée"
+                },
+                new PatternDefinition
+                {
+                    PatternId = "INVERSE_HEAD_AND_SHOULDERS",
+                    DisplayName = "Tête-épaules inversé",
+                    Family = "reversal",
+                    Description = "Structure en trois creux dont celui du centre (la tête) est plus profond que les deux autres (les épaules). Figure de retournement haussier confirmée par le franchissement de la ligne de cou.",
+                    Direction = "Bullish",
+                    FamilyLabel = "Retournement",
+                    DirectionLabel = "Haussière",
+                    AnalysisNarrative = "L'analyse identifie la structure épaule-tête-épaule inversée et attend le franchissement de la ligne de cou pour valider un retournement haussier.",
+                    Reliability = 0.71m,
+                    ReliabilityLabel = "Fiable"
+                },
+                new PatternDefinition
+                {
+                    PatternId = "HEAD_AND_SHOULDERS",
+                    DisplayName = "Tête-épaules",
+                    Family = "reversal",
+                    Description = "Structure en trois sommets dont celui du centre (la tête) est plus haut que les deux autres (les épaules). Figure de retournement baissier confirmée par la cassure de la ligne de cou.",
+                    Direction = "Bearish",
+                    FamilyLabel = "Retournement",
+                    DirectionLabel = "Baissière",
+                    AnalysisNarrative = "L'analyse identifie la structure épaule-tête-épaule et attend la cassure de la ligne de cou pour valider un retournement baissier.",
+                    Reliability = 0.51m,
+                    ReliabilityLabel = "Faible"
+                }
+            ];
         }
 
         private static void ConfigureWordingGovernance(ModelBuilder modelBuilder)
@@ -525,6 +777,7 @@ namespace BackPredictFinance.Datas.Context
                 entity.Property(x => x.BodyMarkdown).HasMaxLength(16000).IsRequired();
                 entity.HasIndex(x => x.Slug).IsUnique();
                 entity.HasIndex(x => new { x.IsActive, x.IsPublished, x.DisplayOrder });
+                entity.HasIndex(x => x.IsDeleted);
 
                 entity.HasData(BuildEducationArticleSeedEntries());
             });
@@ -539,6 +792,7 @@ namespace BackPredictFinance.Datas.Context
                 entity.Property(x => x.Category).HasConversion<string>().HasMaxLength(32).IsRequired();
                 entity.HasIndex(x => x.NormalizedTerm);
                 entity.HasIndex(x => new { x.IsActive, x.IsPublished, x.Category });
+                entity.HasIndex(x => x.IsDeleted);
 
                 entity.HasData(BuildGlossaryTermSeedEntries());
             });

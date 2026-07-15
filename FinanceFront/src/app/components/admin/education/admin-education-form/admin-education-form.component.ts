@@ -9,6 +9,7 @@ import { EducationUpsertRequest } from '../../../../Models/client-finance-models
 import { EducationService } from '../../../../services/education.service';
 import { ToastService } from '../../../../services/toastr.service';
 import { GeneralService } from '../../../../services/general-service.service';
+import { BackButtonComponent } from '../../../shared/back-button/back-button.component';
 
 const PRODUCT_TYPES = [
   { value: 'General', label: 'Général' },
@@ -21,7 +22,7 @@ const PRODUCT_TYPES = [
 @Component({
   selector: 'app-admin-education-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, BackButtonComponent],
   templateUrl: './admin-education-form.component.html',
   styleUrl: './admin-education-form.component.scss'
 })

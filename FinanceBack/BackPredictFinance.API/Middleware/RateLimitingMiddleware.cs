@@ -10,8 +10,10 @@ namespace BackPredictFinance.API.Middleware
         private readonly RequestDelegate _next;
         private readonly ILogger<RateLimitingMiddleware> _logger;
         private readonly IMemoryCache _cache;
-        private const int LIMIT = 25;
+        private const int LIMIT = 200;
         private readonly TimeSpan PERIOD = TimeSpan.FromMinutes(1);
+
+        private sealed record WindowState(int Count, DateTime WindowStart);
 
         public RateLimitingMiddleware(RequestDelegate next, ILogger<RateLimitingMiddleware> logger, IMemoryCache cache)
         {
@@ -23,18 +25,22 @@ namespace BackPredictFinance.API.Middleware
         public async Task Invoke(HttpContext context)
         {
             var key = $"RateLimit_{context.Connection.RemoteIpAddress}";
-            int count = 0;
-            if (_cache.TryGetValue(key, out int existingCount))
+            var now = DateTime.UtcNow;
+
+            WindowState state;
+            if (_cache.TryGetValue(key, out WindowState? existing) && existing != null && now - existing.WindowStart < PERIOD)
             {
-                count = existingCount;
+                state = existing with { Count = existing.Count + 1 };
             }
-            count++;
+            else
+            {
+                state = new WindowState(1, now);
+            }
 
-            // Store count in cache
-            var cacheEntryOptions = new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = PERIOD };
-            _cache.Set(key, count, cacheEntryOptions);
+            var remaining = PERIOD - (now - state.WindowStart);
+            _cache.Set(key, state, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = remaining });
 
-            if (count > LIMIT)
+            if (state.Count > LIMIT)
             {
                 _logger.LogWarning("Rate limit exceeded for {IP}.", context.Connection.RemoteIpAddress);
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;

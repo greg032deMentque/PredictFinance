@@ -1,7 +1,10 @@
 using BackPredictFinance.Datas.Context;
+using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.AnalysisV1;
 using Microsoft.EntityFrameworkCore;
+using BackPredictFinance.Services.ClientFinanceServices;
+using System.Net;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
@@ -11,9 +14,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 public interface IPortfolioContextLoader
 {
     /// <summary>
-    /// Tente de reconstruire le contexte portefeuille d'un utilisateur pour un instrument.
+    /// Tente de reconstruire le contexte portefeuille courant d'un utilisateur pour un instrument.
     /// </summary>
-    Task<PortfolioContext?> TryLoadAsync(string userId, string instrumentId, DateOnly? asOfDate, CancellationToken ct = default);
+    Task<PortfolioContext?> TryLoadAsync(string userId, string instrumentId, CancellationToken ct = default);
 }
 
 
@@ -29,7 +32,7 @@ public interface IPortfolioContextLoader
             _financeDbContext = financeDbContext;
         }
 
-        public async Task<PortfolioContext?> TryLoadAsync(string userId, string instrumentId, DateOnly? asOfDate, CancellationToken ct = default)
+        public async Task<PortfolioContext?> TryLoadAsync(string userId, string instrumentId, CancellationToken ct = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(userId);
             ArgumentException.ThrowIfNullOrWhiteSpace(instrumentId);
@@ -49,12 +52,6 @@ public interface IPortfolioContextLoader
                 .AsNoTracking()
                 .Where(x => x.UserAssetId == userAsset.Id);
 
-            if (asOfDate.HasValue)
-            {
-                var endOfDayUtc = DateTime.SpecifyKind(asOfDate.Value.ToDateTime(TimeOnly.MaxValue), DateTimeKind.Utc);
-                transactionQuery = transactionQuery.Where(x => x.TimestampUtc <= endOfDayUtc);
-            }
-
             var transactions = await transactionQuery
                 .OrderBy(x => x.TimestampUtc)
                 .ThenBy(x => x.Id)
@@ -63,7 +60,10 @@ public interface IPortfolioContextLoader
             if (transactions.Count == 0)
             {
                 return userAsset.Quantity > 0m
-                    ? throw new InvalidOperationException("Le contexte portefeuille ne peut pas etre reconstruit sans historique de transactions.")
+                    ? throw new CustomException(
+                        $"Portfolio context inconsistent for user {userId}, asset {instrumentId}: quantity held without any transaction history.",
+                        "Impossible de reconstruire le contexte de portefeuille pour cet instrument.",
+                        statusCode: HttpStatusCode.UnprocessableEntity)
                     : BuildEmptyContext(userId, instrumentId, currencyCode);
             }
 
@@ -109,7 +109,10 @@ public interface IPortfolioContextLoader
 
                 if (remainingToConsume > 0m)
                 {
-                    throw new InvalidOperationException("Le contexte portefeuille FIFO est incoherent: une vente depasse les quantites achetees disponibles.");
+                    throw new CustomException(
+                        $"Portfolio FIFO reconstruction inconsistent for user {userId}, asset {instrumentId}: a sell exceeds the available bought quantity.",
+                        "Le contexte de portefeuille pour cet instrument est incohérent.",
+                        statusCode: HttpStatusCode.UnprocessableEntity);
                 }
             }
 
@@ -133,7 +136,10 @@ public interface IPortfolioContextLoader
             var totalQuantityHeld = remainingOpenLines.Sum(x => x.Quantity);
             if (totalQuantityHeld != userAsset.Quantity)
             {
-                throw new InvalidOperationException("Le contexte portefeuille FIFO est incoherent: la quantite reconstruite ne correspond pas a la quantite agregee persistee.");
+                throw new CustomException(
+                    $"Portfolio FIFO reconstruction inconsistent for user {userId}, asset {instrumentId}: reconstructed quantity does not match the persisted aggregate quantity.",
+                    "Le contexte de portefeuille pour cet instrument est incohérent.",
+                    statusCode: HttpStatusCode.UnprocessableEntity);
             }
 
             var totalCost = remainingOpenLines.Sum(x => (x.Quantity * x.UnitBuyPrice) + x.FeesAmount);

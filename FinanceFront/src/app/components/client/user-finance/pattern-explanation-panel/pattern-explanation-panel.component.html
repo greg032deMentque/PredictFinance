@@ -1,0 +1,164 @@
+@if (pattern) {
+  <div class="explanation-panel" role="region" [attr.aria-label]="'Détails : ' + pattern.DisplayName">
+
+    <!-- Niveaux clés -->
+    @if (pattern.HasRiskPlan || pattern.ValidationLevel !== null || pattern.InvalidationLevel !== null) {
+      <div class="panel-section">
+        <h3 class="panel-section__title">
+          <i class="bi bi-bullseye" aria-hidden="true"></i>
+          Niveaux clés
+        </h3>
+        <div class="levels-grid">
+          @if (pattern.SuggestedTakeProfit !== null) {
+            <div class="level-item level-item--target">
+              <span class="level-item__icon bi bi-arrow-up-circle-fill" aria-hidden="true"></span>
+              <div>
+                <span class="level-item__label">Cible (—)</span>
+                <strong class="level-item__value">{{ pattern.SuggestedTakeProfit | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+              </div>
+            </div>
+          }
+          @if (pattern.ValidationLevel !== null) {
+            <div class="level-item level-item--validation">
+              <span class="level-item__icon bi bi-check2-circle" aria-hidden="true"></span>
+              <div>
+                <span class="level-item__label">Validation (- - -)</span>
+                <strong class="level-item__value">{{ pattern.ValidationLevel | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+              </div>
+            </div>
+          }
+          @if (pattern.InvalidationLevel !== null) {
+            <div class="level-item level-item--invalidation">
+              <span class="level-item__icon bi bi-x-circle-fill" aria-hidden="true"></span>
+              <div>
+                <span class="level-item__label">Invalidation (· · ·)</span>
+                <strong class="level-item__value">{{ pattern.InvalidationLevel | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+              </div>
+            </div>
+          }
+          @if (pattern.SuggestedStopLoss !== null) {
+            <div class="level-item level-item--stop">
+              <span class="level-item__icon bi bi-shield-x" aria-hidden="true"></span>
+              <div>
+                <span class="level-item__label">Stop-loss (.. ..)</span>
+                <strong class="level-item__value">{{ pattern.SuggestedStopLoss | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+              </div>
+            </div>
+          }
+          @if (pattern.RiskRewardRatio !== null) {
+            <div class="level-item level-item--rr">
+              <span class="level-item__icon bi bi-graph-up-arrow" aria-hidden="true"></span>
+              <div>
+                <span class="level-item__label">Risque / Rendement</span>
+                <strong class="level-item__value">{{ riskRewardLabel }}</strong>
+              </div>
+            </div>
+          }
+        </div>
+        @if (pattern.PositioningNote) {
+          <p class="positioning-note">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            {{ pattern.PositioningNote }}
+          </p>
+        }
+      </div>
+    }
+
+    <!-- Raisons du score (scoreReasons) -->
+    @if (pattern.ScoreReasons.length > 0) {
+      <div class="panel-section">
+        <h3 class="panel-section__title">
+          <i class="bi bi-list-check" aria-hidden="true"></i>
+          Critères de score
+        </h3>
+        <ul class="score-reasons" aria-label="Critères ayant contribué au score">
+          @for (reason of pattern.ScoreReasons; track reason) {
+            <li class="score-reason">
+              <i class="bi bi-check-lg score-reason__icon" aria-hidden="true"></i>
+              {{ reason }}
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    <!-- Explication pédagogique -->
+    @if (pattern.WhyListed || pattern.PedagogicalSummary) {
+      <div class="panel-section">
+        <h3 class="panel-section__title">
+          <i class="bi bi-book" aria-hidden="true"></i>
+          Pourquoi cette figure ?
+        </h3>
+        @if (pattern.WhyListed) {
+          <p class="pedagogy-text">{{ pattern.WhyListed }}</p>
+        }
+        @if (pattern.PedagogicalSummary) {
+          <p class="pedagogy-text text-body-secondary">{{ pattern.PedagogicalSummary }}</p>
+        }
+      </div>
+    }
+
+    <!-- Limites et ambiguïtés — affichées franchement -->
+    @if (pattern.AmbiguityNote || pattern.LimitationsNote) {
+      <div class="panel-section panel-section--warning" role="note" aria-label="Limites de cette analyse">
+        <h3 class="panel-section__title">
+          <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+          Limites de cette analyse
+        </h3>
+        @if (pattern.AmbiguityNote) {
+          <div class="limit-item">
+            <span class="limit-item__label">Ambiguïté :</span>
+            <p class="mb-0">{{ pattern.AmbiguityNote }}</p>
+          </div>
+        }
+        @if (pattern.LimitationsNote) {
+          <div class="limit-item">
+            <span class="limit-item__label">Contrainte :</span>
+            <p class="mb-0">{{ pattern.LimitationsNote }}</p>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Jauge qualité données -->
+    @if (analysisWindow) {
+      <div class="panel-section">
+        <h3 class="panel-section__title">
+          <i class="bi bi-database-check" aria-hidden="true"></i>
+          Qualité des données
+        </h3>
+        <div class="quality-gauge">
+          <div class="quality-gauge__labels">
+            <span>{{ dataQualityLabel }}</span>
+            <!-- Valeurs chiffrées toujours présentes (WCAG — pas que la barre) -->
+            <span class="quality-gauge__count">
+              {{ analysisWindow.ActualCandles }} / {{ analysisWindow.RequiredCandles }} bougies
+            </span>
+          </div>
+          <div
+            class="quality-bar"
+            role="progressbar"
+            [attr.aria-valuenow]="dataQualityPct"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            [attr.aria-label]="'Qualité des données : ' + analysisWindow.ActualCandles + ' bougies sur ' + analysisWindow.RequiredCandles + ' requises (' + dataQualityPct + '%)'"
+          >
+            <div
+              class="quality-bar__fill"
+              [class]="dataQualityBarClass"
+              [style.width.%]="dataQualityPct"
+            ></div>
+          </div>
+          <small class="text-body-secondary">
+            Intervalle : {{ analysisWindow.Interval }} ·
+            Du {{ analysisWindow.StartDate | date: 'dd/MM/yyyy' }} au {{ analysisWindow.EndDate | date: 'dd/MM/yyyy' }}
+          </small>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="empty-state" role="status">
+    <p class="mb-0 text-body-secondary">Sélectionne une figure dans la liste pour voir son explication détaillée.</p>
+  </div>
+}

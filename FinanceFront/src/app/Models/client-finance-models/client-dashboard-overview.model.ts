@@ -4,7 +4,6 @@
   OpenPositions = 0;
   AnalysesThisWeek = 0;
   WatchlistCount = 0;
-  RecommendationWinRate = 0;
   NextMarketOpenAt = '';
   TotalInvested = 0;
   TotalOutstanding = 0;

@@ -8,6 +8,12 @@ namespace BackPredictFinance.Patterns.Common
         /// <summary>Periode standard de l'ATR de Wilder.</summary>
         public const int DefaultAtrPeriod = 14;
 
+        /// <summary>
+        /// Nombre de bougies a demander au fournisseur de donnees pour couvrir la fenetre
+        /// d'analyse. Au moins <paramref name="minimumRequiredCandles"/> (seuil de detection du
+        /// pattern), plafonne a 500 pour eviter une requete disproportionnee sur une fenetre
+        /// calendaire tres large.
+        /// </summary>
         public static int BuildRequestedCandleCount(DateOnly historyStartDate, DateOnly historyEndDate, int minimumRequiredCandles)
         {
             var calendarSpan = historyEndDate.DayNumber - historyStartDate.DayNumber + 1;
@@ -39,6 +45,10 @@ namespace BackPredictFinance.Patterns.Common
             return (endPrice - startPrice) / startPrice;
         }
 
+        /// <summary>
+        /// Ecart relatif entre deux valeurs, normalise par la premiere valeur non nulle rencontree
+        /// (a puis b en repli) pour rester utilisable meme quand l'une des deux vaut zero.
+        /// </summary>
         public static decimal ComputeRelativeGap(decimal a, decimal b)
         {
             var denominator = Math.Abs(a) > 0m ? Math.Abs(a) : Math.Abs(b);
@@ -179,6 +189,12 @@ namespace BackPredictFinance.Patterns.Common
             return candles.Average(candle => candle.Close);
         }
 
+        /// <summary>
+        /// Construit les points structurels (bornes, sommets/creux, breakout...) affiches pour un
+        /// pattern. Filtre les prix a zero ou negatifs et les types vides : un prix invalide
+        /// (ex. figure pas encore assez formee pour avoir une valeur exploitable) est ecarte plutot
+        /// que remonte tel quel a l'affichage.
+        /// </summary>
         public static List<PatternStructuralPoint> BuildBoundaryPoints(DateTime timestamp, params (string PointType, decimal Price)[] points)
         {
             return points
@@ -200,6 +216,99 @@ namespace BackPredictFinance.Patterns.Common
             }
 
             return candles.Skip(candles.Count - count).ToList();
+        }
+
+        /// <summary>
+        /// Retourne les indices des pivots hauts par fractale N-barres.
+        /// Un pivot haut en i : candles[i].High est >= High de toutes les bougies dans [i-n, i+n].
+        /// Seuls les pivots dont l'indice de confirmation (i+n) est strictement inferieur a
+        /// candles.Count sont retournes — les N dernieres bougies ne sont jamais confirmees
+        /// (prevention du look-ahead bias).
+        /// </summary>
+        public static List<int> FindPivotHighs(IReadOnlyList<TickerCandle> candles, int n = PatternThresholds.PivotHalfWindow)
+        {
+            var pivots = new List<int>();
+            var safeN = Math.Max(1, n);
+
+            for (var i = safeN; i < candles.Count - safeN; i++)
+            {
+                var candidateHigh = candles[i].High;
+                var isPivot = true;
+
+                for (var j = i - safeN; j <= i + safeN; j++)
+                {
+                    if (j == i) continue;
+                    if (candles[j].High > candidateHigh)
+                    {
+                        isPivot = false;
+                        break;
+                    }
+                }
+
+                if (isPivot) pivots.Add(i);
+            }
+
+            return pivots;
+        }
+
+        /// <summary>
+        /// Retourne les indices des pivots bas par fractale N-barres.
+        /// Meme logique que FindPivotHighs avec Low. Les N dernieres bougies ne sont jamais
+        /// retournees (prevention du look-ahead bias).
+        /// </summary>
+        public static List<int> FindPivotLows(IReadOnlyList<TickerCandle> candles, int n = PatternThresholds.PivotHalfWindow)
+        {
+            var pivots = new List<int>();
+            var safeN = Math.Max(1, n);
+
+            for (var i = safeN; i < candles.Count - safeN; i++)
+            {
+                var candidateLow = candles[i].Low;
+                var isPivot = true;
+
+                for (var j = i - safeN; j <= i + safeN; j++)
+                {
+                    if (j == i) continue;
+                    if (candles[j].Low < candidateLow)
+                    {
+                        isPivot = false;
+                        break;
+                    }
+                }
+
+                if (isPivot) pivots.Add(i);
+            }
+
+            return pivots;
+        }
+
+        /// <summary>
+        /// Retourne vrai si les deux prix sont consideres egaux a la tolerance pct pres.
+        /// Utilise le plus grand des deux comme denominateur pour etre symetrique.
+        /// </summary>
+        public static bool ArePricesEqual(decimal a, decimal b, decimal tolerancePct = PatternThresholds.DoublePriceTolerance)
+        {
+            var denominator = Math.Max(Math.Abs(a), Math.Abs(b));
+            if (denominator <= 0m) return true;
+            return Math.Abs(a - b) / denominator <= tolerancePct;
+        }
+
+        /// <summary>
+        /// Retourne vrai si le volume des <paramref name="recentBars"/> dernieres bougies
+        /// est superieur au volume moyen de toute la serie.
+        /// Facteur de confiance volume (+0.05) pour les patterns de retournement.
+        /// </summary>
+        public static bool IsVolumeExpanding(IReadOnlyList<TickerCandle> candles, int recentBars = PatternThresholds.PivotHalfWindow)
+        {
+            if (candles.Count <= recentBars) return false;
+            var globalAvg = AverageVolume(candles);
+            if (globalAvg <= 0m) return false;
+            var recentSum = 0m;
+            for (var i = candles.Count - recentBars; i < candles.Count; i++)
+            {
+                recentSum += candles[i].Volume;
+            }
+            return recentSum / recentBars > globalAvg;
         }
     }
 }

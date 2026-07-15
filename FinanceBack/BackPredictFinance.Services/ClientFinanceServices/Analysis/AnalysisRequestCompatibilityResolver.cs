@@ -44,6 +44,12 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             _tickerService = tickerService;
         }
 
+        /// <summary>
+        /// Normalise une requete frontend en <see cref="AnalysisRequest"/> exploitable par le runtime :
+        /// resout les patterns demandes vers des patterns actifs compatibles, fige la date d'analyse
+        /// (AsOfDate/HistoryEndDate) sur le dernier cours connu du fournisseur, et calcule la fenetre
+        /// d'historique necessaire a partir du besoin le plus large parmi les patterns resolus.
+        /// </summary>
         public async Task<AnalysisRequest> ResolveAsync(AnalysisRunRequestViewModel request, string userId, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(request);
@@ -52,7 +58,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             var symbol = NormalizeSymbol(request.Symbol);
             if (string.IsNullOrWhiteSpace(symbol))
             {
-                throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
+                throw new ArgumentException("Le symbole est obligatoire.", nameof(request));
             }
 
             var requestedPatternIds = BuildRequestedPatternIds(request);
@@ -65,7 +71,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             var asOfDate = await ResolveAsOfDateAsync(symbol, ct);
             var asset = await EnsureAssetAsync(symbol, ct);
             var instrument = MapInstrument(asset);
-            var portfolioContext = await _portfolioContextLoader.TryLoadAsync(userId, asset.Id, asOfDate, ct)
+            var portfolioContext = await _portfolioContextLoader.TryLoadAsync(userId, asset.Id, ct)
                 ?? new PortfolioContext
                 {
                     UserId = userId,
@@ -103,6 +109,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 .ToList();
         }
 
+        // AsOfDate (qui devient HistoryEndDate) est fige sur la date du dernier cours connu du
+        // fournisseur, pas sur DateTime.UtcNow : cela borne explicitement la fenetre d'analyse et
+        // evite qu'un calcul en aval n'aille chercher des donnees plus recentes que ce cours.
         private async Task<DateOnly> ResolveAsOfDateAsync(string symbol, CancellationToken ct)
         {
             var quote = await _tickerService.GetQuoteAsync(symbol, ct);
@@ -147,6 +156,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             return asset;
         }
 
+        // Regle d'enrichissement "non destructive" : chaque champ n'est ecrase que s'il est vide en
+        // base ; une donnee deja renseignee (potentiellement corrigee manuellement) n'est jamais
+        // ecrasee par le profil fournisseur, sauf LastProfileSyncUtc qui trace toujours le dernier appel.
         private static void ApplyMarketProfile(Asset asset, MarketAssetProfileData? marketProfile)
         {
             if (marketProfile == null)
@@ -221,6 +233,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             };
         }
 
+        // La fenetre d'historique demandee au fournisseur doit couvrir le besoin le PLUS LARGE parmi
+        // tous les patterns resolus (Max des lookbacks), sinon le pattern le plus gourmand en donnees
+        // se retrouverait avec un historique tronque et un calcul potentiellement errone.
         private static DateOnly BuildHistoryStartDate(DateOnly historyEndDate, IReadOnlyList<ResolvedAnalysisPattern> resolvedPatterns)
         {
             ArgumentNullException.ThrowIfNull(resolvedPatterns);

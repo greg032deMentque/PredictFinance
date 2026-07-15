@@ -1,104 +1,199 @@
-<section class="d-flex flex-column gap-4">
-  <section class="hero">
-    <div class="row g-4 align-items-center">
-      <div class="col-lg-8">
-        <span class="chip bg-white text-dark mb-3"><i class="bi bi-house-door"></i> Accueil</span>
-        <h1 class="display-6 fw-bold mb-3">Votre centre de pilotage quotidien</h1>
-        <p class="mb-4 text-white-50 fs-5">Vos signaux prioritaires, le suivi de vos positions et vos dernières analyses, en un coup d’œil.</p>
-        <div class="d-flex flex-wrap gap-2">
-          <a class="btn btn-light rounded-pill px-4 fw-semibold" [routerLink]="toCommands(userPaths.AnalysisEntry)">Analyser maintenant</a>
-          <a class="btn btn-outline-light rounded-pill px-4" [routerLink]="toCommands(userPaths.Notifications)">Voir les notifications</a>
-        </div>
-      </div>
-      <div class="col-lg-4">
-        <div class="surface bg-white p-4">
-          <div class="fw-bold text-dark mb-3">Règle de lecture</div>
-          <div class="small text-dark mb-3">Commencer par l’urgent, puis arbitrer les positions détenues, puis seulement explorer de nouveaux cas.</div>
-          <a class="btn btn-primary rounded-pill w-100 cta-primary" [routerLink]="toCommands(userPaths.AnalysisEntry)">Voir la watchlist</a>
-        </div>
-      </div>
-    </div>
-  </section>
+<section class="d-flex flex-column gap-3">
 
-  <section class="page-shell" id="urgent-now">
-    <div class="page-heading mb-4">
-      <div class="page-subtitle">
-        <span class="chip chip-navy mb-2"><i class="bi bi-lightning-charge"></i> À traiter</span>
-        <h2 class="h3 fw-bold mb-2">Ce qui demande une attention immédiate</h2>
-        <p class="muted mb-0">Vos positions et signaux à examiner en priorité.</p>
-      </div>
-    </div>
+  <!-- Action bar -->
+  <div class="db-action-bar d-flex align-items-center gap-2 flex-wrap">
+    <a class="btn btn-primary btn-sm" [routerLink]="toCommands(userPaths.AnalysisEntry)">
+      <i class="bi bi-cpu me-1"></i>Analyser
+    </a>
+    <a class="btn btn-outline-secondary btn-sm" [routerLink]="toCommands(userPaths.Finance)">
+      <i class="bi bi-list-check me-1"></i>Watchlist
+    </a>
+    <a class="btn btn-outline-secondary btn-sm" [routerLink]="toCommands(userPaths.Portfolio)">
+      <i class="bi bi-briefcase me-1"></i>Portfolio
+    </a>
+    <a class="btn btn-outline-secondary btn-sm" [routerLink]="toCommands(userPaths.History)">
+      <i class="bi bi-clock-history me-1"></i>Historique
+    </a>
+  </div>
 
-    <div class="kpi-grid">
-      <div class="metric-card">
-        <div class="small muted mb-1">Valeur portefeuille</div>
-        <div class="h3 mb-0">{{ loading ? '...' : (overview.TotalPortfolioValue | currency:'EUR':'symbol':'1.0-0':'fr-FR') }}</div>
-      </div>
-      <div class="metric-card">
-        <div class="small muted mb-1">P/L jour</div>
-        <div class="h3 mb-0" [class]="dayProfitLossClass">{{ loading ? '...' : (overview.DayProfitLoss | currency:'EUR':'symbol':'1.0-0':'fr-FR') }}</div>
-      </div>
-      <div class="metric-card">
-        <div class="small muted mb-1">Positions ouvertes</div>
-        <div class="h3 mb-0">{{ loading ? '...' : overview.OpenPositions }}</div>
-      </div>
-      <div class="metric-card">
-        <div class="small muted mb-1">Watchlist</div>
-        <div class="h3 mb-0">{{ loading ? '...' : overview.WatchlistCount }}</div>
-      </div>
-    </div>
-  </section>
+  <!-- Dashboard grid: flux (left) + rail (right) -->
+  <div class="db-grid">
 
-  <section class="home-data-grid">
-    <div class="page-shell">
-      <div class="page-heading mb-4">
-        <div class="page-subtitle">
-          <span class="chip chip-info mb-2"><i class="bi bi-stars"></i> Aperçu récent</span>
-          <h2 class="h3 fw-bold mb-2">Analyses récentes</h2>
-        </div>
-      </div>
-      @if (recentAnalyses.length === 0) {
-        <div class="empty-state">
-          <div class="empty-state-icon"><i class="bi bi-graph-up-arrow"></i></div>
-          <div class="fw-semibold">Aucune analyse récente</div>
-          <div class="muted">Lance une analyse depuis la page watchlist et portfolio.</div>
-        </div>
-      } @else {
-        <div class="compact-list">
-          @for (analysis of recentAnalyses; track analysis.Id) {
-            <div class="compact-row">
-              <div>
-                <div class="fw-semibold">{{ analysis.Symbol }} · {{ formatPattern(analysis.Pattern) }}</div>
-                <div class="small muted mb-2">{{ formatPhase(analysis.Phase) }}</div>
-                <div class="small muted">{{ analysis.PredictedAt | date:'dd/MM/yyyy HH:mm' }}</div>
+    <!-- LEFT: flux de suivi -->
+    <div class="d-flex flex-column gap-3">
+
+      <!-- Mouvements du jour (bloc indépendant) -->
+      @if (topMovers.length > 0) {
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <p class="db-block-label">
+              <i class="bi bi-graph-up text-success me-1"></i>Mouvements du jour
+            </p>
+            @for (item of topMovers; track item.UserAssetId; let last = $last) {
+              <div class="db-item-row" [class.border-bottom]="!last">
+                <div>
+                  <span class="fw-semibold">{{ item.Symbol }}</span>
+                  <span class="text-muted small ms-2">{{ item.CompanyName }}</span>
+                </div>
+                <div class="text-end">
+                  <div class="small fw-semibold">{{ item.LastPrice | number:'1.2-2' }}</div>
+                  <div class="small"
+                    [class.text-success]="item.DayVariationPct > 0"
+                    [class.text-danger]="item.DayVariationPct < 0"
+                    [class.text-muted]="item.DayVariationPct === 0">
+                    {{ variationSign(item.DayVariationPct) }}{{ item.DayVariationPct | number:'1.1-2' }}&nbsp;%
+                  </div>
+                </div>
               </div>
-              <div class="text-end d-flex flex-column gap-2 align-items-end">
-                <span class="badge" [class]="getBadgeClass(analysis.RecommendationAction)">{{ formatRecommendation(analysis.RecommendationAction) }}</span>
-                <span class="code-chip">{{ analysis.Probability | percent:'1.0-0' }}</span>
-              </div>
-            </div>
-          }
+            }
+          </div>
         </div>
       }
-    </div>
 
-    <div class="right-rail">
-      <div class="page-card">
-        <div class="section-title mb-3">Dernière lecture utile</div>
-        <div class="small muted mb-3">{{ latestInsightSummary }}</div>
-        @if (latestInsight) {
-          <div class="alt-pattern-list">
-            <span class="chip chip-info">{{ latestInsight.Symbol }}</span>
-            <span class="chip chip-navy">{{ formatRecommendation(latestInsight.RecommendationAction) }}</span>
-            <span class="chip chip-warning">{{ latestInsight.ModelStatus || 'n/a' }}</span>
+      <!-- Signaux actifs (bloc indépendant) -->
+      @if (activeSignals.length > 0) {
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <p class="db-block-label">
+              <i class="bi bi-lightning-charge text-warning me-1"></i>Signaux actifs
+            </p>
+            @for (analysis of activeSignals; track analysis.Id; let last = $last) {
+              <div class="db-item-row" [class.border-bottom]="!last">
+                <div>
+                  <div class="fw-semibold">{{ analysis.Symbol }}</div>
+                  <div class="small text-muted">{{ formatPattern(analysis.Pattern) }} · {{ analysis.PredictedAt | date:'dd/MM' }}</div>
+                </div>
+                <div class="text-end d-flex flex-column gap-1 align-items-end">
+                  <span class="badge" [class]="getBadgeClass(analysis.RecommendationAction)">
+                    {{ formatRecommendation(analysis.RecommendationAction) }}
+                  </span>
+                  <a class="small text-primary text-decoration-none"
+                     [routerLink]="toCommands(userPaths.AnalysisDetail(analysis.Id))">
+                    Voir →
+                  </a>
+                </div>
+              </div>
+            }
           </div>
-        }
+        </div>
+      }
+
+      <!-- Analyses récentes (bloc toujours présent) -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <p class="db-block-label d-flex align-items-center gap-2">
+            <span><i class="bi bi-stars me-1"></i>Analyses récentes</span>
+            @if (newSinceLastVisit.length > 0) {
+              <span class="badge text-bg-primary rounded-pill">
+                {{ newSinceLastVisit.length }} nouveau{{ newSinceLastVisit.length > 1 ? 'x' : '' }}
+              </span>
+            }
+          </p>
+          @if (recentAnalyses.length === 0) {
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-graph-up-arrow d-block mb-2 fs-2 opacity-50"></i>
+              <span class="small">Aucune analyse pour l'instant. Lance ta première depuis la watchlist.</span>
+            </div>
+          } @else {
+            @for (analysis of recentAnalyses; track analysis.Id; let last = $last) {
+              <div class="db-item-row" [class.border-bottom]="!last">
+                <div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-semibold">{{ analysis.Symbol }}</span>
+                    @if (isNew(analysis)) {
+                      <span class="badge text-bg-primary rounded-pill db-new-badge">NEW</span>
+                    }
+                  </div>
+                  <div class="small text-muted">
+                    {{ formatPattern(analysis.Pattern) }} · {{ analysis.PredictedAt | date:'dd/MM HH:mm' }}
+                  </div>
+                </div>
+                <div class="text-end d-flex flex-column gap-1 align-items-end">
+                  <span class="badge" [class]="getBadgeClass(analysis.RecommendationAction)">
+                    {{ formatRecommendation(analysis.RecommendationAction) }}
+                  </span>
+                  <a class="small text-primary text-decoration-none"
+                     [routerLink]="toCommands(userPaths.AnalysisDetail(analysis.Id))">
+                    Voir →
+                  </a>
+                </div>
+              </div>
+            }
+          }
+        </div>
       </div>
 
-      <div class="helper-panel">
-        <div class="fw-semibold mb-2">Bon à savoir</div>
-        <div class="mini-note">Chaque recommandation est expliquée et traçable jusqu’à sa source de données.</div>
-      </div>
     </div>
-  </section>
+
+    <!-- RIGHT RAIL -->
+    <div class="d-flex flex-column gap-3">
+
+      <!-- KPIs compacts -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <p class="db-block-label">Portefeuille</p>
+          <div class="d-flex flex-column gap-2">
+            <div class="db-kpi-row">
+              <span class="text-muted small">Valeur</span>
+              <span class="fw-semibold">
+                {{ loading ? '...' : (overview.TotalPortfolioValue | currency:'EUR':'symbol':'1.0-0':'fr-FR') }}
+              </span>
+            </div>
+            <div class="db-kpi-row">
+              <span class="text-muted small">Investi</span>
+              <span class="fw-semibold">
+                {{ loading ? '...' : (overview.TotalInvested | currency:'EUR':'symbol':'1.0-0':'fr-FR') }}
+              </span>
+            </div>
+            <div class="db-kpi-row">
+              <span class="text-muted small">P/L jour</span>
+              <span class="fw-semibold"
+                [class.text-success]="overview.DayProfitLoss >= 0"
+                [class.text-danger]="overview.DayProfitLoss < 0">
+                {{ loading ? '...' : (overview.DayProfitLoss | currency:'EUR':'symbol':'1.0-0':'fr-FR') }}
+              </span>
+            </div>
+            <hr class="my-1 opacity-25">
+            <div class="db-kpi-row">
+              <span class="text-muted small">Positions</span>
+              <span class="fw-semibold">{{ loading ? '...' : overview.OpenPositions }}</span>
+            </div>
+            <div class="db-kpi-row">
+              <span class="text-muted small">Watchlist</span>
+              <span class="fw-semibold">{{ loading ? '...' : overview.WatchlistCount }}</span>
+            </div>
+            <div class="db-kpi-row">
+              <span class="text-muted small">Analyses / sem.</span>
+              <span class="fw-semibold">{{ loading ? '...' : overview.AnalysesThisWeek }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dernière lecture utile -->
+      @if (latestInsight) {
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <p class="db-block-label">Dernière lecture</p>
+            <div class="fw-semibold mb-1">{{ latestInsight.Symbol }}</div>
+            <div class="small text-muted mb-2">{{ latestInsightSummary }}</div>
+            <div class="d-flex gap-1 flex-wrap mb-2">
+              <span class="badge" [class]="getBadgeClass(latestInsight.RecommendationAction)">
+                {{ formatRecommendation(latestInsight.RecommendationAction) }}
+              </span>
+              <span class="badge text-bg-secondary">
+                {{ latestInsight.Probability | percent:'1.0-0' }}
+              </span>
+            </div>
+            <a class="small text-primary text-decoration-none"
+               [routerLink]="toCommands(userPaths.AnalysisDetail(latestInsight.Id))">
+              Voir le détail →
+            </a>
+          </div>
+        </div>
+      }
+
+    </div>
+  </div>
+
 </section>

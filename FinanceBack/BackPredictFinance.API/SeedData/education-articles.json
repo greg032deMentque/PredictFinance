@@ -1,0 +1,90 @@
+[
+  {
+    "Slug": "analyse-technique-introduction",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Introduction à l'analyse technique",
+    "Summary": "Les fondements de l'analyse technique : lire un graphique, identifier une tendance et comprendre pourquoi les prix anticipent l'information.",
+    "DisplayOrder": 10,
+    "BodyMarkdown": "## Qu'est-ce que l'analyse technique ?\n\nL'analyse technique est une approche qui consiste à étudier les variations passées de cours et de volumes pour anticiper les mouvements futurs d'un titre. Elle part de trois postulats :\n\n1. **Les prix reflètent tout** : toute information connue est déjà intégrée dans le cours.\n2. **Les cours évoluent en tendance** : une tendance en place a plus de chances de se poursuivre que de s'inverser.\n3. **L'histoire se répète** : les comportements collectifs des investisseurs créent des figures récurrentes.\n\n## Ce que vous apprendrez dans cette section\n\n- Identifier une tendance haussière, baissière ou neutre\n- Repérer des niveaux clés (supports, résistances)\n- Reconnaître les figures chartistes les plus fréquentes\n- Utiliser les indicateurs de momentum et de volume\n\n## Limites de l'analyse technique\n\nL'analyse technique ne prédit pas l'avenir avec certitude. Elle calcule des probabilités à partir de situations passées comparables. Un signal n'est jamais une garantie — il augmente ou diminue la probabilité d'un scénario, sans l'assurer.\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-tendances",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Les tendances : haussière, baissière et neutre",
+    "Summary": "Comment identifier et qualifier une tendance de cours, et pourquoi ne jamais chercher à aller contre elle sans confirmation.",
+    "DisplayOrder": 11,
+    "BodyMarkdown": "## Définition d'une tendance\n\nUne tendance désigne la direction générale dans laquelle évolue un cours sur une période donnée.\n\n## Tendance haussière\n\nSuite de **plus hauts et de plus bas croissants**. Chaque rebond dépasse le précédent, et chaque correction s'arrête au-dessus de la correction précédente.\n\n## Tendance baissière\n\nSuite de **plus hauts et de plus bas décroissants**. La structure est l'inverse de la tendance haussière.\n\n## Tendance neutre (trading range)\n\nLe cours oscille entre un support et une résistance horizontaux sans progression nette dans un sens ou dans l'autre.\n\n## Comment utiliser la tendance\n\n- En tendance haussière : privilégier les signaux d'achat sur les retracements vers le support.\n- En tendance baissière : éviter les achats ; les figures de continuation baissière sont plus fiables.\n- En range : attendre la cassure d'une borne pour prendre position dans le sens du mouvement.\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-supports-resistances",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Supports et résistances",
+    "Summary": "Les niveaux clés du graphique : comment les identifier, les hiérarchiser et comprendre leur rôle dans l'anticipation des retournements.",
+    "DisplayOrder": 12,
+    "BodyMarkdown": "## Qu'est-ce qu'un support ?\n\nUn support est un niveau de prix en dessous du cours actuel où la demande a été suffisamment forte pour stopper une baisse à plusieurs reprises. Plus un niveau a été testé sans être enfoncé, plus il est jugé solide.\n\n## Qu'est-ce qu'une résistance ?\n\nUne résistance est un niveau au-dessus du cours actuel où l'offre a dominé et freiné les hausses successives. La cassure d'une résistance est souvent accompagnée d'une accélération du cours.\n\n## Inversion de polarité\n\nUn support cassé devient résistance. Une résistance franchie devient support. Ce phénomène dit d'inversion de polarité est l'un des principes les plus utilisés en analyse technique.\n\n## Hiérarchiser les niveaux\n\n- **Force** : nombre de touches sans franchissement\n- **Ancienneté** : un niveau tenu depuis des années est plus significatif\n- **Volume** : un niveau testé avec de forts volumes est plus robuste\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-double-creux",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Figure : le double creux",
+    "Summary": "Une figure de retournement haussier parmi les plus fréquentes — comment la détecter, la valider et estimer son objectif.",
+    "DisplayOrder": 13,
+    "BodyMarkdown": "## Description\n\nLe double creux est une figure de retournement haussier formée par deux creux successifs à des niveaux de prix proches, séparés par un rebond intermédiaire.\n\n## Structure\n\n1. **Premier creux** : le cours touche un bas, rebondit.\n2. **Sommet intermédiaire** : le rebond crée un plus haut (la ligne de cou).\n3. **Second creux** : le cours reteste le niveau du premier creux sans le casser de façon significative.\n4. **Cassure** : le cours franchit la ligne de cou à la hausse, idéalement en volume.\n\n## Validation\n\nLa figure n'est validée qu'à la **cassure de la ligne de cou**. Un simple test du premier creux n'est pas un signal.\n\n## Objectif de cours\n\nL'objectif théorique correspond à la hauteur entre les creux et la ligne de cou, projetée depuis le point de cassure.\n\n## Fiabilité\n\nFigure parmi les plus fiables selon les études de Bulkowski sur l'analyse chartiste. La fiabilité augmente avec la symétrie des deux creux et le volume sur la cassure.\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-double-sommet",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Figure : le double sommet",
+    "Summary": "L'équivalent baissier du double creux — structure, validation et estimation de l'objectif de cours.",
+    "DisplayOrder": 14,
+    "BodyMarkdown": "## Description\n\nLe double sommet est une figure de retournement baissier formée par deux pics successifs à des niveaux proches, séparés par un creux intermédiaire.\n\n## Structure\n\n1. **Premier sommet** : le cours atteint un plus haut, recule.\n2. **Creux intermédiaire** : la correction crée un plus bas (la ligne de cou).\n3. **Second sommet** : le cours reteste le niveau du premier sommet sans le dépasser significativement.\n4. **Cassure** : le cours franchit la ligne de cou à la baisse, idéalement en volume.\n\n## Validation\n\nLa cassure de la ligne de cou est le signal de validation. Les deux sommets doivent être à des niveaux proches — un écart de plus de 3 % remet en cause la figure.\n\n## Objectif de cours\n\nHauteur de la figure (distance entre les sommets et la ligne de cou) projetée à la baisse depuis le point de cassure.\n\n## Erreurs fréquentes\n\n- Anticiper la figure avant la cassure\n- Confondre une simple résistance avec un double sommet\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-tete-epaules",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Figure : la tête-épaules",
+    "Summary": "La figure de retournement baissier la plus connue — identifier ses composantes, sa ligne de cou et calculer l'objectif.",
+    "DisplayOrder": 15,
+    "BodyMarkdown": "## Description\n\nLa tête-épaules est une figure de retournement baissier composée de trois sommets : deux épaules (plus bas) encadrant une tête (plus haut).\n\n## Structure\n\n1. **Épaule gauche** : premier sommet, suivi d'un recul.\n2. **Tête** : second sommet, plus élevé que l'épaule gauche.\n3. **Épaule droite** : troisième sommet, à un niveau proche de l'épaule gauche.\n4. **Ligne de cou** : tracée en reliant les deux creux intermédiaires.\n5. **Cassure** : le cours franchit la ligne de cou à la baisse.\n\n## Validation\n\nLa figure est validée à la cassure de la ligne de cou. Un retour en pull-back sur cette ligne après la cassure offre un second point d'entrée.\n\n## Objectif de cours\n\nDistance entre la tête et la ligne de cou, projetée à la baisse depuis le point de cassure.\n\n## Variante inverse\n\nLa tête-épaules inversée est la même figure retournée : signal de retournement haussier.\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-triangle-symetrique",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Figure : le triangle symétrique",
+    "Summary": "Une figure de continuation neutre qui se résout dans la direction de la tendance dominante — structure, cassure et objectif.",
+    "DisplayOrder": 16,
+    "BodyMarkdown": "## Description\n\nLe triangle symétrique est une figure de continuation formée par la convergence de deux lignes de tendance : une ligne de hauts décroissants et une ligne de bas croissants.\n\n## Structure\n\n- Au moins quatre points de contact (deux sur chaque ligne)\n- La convergence crée un apex (sommet du triangle) vers lequel le cours se dirige\n- La cassure intervient généralement dans le dernier tiers de la figure, avant l'apex\n\n## Cassure\n\nLa cassure peut intervenir dans les deux sens. Statistiquement, elle se produit dans la direction de la tendance préexistante dans environ 55 à 60 % des cas. Elle doit s'accompagner d'un volume supérieur à la moyenne.\n\n## Objectif de cours\n\nHauteur du triangle (base) projetée depuis le point de cassure.\n\n## Points d'attention\n\n- Une cassure sur faible volume est souvent un faux signal\n- Le retour sur la borne après la cassure (pull-back) est fréquent\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-drapeau-haussier",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Figure : le drapeau haussier",
+    "Summary": "Une figure de continuation haussière fréquente après une forte impulsion — mât, canal de consolidation et calcul de l'objectif.",
+    "DisplayOrder": 17,
+    "BodyMarkdown": "## Description\n\nLe drapeau haussier est une figure de continuation haussière composée de deux parties :\n\n1. **Le mât** : forte impulsion haussière initiale sur volume élevé.\n2. **Le drapeau** : phase de consolidation en légère correction, formant un canal légèrement descendant sur volume décroissant.\n\n## Validation\n\nLa cassure haussière du canal de consolidation (le drapeau) en volume confirme la figure. Cette cassure est le signal d'entrée.\n\n## Objectif de cours\n\nL'objectif théorique est obtenu en projetant la longueur du mât depuis le bas du drapeau jusqu'au point de cassure.\n\n## Volume\n\nLe volume décroît pendant la phase de consolidation et reprend à la cassure. Ce profil de volume est la confirmation que la pression vendeuse s'épuise.\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-rectangle",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Figure : le rectangle",
+    "Summary": "Consolidation entre un support et une résistance horizontaux — comment jouer la cassure et éviter les faux signaux.",
+    "DisplayOrder": 18,
+    "BodyMarkdown": "## Description\n\nLe rectangle est une figure de continuation formée par l'oscillation du cours entre deux niveaux horizontaux : un support et une résistance.\n\n## Structure\n\n- Au moins deux touches du support et deux touches de la résistance\n- Le cours rebondit de façon relativement régulière entre ces deux bornes\n- Le volume tend à décroître à mesure que la figure se développe\n\n## Cassure\n\nLa cassure d'une borne (support ou résistance) dans la direction de la tendance préexistante est le signal opérationnel. Elle doit s'accompagner d'un volume supérieur à la moyenne récente.\n\n## Objectif\n\nLa hauteur du rectangle (écart entre support et résistance) est projetée depuis le point de cassure.\n\n## Points d'attention\n\n- Les rectangles peuvent générer de nombreux faux signaux en intra-range\n- Attendre la clôture hors de la borne avant d'agir\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-rsi",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Indicateur : le RSI",
+    "Summary": "Comprendre le RSI (14 séances) : zones de surachat et survente, divergences et interprétation dans le contexte de la tendance.",
+    "DisplayOrder": 19,
+    "BodyMarkdown": "## Qu'est-ce que le RSI ?\n\nLe Relative Strength Index (RSI) est un oscillateur développé par J. Welles Wilder. Calculé sur 14 séances par défaut, il mesure la vitesse et l'amplitude des mouvements de cours pour évaluer si un titre est en situation de surachat ou de survente.\n\n## Lecture du RSI\n\n- **RSI < 30** : zone de survente — signal haussier potentiel, mais pas un ordre d'achat automatique\n- **RSI > 70** : zone de surachat — signal baissier potentiel\n- **RSI entre 30 et 70** : zone neutre\n\n## Divergences\n\nUne divergence survient lorsque le cours et le RSI évoluent dans des directions opposées :\n\n- **Divergence haussière** : le cours forme un nouveau bas, mais le RSI forme un bas plus élevé → signal de retournement haussier potentiel\n- **Divergence baissière** : le cours forme un nouveau haut, mais le RSI forme un haut plus bas → signal de retournement baissier potentiel\n\n## Limites\n\nEn tendance forte, le RSI peut rester longtemps en zone de surachat ou de survente. Il est plus utile en marché sans tendance prononcée.\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  },
+  {
+    "Slug": "analyse-technique-macd",
+    "ProductType": "AnalyseTechnique",
+    "Title": "Indicateur : le MACD",
+    "Summary": "Fonctionnement du MACD (12/26/9), interprétation des croisements et de l'histogramme pour identifier les changements de dynamique.",
+    "DisplayOrder": 20,
+    "BodyMarkdown": "## Qu'est-ce que le MACD ?\n\nLe MACD (Moving Average Convergence Divergence) est un indicateur de suivi de tendance et de momentum. Il est composé de trois éléments :\n\n1. **Ligne MACD** : différence entre la moyenne mobile exponentielle 12 et 26 périodes\n2. **Ligne signal** : moyenne mobile exponentielle 9 périodes de la ligne MACD\n3. **Histogramme** : représente l'écart entre la ligne MACD et la ligne signal\n\n## Signaux\n\n- **Croisement haussier** : la ligne MACD croise la ligne signal à la hausse — signal d'achat potentiel\n- **Croisement baissier** : la ligne MACD croise la ligne signal à la baisse — signal de vente potentiel\n- **Passage à zéro** : la ligne MACD franchit la ligne zéro à la hausse (haussier) ou à la baisse (baissier)\n\n## Histogramme\n\nL'histogramme croissant indique une dynamique haussière qui s'accélère. Un histogramme qui se réduit en territoire positif peut signaler un essoufflement de la hausse.\n\n## Divergences\n\nComme le RSI, les divergences entre le MACD et le cours peuvent précéder un retournement.\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*"
+  }
+]

@@ -1,0 +1,226 @@
+@if (loading) {
+  <div class="text-muted py-3 text-center">Calcul des indicateurs…</div>
+} @else if (indicators && indicators.DataPointsUsed >= 2) {
+  <div class="d-flex flex-column gap-4">
+
+    @if (indicators.Synthesis; as s) {
+      <div class="d-flex align-items-start gap-3 flex-wrap">
+        <div class="flex-grow-1">
+          <div class="text-muted small mb-1">Synthèse des signaux</div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span [class]="synthesisBadgeClass()">{{ s.Label }}</span>
+            <span class="text-muted small">
+              {{ s.BullishSignals }} haussier(s) · {{ s.BearishSignals }} baissier(s) sur {{ s.TotalSignals }} indicateur(s)
+            </span>
+          </div>
+        </div>
+        <button class="btn btn-link btn-sm p-0 text-muted lh-1" type="button" (click)="toggleExplain('synthesis')">
+          <i class="bi bi-info-circle"></i>
+        </button>
+      </div>
+      @if (expandedKey() === 'synthesis') {
+        <div class="alert alert-light py-2 px-3 small mb-0">
+          La synthèse agrège les signaux directionnels de chaque indicateur (RSI, MACD, Bollinger, Moyennes mobiles).
+          Un signal haussier ne constitue pas une recommandation d'achat.
+          Les indicateurs sont complémentaires et doivent être interprétés avec le contexte de marché.
+        </div>
+      }
+    }
+
+    <div class="row g-3">
+
+      <!-- RSI -->
+      <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card border-0 bg-body-tertiary h-100">
+          <div class="card-body d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="text-muted small">RSI · 14 séances</span>
+              <button class="btn btn-link btn-sm p-0 text-muted lh-1" type="button" (click)="toggleExplain('rsi')">
+                <i class="bi bi-info-circle"></i>
+              </button>
+            </div>
+            @if (indicators.Rsi; as rsi) {
+              <div class="h4 mb-0">{{ rsi.Value | number:'1.1-1' }}</div>
+              <span [class]="rsiSignalClass()">{{ rsi.Signal }}</span>
+              <div class="text-muted small">Seuils : &lt; 30 survente · &gt; 70 surachat</div>
+            } @else {
+              <div class="text-muted small">Données insuffisantes (&lt; 15 points)</div>
+            }
+            @if (expandedKey() === 'rsi') {
+              <div class="small text-muted border-top pt-2 mt-1">
+                Mesure la vitesse des variations de prix sur 14 séances. Un RSI au-dessus de 70 signale une possible surchauffe — ce n'est pas un signal de vente immédiat.
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- MACD -->
+      <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card border-0 bg-body-tertiary h-100">
+          <div class="card-body d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="text-muted small">MACD · 12 / 26 / 9</span>
+              <button class="btn btn-link btn-sm p-0 text-muted lh-1" type="button" (click)="toggleExplain('macd')">
+                <i class="bi bi-info-circle"></i>
+              </button>
+            </div>
+            @if (indicators.Macd; as macd) {
+              <span [class]="macdTrendClass()">{{ macd.Trend }}</span>
+              <div class="small d-flex flex-column gap-1">
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Ligne MACD</span>
+                  <span>{{ macd.Line | number:'1.0-4' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Ligne signal</span>
+                  <span>{{ macd.SignalLine | number:'1.0-4' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Histogramme</span>
+                  <span [class.text-success]="macd.Histogram > 0" [class.text-danger]="macd.Histogram < 0">
+                    {{ macd.Histogram | number:'1.0-4' }}
+                  </span>
+                </div>
+              </div>
+            } @else {
+              <div class="text-muted small">Données insuffisantes (&lt; 34 points)</div>
+            }
+            @if (expandedKey() === 'macd') {
+              <div class="small text-muted border-top pt-2 mt-1">
+                Écart entre deux moyennes mobiles exponentielles (12 et 26 séances). Haussier si la ligne MACD est au-dessus de la ligne signal (9 séances).
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Bollinger Bands -->
+      <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card border-0 bg-body-tertiary h-100">
+          <div class="card-body d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="text-muted small">Bandes de Bollinger · 20</span>
+              <button class="btn btn-link btn-sm p-0 text-muted lh-1" type="button" (click)="toggleExplain('bb')">
+                <i class="bi bi-info-circle"></i>
+              </button>
+            </div>
+            @if (indicators.BollingerBands; as bb) {
+              <span [class]="bbPositionClass()">{{ bb.Position }}</span>
+              <div class="small d-flex flex-column gap-1">
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Bande haute</span>
+                  <span>{{ bb.Upper | number:'1.2-4' }}</span>
+                </div>
+                <div class="d-flex justify-content-between fw-semibold">
+                  <span class="text-muted">Médiane (MM20)</span>
+                  <span>{{ bb.Middle | number:'1.2-4' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Bande basse</span>
+                  <span>{{ bb.Lower | number:'1.2-4' }}</span>
+                </div>
+              </div>
+            } @else {
+              <div class="text-muted small">Données insuffisantes (&lt; 20 points)</div>
+            }
+            @if (expandedKey() === 'bb') {
+              <div class="small text-muted border-top pt-2 mt-1">
+                Enveloppe de volatilité autour de la moyenne 20 séances (± 2 écarts-types). Un prix en dehors des bandes indique une volatilité anormale.
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Moyennes mobiles -->
+      <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card border-0 bg-body-tertiary h-100">
+          <div class="card-body d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="text-muted small">Moyennes mobiles simples</span>
+              <button class="btn btn-link btn-sm p-0 text-muted lh-1" type="button" (click)="toggleExplain('ma')">
+                <i class="bi bi-info-circle"></i>
+              </button>
+            </div>
+            <div class="small d-flex flex-column gap-1">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted">MM 20 séances</span>
+                @if (indicators.MovingAverages.Ma20 !== null) {
+                  <span [class]="maCompareClass(indicators.MovingAverages.Ma20)">
+                    {{ indicators.MovingAverages.Ma20 | number:'1.2-4' }} · {{ maCompareLabel(indicators.MovingAverages.Ma20) }}
+                  </span>
+                } @else {
+                  <span class="text-muted">N/D</span>
+                }
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted">MM 50 séances</span>
+                @if (indicators.MovingAverages.Ma50 !== null) {
+                  <span [class]="maCompareClass(indicators.MovingAverages.Ma50)">
+                    {{ indicators.MovingAverages.Ma50 | number:'1.2-4' }} · {{ maCompareLabel(indicators.MovingAverages.Ma50) }}
+                  </span>
+                } @else {
+                  <span class="text-muted">N/D</span>
+                }
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted">MM 200 séances</span>
+                @if (indicators.MovingAverages.Ma200 !== null) {
+                  <span [class]="maCompareClass(indicators.MovingAverages.Ma200)">
+                    {{ indicators.MovingAverages.Ma200 | number:'1.2-4' }} · {{ maCompareLabel(indicators.MovingAverages.Ma200) }}
+                  </span>
+                } @else {
+                  <span class="text-muted">N/D</span>
+                }
+              </div>
+            </div>
+            @if (expandedKey() === 'ma') {
+              <div class="small text-muted border-top pt-2 mt-1">
+                Moyenne des cours sur N séances. Un cours au-dessus de la MM signale une tendance haussière à court (20), moyen (50) ou long terme (200).
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- OBV -->
+      @if (indicators.Obv !== null) {
+        <div class="col-12 col-sm-6 col-xl-4">
+          <div class="card border-0 bg-body-tertiary h-100">
+            <div class="card-body d-flex flex-column gap-2">
+              <div class="d-flex justify-content-between align-items-start">
+                <span class="text-muted small">Volume cumulé (OBV)</span>
+                <button class="btn btn-link btn-sm p-0 text-muted lh-1" type="button" (click)="toggleExplain('obv')">
+                  <i class="bi bi-info-circle"></i>
+                </button>
+              </div>
+              <div class="h5 mb-0"
+                [class.text-success]="indicators.Obv! > 0"
+                [class.text-danger]="indicators.Obv! < 0">
+                {{ indicators.Obv! > 0 ? '↑' : indicators.Obv! < 0 ? '↓' : '→' }}
+                {{ indicators.Obv | number:'1.0-0' }}
+              </div>
+              @if (expandedKey() === 'obv') {
+                <div class="small text-muted border-top pt-2 mt-1">
+                  Accumulation du volume ajusté à la direction du cours. Une OBV croissante confirme une tendance haussière. La pertinence dépend de la disponibilité des volumes.
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+    </div>
+
+    <div class="text-muted small">
+      Calculé sur {{ indicators.DataPointsUsed }} point(s) · données jusqu'au {{ indicators.ComputedAtUtc | date:'dd/MM/yyyy' }}
+      · Les indicateurs sont indépendants. Aucun signal ne constitue une recommandation.
+    </div>
+
+  </div>
+} @else if (indicators && indicators.DataPointsUsed < 2) {
+  <div class="text-muted small">Aucune donnée historique suffisante pour cet instrument.</div>
+} @else {
+  <div class="text-muted small">Aucune donnée disponible.</div>
+}

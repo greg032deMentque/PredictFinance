@@ -9,7 +9,7 @@
             <div class="fw-semibold d-flex align-items-center gap-2">
               <i class="bi" [ngClass]="[getDirectionIcon(branch.Direction), getDirectionClass(branch.Direction)]"></i>
               {{ branch.TriggerLabel }}
-              @if (branch.TriggerLevel != null) {
+              @if (branch.TriggerLevel !== null) {
                 <span class="font-monospace small text-body-secondary">@ {{ branch.TriggerLevel | number:'1.2-2' }}</span>
               }
             </div>

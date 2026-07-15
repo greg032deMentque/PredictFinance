@@ -1,25 +1,33 @@
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import * as XLSX from 'xlsx';
 import {
+  AllocationSlice,
   ClientPortfolio,
   ClientPortfolioPosition,
   ClientTransactionCreateRequest,
-  ClientTransactionItem
+  ClientTransactionItem,
+  MarketAssetOption,
+  PortfolioAllocation
 } from '../../../../Models/client-finance-models/client-finance-models';
-import { PortfolioType, UserPortfolioViewModel, getPortfolioTypeLabel } from '../../../../Models/client-finance-models/user-portfolio.model';
+import { UserPortfolioViewModel, getPortfolioTypeLabel } from '../../../../Models/client-finance-models/user-portfolio.model';
+import { translateCountry, translateSector } from '../../../../Models/client-finance-models/finance-localization.util';
 import { UserPaths, toCommands } from '../../../../Routes/app.routes.constants';
 import { ClientFinanceService } from '../../../../services/client-finance.service';
 import { PortfolioService } from '../../../../services/portfolio.service';
+import { PortfolioRiskMetricsService } from '../../../../services/portfolio-risk-metrics.service';
+import type { PortfolioRiskMetrics } from '../../../../Models/client-finance-models/portfolio-risk-metrics.model';
 import { ToastService } from '../../../../services/toastr.service';
 import { ConfirmModalComponent } from '../../../shared/confirm-modal/confirm-modal.component';
 import { FinanceTransactionFormComponent } from '../../user-finance/finance-transaction-form/finance-transaction-form.component';
 import { PortfolioDonutChartComponent } from '../../user-finance/portfolio-donut-chart/portfolio-donut-chart.component';
+import { PositionPnlModalComponent } from '../../user-finance/position-pnl-modal/position-pnl-modal.component';
+import { PortfolioPnlModalComponent } from '../../user-finance/portfolio-pnl-modal/portfolio-pnl-modal.component';
 
 @Component({
   selector: 'app-portfolio-detail-page',
@@ -33,7 +41,9 @@ import { PortfolioDonutChartComponent } from '../../user-finance/portfolio-donut
     ReactiveFormsModule,
     FinanceTransactionFormComponent,
     PortfolioDonutChartComponent,
-    ConfirmModalComponent
+    ConfirmModalComponent,
+    PositionPnlModalComponent,
+    PortfolioPnlModalComponent
   ],
   templateUrl: './portfolio-detail-page.component.html',
   styleUrl: './portfolio-detail-page.component.scss'
@@ -43,11 +53,13 @@ export class PortfolioDetailPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly clientFinanceService = inject(ClientFinanceService);
   private readonly portfolioService = inject(PortfolioService);
+  private readonly portfolioRiskMetricsService = inject(PortfolioRiskMetricsService);
   private readonly toastService = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('importInput') importInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild(FinanceTransactionFormComponent) transactionForm?: FinanceTransactionFormComponent;
 
   readonly userPaths = UserPaths;
   readonly toCommands = toCommands;
@@ -55,16 +67,22 @@ export class PortfolioDetailPageComponent implements OnInit {
 
   portfolioId = '';
   portfolioMeta = signal<UserPortfolioViewModel | null>(null);
-  portfolio = signal<ClientPortfolio>({ Positions: [], TotalInvestedAmount: 0, TotalOutstandingAmount: 0, OpenPositionCount: 0 });
+  portfolio = signal<ClientPortfolio>({ Positions: [], TotalInvestedAmount: 0, TotalOutstandingAmount: 0, OpenPositionCount: 0, Allocation: null });
+  allocationTab = signal<'sector' | 'country' | 'currency'>('sector');
   transactions = signal<ClientTransactionItem[]>([]);
   selectedSymbol = signal('');
+
+  selectedPositionForPnl = signal<ClientPortfolioPosition | null>(null);
+
+  riskMetrics = signal<PortfolioRiskMetrics | null>(null);
+  riskMetricsLoading = signal(false);
 
   loading = signal(false);
   transactionLoading = signal(false);
   formLoading = signal(false);
   importLoading = signal(false);
   portfolioError = signal<string | null>(null);
-  portfolioToDeleteId = signal<string | null>(null);
+  portfolioToArchiveId = signal<string | null>(null);
   transactionToDeleteId = signal<string | null>(null);
   renamingPortfolioId = signal<string | null>(null);
   renameNameError = signal<string | null>(null);
@@ -91,10 +109,20 @@ export class PortfolioDetailPageComponent implements OnInit {
     return cost > 0 ? ((p.OutstandingAmount / cost) - 1) * 100 : 0;
   }
 
-  get portfolioAsList(): UserPortfolioViewModel[] {
+  readonly portfolioAsList = computed(() => {
     const meta = this.portfolioMeta();
     return meta ? [meta] : [];
-  }
+  });
+
+  readonly trendingOptions = computed(() =>
+    this.portfolio().Positions.slice(0, 5).map(
+      (p) => new MarketAssetOption({
+        Symbol: p.Instrument.Symbol,
+        CompanyName: p.Instrument.DisplayName,
+        LastPrice: 0
+      })
+    )
+  );
 
   ngOnInit(): void {
     this.portfolioId = this.route.snapshot.paramMap.get('portfolioId') ?? '';
@@ -105,6 +133,18 @@ export class PortfolioDetailPageComponent implements OnInit {
     this.loadPortfolioMeta();
     this.loadPortfolio();
     this.loadTransactions();
+    this.loadRiskMetrics();
+  }
+
+  private loadRiskMetrics(): void {
+    this.riskMetricsLoading.set(true);
+    this.portfolioRiskMetricsService.getMetrics(this.portfolioId).pipe(
+      finalize(() => this.riskMetricsLoading.set(false)),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (data) => this.riskMetrics.set(data),
+      error: () => this.riskMetrics.set(null)
+    });
   }
 
   private loadPortfolioMeta(): void {
@@ -120,15 +160,42 @@ export class PortfolioDetailPageComponent implements OnInit {
       });
   }
 
+  private initAllocationTab(portfolio: ClientPortfolio): void {
+    const alloc = portfolio.Allocation;
+    if (!alloc) return;
+    if (alloc.SectorAllocation.length > 0) { this.allocationTab.set('sector'); return; }
+    if (alloc.CountryAllocation.length > 0) { this.allocationTab.set('country'); return; }
+    if (alloc.CurrencyAllocation.length > 0) { this.allocationTab.set('currency'); }
+  }
+
+  activeAllocationSlices(alloc: PortfolioAllocation): AllocationSlice[] {
+    const tab = this.allocationTab();
+    const slices = tab === 'sector' ? alloc.SectorAllocation
+      : tab === 'country' ? alloc.CountryAllocation
+      : alloc.CurrencyAllocation;
+    return [...slices].sort((a, b) => b.WeightPct - a.WeightPct);
+  }
+
+  /** Traduit le label d'un slice selon l'onglet actif (secteur ou pays). Devise inchangée. */
+  translateSliceLabel(label: string): string {
+    const tab = this.allocationTab();
+    if (tab === 'sector') return translateSector(label);
+    if (tab === 'country') return translateCountry(label);
+    return label;
+  }
+
   private loadPortfolio(): void {
     this.loading.set(true);
     this.portfolioError.set(null);
     this.clientFinanceService.getPortfolio(this.portfolioId)
       .pipe(finalize(() => this.loading.set(false)), takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (payload) => this.portfolio.set(payload),
+        next: (payload) => {
+          this.portfolio.set(payload);
+          this.initAllocationTab(payload);
+        },
         error: (err: HttpErrorResponse) => {
-          this.portfolio.set({ Positions: [], TotalInvestedAmount: 0, TotalOutstandingAmount: 0, OpenPositionCount: 0 });
+          this.portfolio.set({ Positions: [], TotalInvestedAmount: 0, TotalOutstandingAmount: 0, OpenPositionCount: 0, Allocation: null });
           if (err.status === 404) this.portfolioError.set('Ce portefeuille est introuvable.');
         }
       });
@@ -141,6 +208,10 @@ export class PortfolioDetailPageComponent implements OnInit {
         next: (items) => this.transactions.set(items),
         error: () => this.transactions.set([])
       });
+  }
+
+  openPnlDetail(position: ClientPortfolioPosition): void {
+    this.selectedPositionForPnl.set(position);
   }
 
   onOpenTransaction(symbol: string): void {
@@ -157,9 +228,13 @@ export class PortfolioDetailPageComponent implements OnInit {
           this.transactions.set([transaction, ...this.transactions()].slice(0, 50));
           this.toastService.success('Transaction enregistrée.');
           this.selectedSymbol.set('');
+          this.transactionForm?.resetForm();
           this.loadPortfolio();
         },
-        error: () => {}
+        error: (err: HttpErrorResponse) => {
+          const msg = (err.error as { message?: string } | null)?.message;
+          this.toastService.error(msg || 'Une erreur est survenue lors de l\'enregistrement.');
+        }
       });
   }
 
@@ -178,7 +253,11 @@ export class PortfolioDetailPageComponent implements OnInit {
           this.toastService.success('Transaction supprimée.');
           this.loadPortfolio();
         },
-        error: () => this.transactionToDeleteId.set(null)
+        error: (err: HttpErrorResponse) => {
+          this.transactionToDeleteId.set(null);
+          const msg = (err.error as { message?: string } | null)?.message;
+          this.toastService.error(msg || 'Impossible de supprimer cette transaction.');
+        }
       });
   }
 
@@ -214,20 +293,20 @@ export class PortfolioDetailPageComponent implements OnInit {
       });
   }
 
-  requestDeletePortfolio(): void { this.portfolioToDeleteId.set(this.portfolioId); }
+  requestArchivePortfolio(): void { this.portfolioToArchiveId.set(this.portfolioId); }
 
-  confirmDeletePortfolio(): void {
-    if (!this.portfolioToDeleteId() || this.formLoading()) return;
+  confirmArchivePortfolio(): void {
+    if (!this.portfolioToArchiveId() || this.formLoading()) return;
     this.formLoading.set(true);
-    this.portfolioService.deletePortfolio(this.portfolioId)
+    this.portfolioService.archivePortfolio(this.portfolioId)
       .pipe(finalize(() => this.formLoading.set(false)), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.portfolioToDeleteId.set(null);
-          this.toastService.success('Portefeuille supprimé.');
+          this.portfolioToArchiveId.set(null);
+          this.toastService.success('Portefeuille archivé.');
           void this.router.navigate(toCommands(UserPaths.Portfolio));
         },
-        error: () => this.portfolioToDeleteId.set(null)
+        error: () => this.portfolioToArchiveId.set(null)
       });
   }
 
@@ -365,7 +444,7 @@ export class PortfolioDetailPageComponent implements OnInit {
     XLSX.writeFile(wb, 'template-import-transactions.xlsx');
   }
 
-  get portfolioToDeleteName(): string {
+  get portfolioToArchiveName(): string {
     return this.portfolioMeta()?.Name ?? '';
   }
 }

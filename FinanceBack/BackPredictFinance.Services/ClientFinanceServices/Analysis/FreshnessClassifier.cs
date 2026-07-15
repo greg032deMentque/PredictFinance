@@ -5,9 +5,18 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
     public static class FreshnessClassifier
     {
+        // AgingThresholdDays n'est pas utilisé dans le calcul (le seuil Fresh est câblé en dur à
+        // "<= 1" ci-dessous) — conservé pour documenter l'intention (2 jours ouvrés = encore frais)
+        // même si Classify ne s'y réfère pas directement.
         private const int AgingThresholdDays = 2;
         private const int StaleThresholdDays = 4;
 
+        /// <summary>
+        /// Classe la fraîcheur d'une donnée selon le nombre de jours OUVRÉS (semaine, hors week-end)
+        /// écoulés depuis sa dernière mise à jour. Piège connu et assumé en V1 : les jours fériés
+        /// Euronext ne sont pas exclus (voir log ci-dessous), donc un pont/jour férié peut faire
+        /// basculer une donnée en "Aging"/"Stale" un jour trop tôt par rapport au calendrier boursier réel.
+        /// </summary>
         public static FreshnessStatusEnum Classify(DateTime? checkedAtUtc, DateTime referenceUtc, ILogger? logger = null)
         {
             if (!checkedAtUtc.HasValue)

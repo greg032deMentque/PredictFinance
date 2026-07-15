@@ -1,3 +1,4 @@
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Assets;
@@ -13,9 +14,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
     /// </summary>
     public interface IClientFinanceWatchlistPortfolioService
     {
-        /// <summary>
-        /// Retourne la watchlist projetée de l'utilisateur courant.
-        /// </summary>
         Task<List<WatchlistItemViewModel>> GetWatchlistAsync(CancellationToken ct = default);
         Task<PortfolioViewModel> GetPortfolioAsync(string? portfolioId, CancellationToken ct = default);
         /// <summary>
@@ -40,20 +38,23 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         private readonly IClientFinanceAssetSupportService _assetSupportService;
         private readonly IClientFinanceProjectionService _projectionService;
         private readonly IPortfolioService _portfolioService;
-        private readonly ILogger<ClientFinanceWatchlistPortfolioService> _logger;
+        private readonly IPortfolioAllocationService _allocationService;
+        private readonly ILogger<ClientFinanceWatchlistPortfolioService> _holdingLogger;
 
         public ClientFinanceWatchlistPortfolioService(
             IServiceProvider serviceProvider,
             IClientFinanceAssetSupportService assetSupportService,
             IClientFinanceProjectionService projectionService,
             IPortfolioService portfolioService,
-            ILogger<ClientFinanceWatchlistPortfolioService> logger)
+            IPortfolioAllocationService allocationService,
+            ILogger<ClientFinanceWatchlistPortfolioService> holdingLogger)
             : base(serviceProvider)
         {
             _assetSupportService = assetSupportService;
             _projectionService = projectionService;
             _portfolioService = portfolioService;
-            _logger = logger;
+            _allocationService = allocationService;
+            _holdingLogger = holdingLogger;
         }
 
         public Task<List<WatchlistItemViewModel>> GetWatchlistAsync(CancellationToken ct = default)
@@ -61,13 +62,15 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
         public async Task<PortfolioViewModel> GetPortfolioAsync(string? portfolioId, CancellationToken ct = default)
         {
+            var userId = _assetSupportService.GetRequiredCurrentUserId();
+
             if (!string.IsNullOrWhiteSpace(portfolioId))
             {
-                var userId = _assetSupportService.GetRequiredCurrentUserId();
                 await _portfolioService.GetRequiredPortfolioForUserAsync(portfolioId, userId, ct);
             }
 
             var watchlist = await BuildWatchlistAsync(includeOnlyHeld: true, excludeHeld: false, portfolioId, ct);
+            var allocation = await _allocationService.ComputeAllocationAsync(userId, portfolioId, ct);
 
             return new PortfolioViewModel
             {
@@ -81,6 +84,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                         AverageCost = x.AverageBuyPrice,
                         Fees = decimal.Round(Math.Max(x.InvestedAmount - (x.AverageBuyPrice * x.HeldQuantity), 0m), 2),
                         OutstandingAmount = x.OutstandingAmount,
+                        CurrentPriceNative = x.LastPrice,
+                        Currency = x.Currency,
+                        ForexRateUsed = x.ForexRateUsed,
                         MarketReading = x.MarketReading,
                         SupportReading = x.SupportReading,
                         Recommendation = x.Recommendation,
@@ -91,7 +97,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                     .ToList(),
                 TotalInvestedAmount = decimal.Round(watchlist.Sum(x => x.InvestedAmount), 2),
                 TotalOutstandingAmount = decimal.Round(watchlist.Sum(x => x.OutstandingAmount), 2),
-                OpenPositionCount = watchlist.Count
+                OpenPositionCount = watchlist.Count,
+                Allocation = allocation
             };
         }
 
@@ -100,7 +107,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             var symbol = _assetSupportService.NormalizeSymbol(request.Symbol);
             if (string.IsNullOrWhiteSpace(symbol))
             {
-                throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
+                throw new ArgumentException("Le symbole est obligatoire.", nameof(request));
             }
 
             var asset = await _assetSupportService.EnsureAssetAsync(symbol, request.CompanyName, ct);
@@ -121,6 +128,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             }
 
             var quote = await _assetSupportService.BuildQuoteAsync(symbol, ct);
+            var forexRate = await _assetSupportService.GetForexRateToEurAsync(asset.Currency, ct);
 
             return new WatchlistItemViewModel
             {
@@ -132,11 +140,13 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 Market = asset.Exchange,
                 Currency = asset.Currency,
                 LastPrice = quote.LastPrice,
+                LastPriceEur = decimal.Round(quote.LastPrice * forexRate, 4),
+                ForexRateUsed = decimal.Round(forexRate, 6),
                 DayVariationPct = quote.DayVariationPct,
                 HeldQuantity = userAsset.Quantity,
                 AverageBuyPrice = 0m,
                 InvestedAmount = 0m,
-                OutstandingAmount = decimal.Round(userAsset.Quantity * quote.LastPrice, 2),
+                OutstandingAmount = decimal.Round(userAsset.Quantity * quote.LastPrice * forexRate, 2),
                 HoldingStatus = userAsset.Quantity > 0m ? HoldingStatusEnum.Held : HoldingStatusEnum.NotHeld,
                 MarketReading = _projectionService.BuildEmptyMarketReading(),
                 SupportReading = _projectionService.BuildSupportReadingSummary(PeaEligibilityStatusEnum.Unknown),
@@ -220,9 +230,12 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             if (!string.IsNullOrWhiteSpace(portfolioId))
             {
+                // Accès ciblé : un portefeuille archivé reste consultable directement.
                 transactionQuery = transactionQuery.Where(x => x.PortfolioId == portfolioId);
             }
 
+            // Agrégat global (portfolioId vide) : les portefeuilles archivés restent inclus pour rester
+            // cohérent avec UserAsset.Quantity, qui n'a jamais été décrémentée par l'archivage.
             var transactions = await transactionQuery.ToListAsync(ct);
 
             var latestPeaStatusByAssetId = await _financeDbContext.AssetPeaEligibilities
@@ -237,22 +250,40 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .GroupBy(x => x.UserAssetId)
                 .ToDictionary(x => x.Key, x => x.ToList());
 
+            var symbols = userAssets.Select(x => x.Asset.Symbol).Distinct().ToList();
+            var quotesBySymbol = await _assetSupportService.BuildQuotesAsync(symbols, ct);
+
+            var distinctCurrencies = userAssets
+                .Select(x => x.Asset.Currency)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var forexRateByCurrency = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            foreach (var currency in distinctCurrencies)
+            {
+                forexRateByCurrency[currency] = await _assetSupportService.GetForexRateToEurAsync(currency, ct);
+            }
+
             var response = new List<WatchlistItemViewModel>(userAssets.Count);
 
             foreach (var userAsset in userAssets)
             {
-                var quote = await _assetSupportService.BuildQuoteAsync(userAsset.Asset.Symbol, ct);
+                if (!quotesBySymbol.TryGetValue(userAsset.Asset.Symbol, out var quote))
+                {
+                    continue;
+                }
+
+                var forexRate = forexRateByCurrency.GetValueOrDefault(userAsset.Asset.Currency, 1m);
                 groupedTransactions.TryGetValue(userAsset.Id, out var history);
                 history ??= [];
 
-                var holding = PortfolioHoldingCalculator.Compute(history, _logger);
+                var holding = PortfolioHoldingCalculator.Compute(history, _holdingLogger);
 
                 // Quantité segmentée par portefeuille quand un portfolioId est fourni ; sinon la
                 // détention reste la vérité globale portée par UserAsset (cf. AssetTransaction).
                 var heldQuantity = string.IsNullOrWhiteSpace(portfolioId) ? userAsset.Quantity : holding.Quantity;
                 var averageBuyPrice = holding.AverageBuyPrice;
                 var investedAmount = holding.InvestedAmount;
-                var outstandingAmount = heldQuantity * quote.LastPrice;
+                var outstandingAmount = heldQuantity * quote.LastPrice * forexRate;
 
                 latestAnalysisByAssetId.TryGetValue(userAsset.AssetId, out var latestAnalysis);
                 latestPeaStatusByAssetId.TryGetValue(userAsset.AssetId, out var peaStatus);
@@ -267,6 +298,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                         heldQuantity > 0m,
                         marketReading.RecommendationStrength);
                 var checkedAtUtc = latestAnalysis?.CompletedAtUtc ?? userAsset.Asset.LastProfileSyncUtc;
+                var earningsHorizonDays = latestAnalysis?.Recommendation?.RecommendationPayload?.ReviewHorizonDays ?? 0;
+                var earningsWithinHorizonWarning = latestAnalysis != null
+                    && EarningsHorizonEvaluator.IsWithinHorizon(latestAnalysis.EarningsDateUtc, earningsHorizonDays, latestAnalysis.CompletedAtUtc);
 
                 response.Add(new WatchlistItemViewModel
                 {
@@ -278,17 +312,22 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                     Market = userAsset.Asset.Exchange,
                     Currency = userAsset.Asset.Currency,
                     LastPrice = quote.LastPrice,
+                    LastPriceEur = decimal.Round(quote.LastPrice * forexRate, 4),
+                    ForexRateUsed = decimal.Round(forexRate, 6),
                     DayVariationPct = quote.DayVariationPct,
                     HeldQuantity = heldQuantity,
                     AverageBuyPrice = averageBuyPrice,
                     InvestedAmount = investedAmount,
                     OutstandingAmount = decimal.Round(outstandingAmount, 2),
                     HoldingStatus = heldQuantity > 0m ? HoldingStatusEnum.Held : HoldingStatusEnum.NotHeld,
+                    HasPersistedAnalysis = latestAnalysis != null,
                     MarketReading = marketReading,
                     SupportReading = _projectionService.BuildSupportReadingSummary(peaStatus),
                     Recommendation = recommendation,
                     LastAnalysisAtUtc = latestAnalysis?.CompletedAtUtc,
-                    Freshness = _projectionService.BuildFreshness(checkedAtUtc)
+                    Freshness = _projectionService.BuildFreshness(checkedAtUtc),
+                    NextEarningsDateUtc = latestAnalysis?.EarningsDateUtc,
+                    EarningsWithinHorizonWarning = earningsWithinHorizonWarning
                 });
             }
 

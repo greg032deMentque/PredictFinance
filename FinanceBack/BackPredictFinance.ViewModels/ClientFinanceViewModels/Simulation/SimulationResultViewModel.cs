@@ -1,7 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis;
 
 namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Simulation
 {
@@ -17,6 +15,7 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Simulation
         public decimal EstimatedFinalAmount { get; set; }
         public string Assumption { get; set; } = string.Empty;
         public decimal CurrentPrice { get; set; }
+        public string Currency { get; set; } = "EUR";
         public decimal Probability { get; set; }
         public RecommendationActionEnum RecommendationAction { get; set; } = RecommendationActionEnum.Hold;
         public string RecommendationReason { get; set; } = string.Empty;
@@ -24,5 +23,8 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Simulation
         public bool IsActionable { get; set; }
         public decimal? TargetPrice { get; set; }
         public decimal? InvalidationPrice { get; set; }
+        public List<SimulationScenarioViewModel> Scenarios { get; set; } = [];
+        public List<CandleViewModel> PriceSeries { get; set; } = [];
+        public List<StructuralPointViewModel> StructuralPoints { get; set; } = [];
     }
 }

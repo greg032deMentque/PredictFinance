@@ -1,31 +1,31 @@
 export interface LegalCardItem {
-  icon: string;
-  title: string;
-  description: string;
-  updatedAt: string | null;
-  routerLink: string | null;
-  displayOrder: number;
+  Icon: string;
+  Title: string;
+  Description: string;
+  UpdatedAt: string | null;
+  RouterLink: string | null;
+  DisplayOrder: number;
 }
 
 export interface LegalCardAdminItem {
-  id: number;
-  key: string;
-  icon: string;
-  title: string;
-  description: string;
-  effectiveDate: string | null;
-  targetRoute: string | null;
-  displayOrder: number;
-  isPublished: boolean;
+  Id: string;
+  Key: string;
+  Icon: string;
+  Title: string;
+  Description: string;
+  EffectiveDate: string | null;
+  TargetRoute: string | null;
+  DisplayOrder: number;
+  IsPublished: boolean;
 }
 
 export interface LegalCardUpsertRequest {
-  key: string;
-  icon: string;
-  title: string;
-  description: string;
-  effectiveDate: string | null;
-  targetRoute: string | null;
-  displayOrder: number;
-  isPublished: boolean;
+  Key: string;
+  Icon: string;
+  Title: string;
+  Description: string;
+  EffectiveDate: string | null;
+  TargetRoute: string | null;
+  DisplayOrder: number;
+  IsPublished: boolean;
 }

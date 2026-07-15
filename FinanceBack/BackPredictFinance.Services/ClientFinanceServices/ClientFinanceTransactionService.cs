@@ -1,3 +1,5 @@
+using System.Net;
+using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Transactions;
@@ -31,27 +33,35 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             if (request.Quantity <= 0m)
             {
-                throw new ArgumentException("La quantite doit etre strictement positive.", nameof(request.Quantity));
+                throw new ArgumentException("La quantite doit etre strictement positive.", nameof(request));
             }
 
             if (request.UnitPrice <= 0m)
             {
-                throw new ArgumentException("Le prix unitaire doit etre strictement positif.", nameof(request.UnitPrice));
+                throw new ArgumentException("Le prix unitaire doit etre strictement positif.", nameof(request));
             }
 
             if (request.Fees < 0m)
             {
-                throw new ArgumentException("Les frais ne peuvent pas etre negatifs.", nameof(request.Fees));
+                throw new ArgumentException("Les frais ne peuvent pas etre negatifs.", nameof(request));
             }
 
             var symbol = _assetSupportService.NormalizeSymbol(request.Symbol);
             if (string.IsNullOrWhiteSpace(symbol))
             {
-                throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
+                throw new ArgumentException("Le symbole est obligatoire.", nameof(request));
             }
 
             var userId = _assetSupportService.GetRequiredCurrentUserId();
             var portfolio = await _portfolioService.GetRequiredPortfolioForUserAsync(request.PortfolioId, userId, ct);
+
+            if (portfolio.Status == PortfolioStatusEnum.Archived)
+            {
+                throw new CustomException(
+                    "Transaction refusée : portefeuille archivé.",
+                    "Impossible d'ajouter une transaction dans un portefeuille archivé.",
+                    statusCode: HttpStatusCode.UnprocessableEntity);
+            }
 
             var transactionType = request.TransactionType;
             var asset = await _assetSupportService.EnsureAssetAsync(symbol, symbol, ct);
@@ -73,7 +83,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             if (transactionType == TransactionTypeEnum.Sell && userAsset.Quantity < request.Quantity)
             {
-                throw new InvalidOperationException("Quantite insuffisante pour vendre.");
+                throw new CustomException(
+                    $"Vente refusée : quantité demandée ({request.Quantity}) supérieure à la quantité détenue ({userAsset.Quantity}).",
+                    $"Quantité insuffisante pour vendre. Vous détenez {userAsset.Quantity} action(s).",
+                    statusCode: HttpStatusCode.UnprocessableEntity);
             }
 
             userAsset.Quantity = transactionType == TransactionTypeEnum.Buy
@@ -127,6 +140,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             if (!string.IsNullOrWhiteSpace(portfolioId))
                 query = query.Where(x => x.PortfolioId == portfolioId);
+            else
+                query = query.ExcludeArchivedPortfolios();
 
             var transactions = await query
                 .OrderByDescending(x => x.TimestampUtc)
@@ -159,7 +174,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 if (userAsset.Quantity < transaction.Quantity)
                 {
-                    throw new InvalidOperationException("Suppression impossible: quantite actuelle insuffisante.");
+                    throw new CustomException(
+                        "Suppression refusée : solde insuffisant pour annuler cet achat.",
+                        "Suppression impossible : la quantité actuelle est insuffisante pour annuler cet achat.",
+                        statusCode: HttpStatusCode.UnprocessableEntity);
                 }
 
                 userAsset.Quantity -= transaction.Quantity;

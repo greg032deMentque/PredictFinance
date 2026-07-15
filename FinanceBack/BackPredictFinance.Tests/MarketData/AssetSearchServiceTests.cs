@@ -1,12 +1,15 @@
 ﻿using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.MarketData;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services.ClientFinanceServices;
+using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.Patterns;
 using BackPredictFinance.Services.ClientFinanceServices.Analysis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Assets;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace BackPredictFinance.Tests.MarketData;
@@ -25,12 +28,19 @@ public sealed class AssetSearchServiceTests
         return new FinanceDbContext(options, httpContextAccessorMock.Object);
     }
 
-    private static ClientFinanceService BuildService(FinanceDbContext db)
+    private static ClientFinanceService BuildService(FinanceDbContext db, Mock<IMarketCatalogProvider>? catalogMock = null)
     {
         var assetSupportMock = new Mock<IClientFinanceAssetSupportService>(MockBehavior.Strict);
         assetSupportMock
             .Setup(x => x.MapAssetType(It.IsAny<AssetTypeEnum>()))
             .Returns((AssetTypeEnum t) => t.ToString());
+
+        var catalog = catalogMock ?? new Mock<IMarketCatalogProvider>(MockBehavior.Strict);
+        if (catalogMock is null)
+        {
+            catalog.Setup(x => x.SearchAssetsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                   .ReturnsAsync([]);
+        }
 
         return new ClientFinanceService(
             db,
@@ -38,7 +48,9 @@ public sealed class AssetSearchServiceTests
             new Mock<IAnalysisOrchestrator>(MockBehavior.Strict).Object,
             new Mock<IAnalysisPatternRegistry>(MockBehavior.Strict).Object,
             assetSupportMock.Object,
-            new Mock<IAnalysisResultProjectionService>(MockBehavior.Strict).Object);
+            new Mock<IAnalysisResultProjectionService>(MockBehavior.Strict).Object,
+            catalog.Object,
+            NullLogger<ClientFinanceService>.Instance);
     }
 
     private static Asset BuildAsset(string id, string symbol, string name) => new()
@@ -125,5 +137,56 @@ public sealed class AssetSearchServiceTests
         Assert.Equal("MC.PA", upperResult[0].Symbol);
         Assert.Single(lowerResult);
         Assert.Equal("MC.PA", lowerResult[0].Symbol);
+    }
+
+    [Fact]
+    public async Task SearchAssetsAsync_MergesYahooResults_DeduplicatesBySymbol_LocalVersionWins()
+    {
+        var dbName = $"search-merge-{Guid.NewGuid():N}";
+        await using var db = BuildInMemoryDb(dbName);
+
+        var localAsset = BuildAsset("asset-local-1", "AIR.PA", "Airbus SE");
+        localAsset.Sector = "Aerospace";
+        localAsset.Isin = "FR0000120073";
+        db.Assets.Add(localAsset);
+        await db.SaveChangesAsync();
+
+        var catalogMock = new Mock<IMarketCatalogProvider>(MockBehavior.Strict);
+        catalogMock
+            .Setup(x => x.SearchAssetsAsync("airbus", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new MarketAssetDescriptor
+                {
+                    Symbol = "AIR.PA",
+                    CompanyName = "Airbus (Yahoo)",
+                    Exchange = "EPA",
+                    Currency = "EUR",
+                    AssetType = AssetTypeEnum.Stock
+                },
+                new MarketAssetDescriptor
+                {
+                    Symbol = "EADSY",
+                    CompanyName = "Airbus SE ADR",
+                    Exchange = "OTC",
+                    Currency = "USD",
+                    AssetType = AssetTypeEnum.Stock
+                }
+            ]);
+
+        var service = BuildService(db, catalogMock);
+        var results = await service.SearchAssetsAsync("airbus");
+
+        Assert.Equal(2, results.Count);
+
+        var airPa = results.First(r => r.Symbol == "AIR.PA");
+        Assert.Equal("Airbus SE", airPa.CompanyName);
+        Assert.Equal("Aerospace", airPa.Sector);
+        Assert.Equal("FR0000120073", airPa.Isin);
+
+        var adsr = results.First(r => r.Symbol == "EADSY");
+        Assert.Equal("Airbus SE ADR", adsr.CompanyName);
+        Assert.Null(adsr.Sector);
+        Assert.Null(adsr.Isin);
     }
 }

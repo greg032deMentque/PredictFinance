@@ -119,17 +119,17 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of items(); track item.id) {
+          @for (item of items(); track item.Id) {
             <tr>
               <td>
-                <div class="fw-semibold">{{ item.title }}</div>
-                <div class="small muted">{{ item.summary }}</div>
+                <div class="fw-semibold">{{ item.Title }}</div>
+                <div class="small muted">{{ item.Summary }}</div>
               </td>
-              <td><code>{{ item.topicId }}</code></td>
-              <td class="small muted">{{ item.routePath }}</td>
-              <td>{{ item.displayOrder }}</td>
+              <td><code>{{ item.TopicId }}</code></td>
+              <td class="small muted">{{ item.RoutePath }}</td>
+              <td>{{ item.DisplayOrder }}</td>
               <td>
-                @if (item.isPublished) {
+                @if (item.IsPublished) {
                   <span class="badge bg-success-subtle text-success-emphasis">Publié</span>
                 } @else {
                   <span class="badge bg-secondary-subtle text-secondary-emphasis">Brouillon</span>
@@ -143,7 +143,7 @@
                   <button
                     type="button"
                     class="btn btn-sm btn-outline-danger rounded-pill"
-                    [disabled]="deletingId() === item.id"
+                    [disabled]="deletingId() === item.Id"
                     (click)="delete(item)"
                   >
                     <i class="bi bi-trash me-1"></i>Supprimer

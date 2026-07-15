@@ -12,6 +12,12 @@ namespace BackPredictFinance.Patterns
         IReadOnlyList<ResolvedAnalysisPattern> GetEnabledPatterns();
     }
 
+    /// <summary>
+    /// Point d'entree unique pour resoudre un identifiant de pattern (venu de l'API ou d'une
+    /// configuration) vers l'implementation <see cref="IAnalysisPatternDefinition"/> injectee par
+    /// DI correspondante. Centralise aussi la liste des patterns "actifs" pour l'explorateur
+    /// (<see cref="GetEnabledPatterns"/>), definie par <see cref="PatternCatalog"/>.
+    /// </summary>
     public sealed class AnalysisPatternRegistry : IAnalysisPatternRegistry
     {
         private readonly IReadOnlyDictionary<string, IAnalysisPatternDefinition> _definitions;
@@ -20,6 +26,9 @@ namespace BackPredictFinance.Patterns
         {
             ArgumentNullException.ThrowIfNull(definitions);
 
+            // group.Single() : deux definitions enregistrees avec le meme PatternId (normalise)
+            // sont une erreur de configuration DI et doivent lever plutot que de se substituer
+            // silencieusement l'une a l'autre.
             _definitions = definitions
                 .GroupBy(definition => NormalizePatternId(definition.PatternId), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(

@@ -74,17 +74,17 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             }
         }
 
-        private static string NormalizeRequiredText(string? rawValue, string parameterName, int maxLength)
+        private static string NormalizeRequiredText(string? rawValue, string fieldLabel, int maxLength)
         {
             var normalizedValue = (rawValue ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(normalizedValue))
             {
-                throw new ArgumentException("Le champ est obligatoire.", parameterName);
+                throw new ArgumentException($"Le champ {fieldLabel} est obligatoire.", nameof(rawValue));
             }
 
             if (normalizedValue.Length > maxLength)
             {
-                throw new ArgumentException($"Le champ ne peut pas depasser {maxLength} caracteres.", parameterName);
+                throw new ArgumentException($"Le champ {fieldLabel} ne peut pas depasser {maxLength} caracteres.", nameof(rawValue));
             }
 
             return normalizedValue;

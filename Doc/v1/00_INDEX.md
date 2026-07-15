@@ -1,7 +1,7 @@
 # PredictFinance — Documentation V1 (pack consolidé)
 
 > **Statut** : pack canonique de la V1. Il **remplace** l'ancienne documentation (déplacée dans `Doc/_legacy/`).
-> **Date de refonte** : 2026-05-21 · **Dernière mise à jour** : 2026-05-28 (ajout diagnostic stratégique 09, priorités P0/P1/P2, blocages légaux).
+> **Date de refonte** : 2026-05-21 · **Dernière mise à jour** : 2026-07-13 (réconciliation code↔doc : moteur 8 patterns, boucle ex post, fondamentaux enrichis, multi-portefeuille, accompagnement et RGPD livrés — voir [06](06_ecarts_doc_code.md)).
 > **Principe** : un sujet = un seul fichier propriétaire. Pas de redondance. Toute décision est écrite une seule fois.
 
 ---
@@ -74,7 +74,7 @@ Le détail du périmètre (inclus / hors scope) est dans [01 §4](01_specificati
 
 Le code est **substantiellement implémenté**, pas un squelette :
 
-- **Backend** (.NET 10, `FinanceBack/`) : 7 projets, moteur de 4 patterns de continuation opérationnel, auth JWT + refresh, ~40 endpoints, persistance EF Core, gouvernance admin avancée, tests d'intégration.
-- **Frontend** (Angular 21, `FinanceFront/`) : SPA avec routage par rôle (auth / client / admin), la plupart des écrans user et **tous** les écrans admin construits.
+- **Backend** (.NET 10, `FinanceBack/`) : 7 projets, moteur de **8 patterns** (continuation + retournement) avec contexte de risque ATR, **boucle ex post** (`SignalOutcome` + job quotidien), auth JWT + refresh, **30 contrôleurs**, persistance EF Core, gouvernance + KPI admin, RGPD (suppression compte / export données), tests d'intégration.
+- **Frontend** (Angular 21, `FinanceFront/`) : SPA avec routage par rôle (auth / client / admin), écrans user (dont détail d'analyse, plan d'action, confiance expliquée, multi-portefeuille, comparaison de snapshots, learn/help/glossaire/onboarding) et **tous** les écrans admin construits.
 
 Les écarts précis entre ce code et la cible documentée sont dans [06](06_ecarts_doc_code.md).

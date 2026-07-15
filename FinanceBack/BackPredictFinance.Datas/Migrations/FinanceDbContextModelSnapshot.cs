@@ -17,10 +17,99 @@ namespace BackPredictFinance.Datas.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AnalysisConceptExplanation", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Explanation")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("AnalysisConceptExplanations");
+
+                    b.HasData(
+                        new
+                        {
+                            Code = "support",
+                            Explanation = "Niveau de prix situé sous le cours où les achats ont tendance à l'emporter, freinant la baisse. Plus il a été touché sans céder, plus il est jugé solide.",
+                            Label = "Support"
+                        },
+                        new
+                        {
+                            Code = "resistance",
+                            Explanation = "Niveau de prix situé au-dessus du cours où les ventes ont tendance à l'emporter, freinant la hausse. Une cassure franche peut ouvrir la voie à une poursuite du mouvement.",
+                            Label = "Résistance"
+                        },
+                        new
+                        {
+                            Code = "touches",
+                            Explanation = "Nombre de fois où le cours est venu tester un niveau sans le franchir. Un niveau souvent touché est considéré comme plus significatif.",
+                            Label = "Touches"
+                        },
+                        new
+                        {
+                            Code = "strength",
+                            Explanation = "Estimation de la solidité d'un niveau, fondée notamment sur le nombre de touches et leur netteté. Plus la force est élevée, plus le niveau est jugé fiable.",
+                            Label = "Force"
+                        },
+                        new
+                        {
+                            Code = "double_zone",
+                            Explanation = "Niveau qui agit tantôt comme support, tantôt comme résistance selon la position du cours. Sa rupture est souvent surveillée de près.",
+                            Label = "Zone « Double »"
+                        },
+                        new
+                        {
+                            Code = "continuation",
+                            Explanation = "Figure qui suggère une simple pause avant la reprise de la tendance déjà en place (hausse ou baisse).",
+                            Label = "Continuation"
+                        },
+                        new
+                        {
+                            Code = "reversal",
+                            Explanation = "Figure qui suggère un changement de direction de la tendance en cours.",
+                            Label = "Retournement"
+                        },
+                        new
+                        {
+                            Code = "bullish",
+                            Explanation = "Orientation favorable à une hausse du cours : la figure anticipe une progression.",
+                            Label = "Haussier"
+                        },
+                        new
+                        {
+                            Code = "bearish",
+                            Explanation = "Orientation favorable à une baisse du cours : la figure anticipe un recul.",
+                            Label = "Baissier"
+                        },
+                        new
+                        {
+                            Code = "trendfollowing",
+                            Explanation = "La figure ne donne pas de direction propre : elle anticipe la poursuite du mouvement (hausse ou baisse) déjà en place avant son apparition.",
+                            Label = "Suit la tendance"
+                        },
+                        new
+                        {
+                            Code = "reliability",
+                            Explanation = "Taux de réussite observé sur un large échantillon passé pour ce type de figure (source Bulkowski). Plus il est élevé, plus la figure tend à se concrétiser une fois confirmée — ce n'est jamais une garantie.",
+                            Label = "Fiabilité historique"
+                        });
+                });
 
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.AnalysisRun", b =>
                 {
@@ -63,7 +152,7 @@ namespace BackPredictFinance.Datas.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssetId");
+                    b.HasIndex("AssetId", "StartedAtUtc");
 
                     b.HasIndex("UserId", "StartedAtUtc");
 
@@ -233,6 +322,48 @@ namespace BackPredictFinance.Datas.Migrations
                         .IsUnique();
 
                     b.ToTable("AssetCandleSnapshots");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetFundamentalsSnapshot", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("AsOfUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AssetId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("DividendYield")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("MarketCap")
+                        .HasPrecision(24, 4)
+                        .HasColumnType("decimal(24,4)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal?>("TrailingPE")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("decimal(9,4)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetId", "AsOfUtc");
+
+                    b.ToTable("AssetFundamentalsSnapshots");
                 });
 
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetPeaEligibility", b =>
@@ -485,7 +616,7 @@ namespace BackPredictFinance.Datas.Migrations
                         new
                         {
                             Id = "3f1a2b4c-0001-0000-0000-000000000001",
-                            BodyMarkdown = "## Définition\n\nL'assurance vie est un contrat d'épargne entre un souscripteur et une compagnie d'assurance. Elle permet de faire fructifier une épargne sur le long terme tout en bénéficiant d'une fiscalité allégée et d'une grande souplesse en cas de transmission de patrimoine.\n\n## À quoi ça sert ?\n\n- Constituer une épargne progressive\n- Préparer un projet à moyen ou long terme (retraite, achat immobilier, transmission)\n- Transmettre un capital à un bénéficiaire désigné hors succession\n\n## Comment ça fonctionne ?\n\nVous versez des primes (libres ou programmées) sur un contrat. Ces sommes sont investies sur des supports financiers :\n- **Fonds en euros** : capital garanti, rendement modéré\n- **Unités de compte (UC)** : investis sur des marchés financiers, potentiel plus élevé mais sans garantie du capital\n\n## Règles clés\n\n- **Plafonds de versement** : aucun plafond légal sur les versements\n- **Fiscalité** : après 8 ans de détention, abattement annuel de 4 600 € (personne seule) ou 9 200 € (couple) sur les gains, puis prélèvement forfaitaire de 7,5 % au-delà pour les gains issus des primes versées jusqu'à 150 000 €, et 12,8 % au-delà de ce seuil (prélèvements sociaux de 17,2 % dans tous les cas)\n- **Disponibilité** : capital disponible à tout moment via un rachat partiel ou total\n- **Transmission** : hors succession jusqu'à 152 500 € par bénéficiaire pour les versements effectués avant 70 ans\n\n## Bonnes pratiques\n\n- Privilégier les contrats multisupports pour diversifier le risque\n- Vérifier les frais d'entrée, de gestion et d'arbitrage\n- Adapter la part fonds euros / UC à votre horizon et à votre profil de risque\n- Ne pas confondre assurance vie et assurance décès\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*",
+                            BodyMarkdown = "## Définition\r\n\r\nL'assurance vie est un contrat d'épargne entre un souscripteur et une compagnie d'assurance. Elle permet de faire fructifier une épargne sur le long terme tout en bénéficiant d'une fiscalité allégée et d'une grande souplesse en cas de transmission de patrimoine.\r\n\r\n## À quoi ça sert ?\r\n\r\n- Constituer une épargne progressive\r\n- Préparer un projet à moyen ou long terme (retraite, achat immobilier, transmission)\r\n- Transmettre un capital à un bénéficiaire désigné hors succession\r\n\r\n## Comment ça fonctionne ?\r\n\r\nVous versez des primes (libres ou programmées) sur un contrat. Ces sommes sont investies sur des supports financiers :\r\n- **Fonds en euros** : capital garanti, rendement modéré\r\n- **Unités de compte (UC)** : investis sur des marchés financiers, potentiel plus élevé mais sans garantie du capital\r\n\r\n## Règles clés\r\n\r\n- **Plafonds de versement** : aucun plafond légal sur les versements\r\n- **Fiscalité** : après 8 ans de détention, abattement annuel de 4 600 € (personne seule) ou 9 200 € (couple) sur les gains, puis prélèvement forfaitaire de 7,5 % au-delà\r\n- **Disponibilité** : capital disponible à tout moment via un rachat partiel ou total\r\n- **Transmission** : hors succession jusqu'à 152 500 € par bénéficiaire pour les versements effectués avant 70 ans\r\n\r\n## Bonnes pratiques\r\n\r\n- Privilégier les contrats multisupports pour diversifier le risque\r\n- Vérifier les frais d'entrée, de gestion et d'arbitrage\r\n- Adapter la part fonds euros / UC à votre horizon et à votre profil de risque\r\n- Ne pas confondre assurance vie et assurance décès\r\n\r\n---\r\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 1,
                             IsActive = true,
@@ -499,7 +630,7 @@ namespace BackPredictFinance.Datas.Migrations
                         new
                         {
                             Id = "3f1a2b4c-0001-0000-0000-000000000002",
-                            BodyMarkdown = "## Définition\n\nLe Plan d'Épargne en Actions (PEA) est une enveloppe fiscale permettant d'investir en actions d'entreprises européennes tout en bénéficiant d'une exonération d'impôt sur les plus-values après 5 ans de détention.\n\n## À quoi ça sert ?\n\n- Investir en actions françaises et européennes avec un avantage fiscal\n- Constituer une épargne boursière à long terme\n- Percevoir des dividendes exonérés d'impôt sur le revenu après 5 ans\n\n## Comment ça fonctionne ?\n\nVous alimentez le PEA par des versements en numéraire. Les sommes sont investies dans des titres éligibles (actions d'entreprises de l'Espace Économique Européen, OPCVM éligibles). Les gains réalisés restent dans l'enveloppe sans imposition tant qu'ils ne sont pas retirés.\n\n## Règles clés\n\n- **Plafond de versement** : 150 000 € pour un PEA classique ; le PEA-PME porte le plafond global à 225 000 € (versements PEA + PEA-PME cumulés)\n- **PEA jeunes** : réservé aux 18-25 ans rattachés au foyer fiscal de leurs parents, plafonné à 20 000 €\n- **Fiscalité** : après 5 ans, les gains sont exonérés d'impôt sur le revenu (hors prélèvements sociaux de 17,2 %)\n- **Disponibilité** : tout retrait avant 5 ans entraîne la clôture du PEA et une imposition des gains ; après 5 ans, les retraits partiels sont possibles sans clôture\n- **Titres éligibles** : actions cotées ou non d'entreprises de l'EEE, certains OPCVM, fonds indiciels (ETF) éligibles\n\n## Bonnes pratiques\n\n- Ouvrir le PEA dès que possible pour faire courir le délai de 5 ans\n- Ne pas retirer avant 5 ans sauf nécessité absolue\n- Utiliser des ETF éligibles pour diversifier à moindre coût\n- Vérifier l'éligibilité PEA de chaque titre avant achat\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*",
+                            BodyMarkdown = "## Définition\r\n\r\nLe Plan d'Épargne en Actions (PEA) est une enveloppe fiscale permettant d'investir en actions d'entreprises européennes tout en bénéficiant d'une exonération d'impôt sur les plus-values après 5 ans de détention.\r\n\r\n## À quoi ça sert ?\r\n\r\n- Investir en actions françaises et européennes avec un avantage fiscal\r\n- Constituer une épargne boursière à long terme\r\n- Percevoir des dividendes exonérés d'impôt sur le revenu après 5 ans\r\n\r\n## Comment ça fonctionne ?\r\n\r\nVous alimentez le PEA par des versements en numéraire. Les sommes sont investies dans des titres éligibles (actions d'entreprises de l'Espace Économique Européen, OPCVM éligibles). Les gains réalisés restent dans l'enveloppe sans imposition tant qu'ils ne sont pas retirés.\r\n\r\n## Règles clés\r\n\r\n- **Plafond de versement** : 150 000 € pour un PEA classique, 75 000 € pour un PEA-PME\r\n- **Fiscalité** : après 5 ans, les gains sont exonérés d'impôt sur le revenu (hors prélèvements sociaux de 17,2 %)\r\n- **Disponibilité** : tout retrait avant 5 ans entraîne la clôture du PEA et une imposition des gains ; après 5 ans, les retraits partiels sont possibles sans clôture\r\n- **Titres éligibles** : actions cotées ou non d'entreprises de l'EEE, certains OPCVM, fonds indiciels (ETF) éligibles\r\n\r\n## Bonnes pratiques\r\n\r\n- Ouvrir le PEA dès que possible pour faire courir le délai de 5 ans\r\n- Ne pas retirer avant 5 ans sauf nécessité absolue\r\n- Utiliser des ETF éligibles pour diversifier à moindre coût\r\n- Vérifier l'éligibilité PEA de chaque titre avant achat\r\n\r\n---\r\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 2,
                             IsActive = true,
@@ -513,7 +644,7 @@ namespace BackPredictFinance.Datas.Migrations
                         new
                         {
                             Id = "3f1a2b4c-0001-0000-0000-000000000003",
-                            BodyMarkdown = "## Définition\n\nLe Plan d'Épargne Logement (PEL) est un produit d'épargne réglementé proposé par les banques. Il permet d'accumuler une épargne sur une durée minimale de 4 ans en vue d'obtenir un prêt immobilier à taux préférentiel.\n\n## À quoi ça sert ?\n\n- Préparer un achat immobilier\n- Obtenir un droit à prêt à taux avantageux (sous conditions)\n- Bénéficier d'une épargne à taux fixe garanti\n\n## Comment ça fonctionne ?\n\nVous effectuez des versements réguliers obligatoires sur le PEL. Le taux d'intérêt est fixé à l'ouverture et garanti pendant toute la durée du plan. Au terme de la phase d'épargne, vous pouvez demander un prêt immobilier lié au PEL.\n\n## Règles clés\n\n- **Plafond de versement** : 61 200 €\n- **Versements** : minimum 540 € par an, libre répartition\n- **Durée minimale** : 4 ans pour obtenir le droit à prêt ; au-delà de 10 ans le PEL cesse de produire des droits à prêt supplémentaires\n- **Fiscalité** : les intérêts sont soumis au prélèvement forfaitaire unique (PFU 30 %) pour les PEL ouverts à partir de 2018 ; les PEL ouverts avant 2018 conservent l'ancien régime (exonération d'impôt sur le revenu pendant les 12 premières années, hors prélèvements sociaux)\n- **Disponibilité** : clôture possible à tout moment mais perte des droits à prêt et pénalités sur intérêts si clôture avant 2 ans\n\n## Bonnes pratiques\n\n- Vérifier que le taux en vigueur à l'ouverture est compétitif par rapport aux taux du marché\n- Ne pas dépasser 10 ans sans l'utiliser (le prêt PEL perd de l'intérêt au-delà)\n- Comparer avec d'autres placements sécurisés si l'objectif immobilier est incertain\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*",
+                            BodyMarkdown = "## Définition\r\n\r\nLe Plan d'Épargne Logement (PEL) est un produit d'épargne réglementé proposé par les banques. Il permet d'accumuler une épargne sur une durée minimale de 4 ans en vue d'obtenir un prêt immobilier à taux préférentiel.\r\n\r\n## À quoi ça sert ?\r\n\r\n- Préparer un achat immobilier\r\n- Obtenir un droit à prêt à taux avantageux (sous conditions)\r\n- Bénéficier d'une épargne à taux fixe garanti\r\n\r\n## Comment ça fonctionne ?\r\n\r\nVous effectuez des versements réguliers obligatoires sur le PEL. Le taux d'intérêt est fixé à l'ouverture et garanti pendant toute la durée du plan. Au terme de la phase d'épargne, vous pouvez demander un prêt immobilier lié au PEL.\r\n\r\n## Règles clés\r\n\r\n- **Plafond de versement** : 61 200 €\r\n- **Versements** : minimum 540 € par an, libre répartition\r\n- **Durée minimale** : 4 ans pour obtenir le droit à prêt ; au-delà de 10 ans le PEL cesse de produire des droits à prêt supplémentaires\r\n- **Fiscalité** : les intérêts sont soumis au prélèvement forfaitaire unique (PFU 30 %) depuis 2018 pour les PEL ouverts après cette date\r\n- **Disponibilité** : clôture possible à tout moment mais perte des droits à prêt et pénalités sur intérêts si clôture avant 2 ans\r\n\r\n## Bonnes pratiques\r\n\r\n- Vérifier que le taux en vigueur à l'ouverture est compétitif par rapport aux taux du marché\r\n- Ne pas dépasser 10 ans sans l'utiliser (le prêt PEL perd de l'intérêt au-delà)\r\n- Comparer avec d'autres placements sécurisés si l'objectif immobilier est incertain\r\n\r\n---\r\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 3,
                             IsActive = true,
@@ -527,7 +658,7 @@ namespace BackPredictFinance.Datas.Migrations
                         new
                         {
                             Id = "3f1a2b4c-0001-0000-0000-000000000004",
-                            BodyMarkdown = "## Définition\n\nLe Plan d'Épargne Retraite (PER) est un produit d'épargne long terme créé par la loi PACTE (2019). Il vise à préparer la retraite en permettant une déduction fiscale des versements du revenu imposable, tout en offrant une grande souplesse de gestion.\n\n## À quoi ça sert ?\n\n- Préparer financièrement la retraite\n- Réduire son impôt sur le revenu via la déduction des versements volontaires\n- Investir sur des supports diversifiés (fonds euros, unités de compte)\n\n## Comment ça fonctionne ?\n\nVous versez librement sur le PER individuel (PERin). Les sommes sont investies selon votre profil de risque. À la retraite, vous pouvez sortir en capital, en rente viagère, ou une combinaison des deux.\n\n## Règles clés\n\n- **Plafond de déduction** : 10 % des revenus professionnels de l'année précédente (dans certaines limites), reportable sur 3 ans\n- **Fiscalité à la sortie** : si les versements ont été déduits, le capital et les gains sont imposables à la sortie (impôt sur le revenu + prélèvements sociaux sur les gains)\n- **Disponibilité** : les fonds sont bloqués jusqu'à la retraite, sauf cas de déblocage anticipé (achat résidence principale, invalidité, décès du conjoint, surendettement, expiration des droits chômage)\n- **Sortie en capital** : possible en totalité depuis la loi PACTE\n\n## Bonnes pratiques\n\n- Verser dans le PER est surtout avantageux si vous êtes dans une tranche marginale d'imposition élevée\n- Prévoir la fiscalité à la sortie : un fort capital entraînera une imposition significative\n- Ne pas mobiliser toute son épargne dans le PER si vous avez des besoins de liquidité à moyen terme\n- Comparer les frais de gestion des contrats PER, ils varient sensiblement\n\n---\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*",
+                            BodyMarkdown = "## Définition\r\n\r\nLe Plan d'Épargne Retraite (PER) est un produit d'épargne long terme créé par la loi PACTE (2019). Il vise à préparer la retraite en permettant une déduction fiscale des versements du revenu imposable, tout en offrant une grande souplesse de gestion.\r\n\r\n## À quoi ça sert ?\r\n\r\n- Préparer financièrement la retraite\r\n- Réduire son impôt sur le revenu via la déduction des versements volontaires\r\n- Investir sur des supports diversifiés (fonds euros, unités de compte)\r\n\r\n## Comment ça fonctionne ?\r\n\r\nVous versez librement sur le PER individuel (PERin). Les sommes sont investies selon votre profil de risque. À la retraite, vous pouvez sortir en capital, en rente viagère, ou une combinaison des deux.\r\n\r\n## Règles clés\r\n\r\n- **Plafond de déduction** : 10 % des revenus professionnels de l'année précédente (dans certaines limites), reportable sur 3 ans\r\n- **Fiscalité à la sortie** : si les versements ont été déduits, le capital et les gains sont imposables à la sortie (impôt sur le revenu + prélèvements sociaux sur les gains)\r\n- **Disponibilité** : les fonds sont bloqués jusqu'à la retraite, sauf cas de déblocage anticipé (achat résidence principale, invalidité, décès du conjoint, surendettement, expiration des droits chômage)\r\n- **Sortie en capital** : possible en totalité depuis la loi PACTE\r\n\r\n## Bonnes pratiques\r\n\r\n- Verser dans le PER est surtout avantageux si vous êtes dans une tranche marginale d'imposition élevée\r\n- Prévoir la fiscalité à la sortie : un fort capital entraînera une imposition significative\r\n- Ne pas mobiliser toute son épargne dans le PER si vous avez des besoins de liquidité à moyen terme\r\n- Comparer les frais de gestion des contrats PER, ils varient sensiblement\r\n\r\n---\r\n*Ce contenu est fourni à titre pédagogique général. Il ne constitue pas un conseil en investissement personnalisé.*",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             DisplayOrder = 4,
                             IsActive = true,
@@ -929,270 +1060,6 @@ namespace BackPredictFinance.Datas.Migrations
                             IsPublished = true,
                             NormalizedTerm = "horizon de placement",
                             Term = "Horizon de placement"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000016",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Titre de propriété représentant une part du capital d'une entreprise. L'actionnaire peut percevoir des dividendes et profite (ou pâtit) de l'évolution du cours.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "action",
-                            Term = "Action"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000017",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Titre de créance : en achetant une obligation, on prête de l'argent à un émetteur (État, entreprise) en échange d'intérêts et d'un remboursement à l'échéance.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "obligation",
-                            Term = "Obligation"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000018",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Fonds indiciel coté en bourse qui réplique la performance d'un indice (ex : CAC 40). Permet de diversifier à faible coût ; certains ETF sont éligibles au PEA.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "etf tracker",
-                            Term = "ETF (Tracker)"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000019",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Organisme de Placement Collectif en Valeurs Mobilières (SICAV, FCP) : fonds qui investit l'argent de plusieurs épargnants sur un panier de titres géré collectivement.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "opcvm",
-                            Term = "OPCVM"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000020",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Part du bénéfice d'une entreprise distribuée à ses actionnaires. Son versement n'est pas garanti et dépend des résultats et de la décision de l'entreprise.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "dividende",
-                            Term = "Dividende"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000021",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Gain réalisé lorsqu'un actif est revendu plus cher que son prix d'achat. La moins-value est la perte inverse.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "plus-value",
-                            Term = "Plus-value"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000022",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Mesure de l'ampleur des variations du prix d'un actif. Une forte volatilité signifie des mouvements de cours plus marqués, à la hausse comme à la baisse.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "volatilite",
-                            Term = "Volatilité"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000023",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Répartition de l'épargne sur plusieurs actifs, secteurs ou zones géographiques pour réduire le risque global du portefeuille.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "diversification",
-                            Term = "Diversification"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000024",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Gain généré par un placement sur une période, exprimé en pourcentage du montant investi. Un rendement passé ne préjuge pas des rendements futurs.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "rendement",
-                            Term = "Rendement"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000025",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Mécanisme par lequel les intérêts produits sont réinvestis et génèrent à leur tour des intérêts. L'effet s'amplifie fortement avec la durée.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "interets composes",
-                            Term = "Intérêts composés"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000026",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Possibilité de récupérer moins que le montant investi. Présent sur les supports non garantis comme les actions ou les unités de compte.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "risque de perte en capital",
-                            Term = "Risque de perte en capital"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000027",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Taux d'imposition appliqué à la dernière tranche de vos revenus. Plus elle est élevée, plus l'avantage fiscal d'un PER est important.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "tranche marginale d'imposition tmi",
-                            Term = "Tranche marginale d'imposition (TMI)"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000028",
-                            Category = "PER",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Revenu régulier versé à vie, par exemple à la sortie d'un PER, en échange du capital accumulé.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "rente viagere",
-                            Term = "Rente viagère"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000029",
-                            Category = "PER",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Récupération de l'épargne sous forme d'un ou plusieurs versements, par opposition à la rente. Possible sur le PER depuis la loi PACTE.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "sortie en capital",
-                            Term = "Sortie en capital"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000030",
-                            Category = "PER",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Retrait de fonds avant l'échéance normale d'un produit bloqué (ex : PER), autorisé seulement dans certains cas légaux (achat de la résidence principale, accidents de la vie).",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "deblocage anticipe",
-                            Term = "Déblocage anticipé"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000031",
-                            Category = "PEA",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Variante du PEA réservée aux titres de PME et ETI européennes. Depuis la loi PACTE, le plafond de versement est de 225 000 €, commun avec le PEA classique.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "pea-pme",
-                            Term = "PEA-PME"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000032",
-                            Category = "PEA",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Zone regroupant l'Union européenne plus l'Islande, le Liechtenstein et la Norvège. Les titres éligibles au PEA doivent provenir de cette zone.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "espace economique europeen eee",
-                            Term = "Espace Économique Européen (EEE)"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000033",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Frais annuels prélevés par l'assureur ou le gestionnaire pour administrer le contrat ou le fonds. Ils réduisent le rendement net du placement.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "frais de gestion",
-                            Term = "Frais de gestion"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000034",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Niveau de risque qu'un épargnant est prêt à accepter, selon ses objectifs, son horizon de placement et sa tolérance aux pertes.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "profil de risque",
-                            Term = "Profil de risque"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000035",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Répartition de l'épargne entre les grandes classes d'actifs (actions, obligations, monétaire, immobilier) selon le profil et l'horizon de l'investisseur.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "allocation d'actifs",
-                            Term = "Allocation d'actifs"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000036",
-                            Category = "General",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Enveloppe sans plafond ni restriction géographique permettant d'investir sur tous types de titres, mais sans avantage fiscal spécifique.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "compte-titres ordinaire cto",
-                            Term = "Compte-titres ordinaire (CTO)"
-                        },
-                        new
-                        {
-                            Id = "4a2b3c5d-0002-0000-0000-000000000037",
-                            Category = "PER",
-                            CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Definition = "Loi de 2019 ayant réformé l'épargne retraite en créant le PER et en assouplissant ses règles (sortie en capital, transférabilité entre contrats).",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsPublished = true,
-                            NormalizedTerm = "loi pacte",
-                            Term = "Loi PACTE"
                         });
                 });
 
@@ -1732,6 +1599,11 @@ namespace BackPredictFinance.Datas.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
                     b.Property<DateTime?>("FirstPeakAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1780,6 +1652,167 @@ namespace BackPredictFinance.Datas.Migrations
                     b.ToTable("PatternAssessments");
                 });
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.PatternDefinition", b =>
+                {
+                    b.Property<string>("PatternId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("AnalysisNarrative")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DirectionLabel")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Family")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("FamilyLabel")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("Reliability")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("decimal(4,2)");
+
+                    b.Property<string>("ReliabilityLabel")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("PatternId");
+
+                    b.ToTable("PatternDefinitions");
+
+                    b.HasData(
+                        new
+                        {
+                            PatternId = "RECTANGLE_CONTINUATION",
+                            AnalysisNarrative = "Tant que le cours évolue dans le rectangle, la tendance est en pause : l'analyse surveille la sortie de zone pour confirmer la reprise dans le sens initial.",
+                            Description = "Phase de consolidation horizontale entre un support et une résistance parallèles. La figure se valide lorsque le cours sort de la zone dans le sens de la tendance précédente, suggérant une reprise de celle-ci.",
+                            Direction = "TrendFollowing",
+                            DirectionLabel = "Suit la tendance",
+                            DisplayName = "Rectangle de continuation",
+                            Family = "continuation",
+                            FamilyLabel = "Continuation de tendance",
+                            Reliability = 0.68m,
+                            ReliabilityLabel = "Modérée"
+                        },
+                        new
+                        {
+                            PatternId = "SYMMETRICAL_TRIANGLE_CONTINUATION",
+                            AnalysisNarrative = "L'analyse suit le resserrement des cours et attend la cassure d'un côté du triangle pour valider la poursuite de la tendance en place.",
+                            Description = "Resserrement progressif des cours entre une ligne de plus hauts décroissants et une ligne de plus bas croissants. La figure se valide lorsque le cours franchit l'un des côtés dans le sens de la tendance établie.",
+                            Direction = "TrendFollowing",
+                            DirectionLabel = "Suit la tendance",
+                            DisplayName = "Triangle symétrique de continuation",
+                            Family = "continuation",
+                            FamilyLabel = "Continuation de tendance",
+                            Reliability = 0.54m,
+                            ReliabilityLabel = "Faible"
+                        },
+                        new
+                        {
+                            PatternId = "BULL_FLAG_CONTINUATION",
+                            AnalysisNarrative = "Après une forte hausse, l'analyse évalue si la respiration en cours débouche sur une nouvelle jambe haussière une fois le drapeau cassé à la hausse.",
+                            Description = "Brève phase de respiration baissière ou horizontale après une forte impulsion haussière. La figure se valide sur une cassure à la hausse, signalant la reprise probable du mouvement initial.",
+                            Direction = "Bullish",
+                            DirectionLabel = "Haussière",
+                            DisplayName = "Drapeau haussier",
+                            Family = "continuation",
+                            FamilyLabel = "Continuation de tendance",
+                            Reliability = 0.67m,
+                            ReliabilityLabel = "Modérée"
+                        },
+                        new
+                        {
+                            PatternId = "BEAR_FLAG_CONTINUATION",
+                            AnalysisNarrative = "Après une forte baisse, l'analyse évalue si le rebond en cours laisse place à une nouvelle jambe baissière une fois le drapeau cassé à la baisse.",
+                            Description = "Brève phase de rebond ou horizontale après une forte impulsion baissière. La figure se valide sur une cassure à la baisse, signalant la reprise probable du mouvement de baisse.",
+                            Direction = "Bearish",
+                            DirectionLabel = "Baissière",
+                            DisplayName = "Drapeau baissier",
+                            Family = "continuation",
+                            FamilyLabel = "Continuation de tendance",
+                            Reliability = 0.67m,
+                            ReliabilityLabel = "Modérée"
+                        },
+                        new
+                        {
+                            PatternId = "DOUBLE_BOTTOM",
+                            AnalysisNarrative = "L'analyse compare les deux creux et surveille le franchissement de la ligne de cou, signal d'un possible retournement haussier.",
+                            Description = "Deux creux de niveau équivalent séparés par un rebond intermédiaire, dessinant un « W ». Figure de retournement haussier confirmée par le franchissement de la ligne de cou (le sommet du rebond).",
+                            Direction = "Bullish",
+                            DirectionLabel = "Haussière",
+                            DisplayName = "Double creux",
+                            Family = "reversal",
+                            FamilyLabel = "Retournement",
+                            Reliability = 0.65m,
+                            ReliabilityLabel = "Modérée"
+                        },
+                        new
+                        {
+                            PatternId = "DOUBLE_TOP",
+                            AnalysisNarrative = "L'analyse compare les deux sommets et surveille la cassure de la ligne de cou, signal d'un possible retournement baissier.",
+                            Description = "Deux sommets de niveau équivalent séparés par un creux intermédiaire, dessinant un « M ». Figure de retournement baissier confirmée par la cassure de la ligne de cou (le bas du creux).",
+                            Direction = "Bearish",
+                            DirectionLabel = "Baissière",
+                            DisplayName = "Double sommet",
+                            Family = "reversal",
+                            FamilyLabel = "Retournement",
+                            Reliability = 0.64m,
+                            ReliabilityLabel = "Modérée"
+                        },
+                        new
+                        {
+                            PatternId = "INVERSE_HEAD_AND_SHOULDERS",
+                            AnalysisNarrative = "L'analyse identifie la structure épaule-tête-épaule inversée et attend le franchissement de la ligne de cou pour valider un retournement haussier.",
+                            Description = "Structure en trois creux dont celui du centre (la tête) est plus profond que les deux autres (les épaules). Figure de retournement haussier confirmée par le franchissement de la ligne de cou.",
+                            Direction = "Bullish",
+                            DirectionLabel = "Haussière",
+                            DisplayName = "Tête-épaules inversé",
+                            Family = "reversal",
+                            FamilyLabel = "Retournement",
+                            Reliability = 0.71m,
+                            ReliabilityLabel = "Fiable"
+                        },
+                        new
+                        {
+                            PatternId = "HEAD_AND_SHOULDERS",
+                            AnalysisNarrative = "L'analyse identifie la structure épaule-tête-épaule et attend la cassure de la ligne de cou pour valider un retournement baissier.",
+                            Description = "Structure en trois sommets dont celui du centre (la tête) est plus haut que les deux autres (les épaules). Figure de retournement baissier confirmée par la cassure de la ligne de cou.",
+                            Direction = "Bearish",
+                            DirectionLabel = "Baissière",
+                            DisplayName = "Tête-épaules",
+                            Family = "reversal",
+                            FamilyLabel = "Retournement",
+                            Reliability = 0.51m,
+                            ReliabilityLabel = "Faible"
+                        });
+                });
+
             modelBuilder.Entity("BackPredictFinance.Datas.Entities.Portfolio", b =>
                 {
                     b.Property<string>("Id")
@@ -1800,6 +1833,11 @@ namespace BackPredictFinance.Datas.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
@@ -2418,6 +2456,42 @@ namespace BackPredictFinance.Datas.Migrations
                     b.ToTable("UserNotifications");
                 });
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.UserScreenerPreset", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("QueryJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "IsDeleted");
+
+                    b.ToTable("UserScreenerPresets", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -2574,6 +2648,17 @@ namespace BackPredictFinance.Datas.Migrations
                 {
                     b.HasOne("BackPredictFinance.Datas.Entities.Asset", "Asset")
                         .WithMany("CandleSnapshots")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Asset");
+                });
+
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.AssetFundamentalsSnapshot", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.Asset", "Asset")
+                        .WithMany("FundamentalsSnapshots")
                         .HasForeignKey("AssetId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2765,6 +2850,17 @@ namespace BackPredictFinance.Datas.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BackPredictFinance.Datas.Entities.UserScreenerPreset", b =>
+                {
+                    b.HasOne("BackPredictFinance.Datas.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -2830,6 +2926,8 @@ namespace BackPredictFinance.Datas.Migrations
                     b.Navigation("AnalysisRuns");
 
                     b.Navigation("CandleSnapshots");
+
+                    b.Navigation("FundamentalsSnapshots");
 
                     b.Navigation("PeaEligibilities");
 

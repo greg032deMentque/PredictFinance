@@ -1,5 +1,7 @@
 using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.MarketData;
+using BackPredictFinance.Patterns.Common;
 using BackPredictFinance.Services.ClientFinanceServices.Analysis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Patterns;
@@ -11,6 +13,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Patterns
     {
         Task<PatternEvaluateResultViewModel> EvaluateAsync(PatternEvaluateRequestViewModel request, CancellationToken ct = default);
         Task<PatternDetailViewModel?> GetPatternDetailAsync(string analysisId, string patternId, bool holdsInstrument, CancellationToken ct = default);
+        Task<List<PatternCatalogViewModel>> GetPatternCatalogAsync(CancellationToken ct = default);
+        Task<List<AnalysisConceptViewModel>> GetAnalysisConceptsAsync(CancellationToken ct = default);
     }
 
     public sealed class PatternExplorerService : BaseService, IPatternExplorerService
@@ -47,7 +51,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Patterns
             var symbol = _assetSupportService.NormalizeSymbol(request.Symbol);
             if (string.IsNullOrWhiteSpace(symbol))
             {
-                throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
+                throw new ArgumentException("Le symbole est obligatoire.", nameof(request));
             }
 
             var userId = _assetSupportService.GetRequiredCurrentUserId();
@@ -75,13 +79,63 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Patterns
                 .ToListAsync(ct);
 
             var candidates = BuildCandidates(snapshot, persistedAssessments);
+            var supportResistanceZones = BuildSupportResistanceZones(analysisResponse.Candles);
 
             return new PatternEvaluateResultViewModel
             {
                 AnalysisId = analysisResponse.AnalysisId,
                 Symbol = symbol,
-                Candidates = candidates
+                Candidates = candidates,
+                SupportResistanceZones = supportResistanceZones
             };
+        }
+
+        private static List<SupportResistanceZoneViewModel> BuildSupportResistanceZones(IReadOnlyList<TickerCandle> candles)
+        {
+            return SupportResistanceDetector.Detect(candles)
+                .Select(zone => new SupportResistanceZoneViewModel
+                {
+                    PriceLow = zone.PriceLow,
+                    PriceHigh = zone.PriceHigh,
+                    PriceMid = zone.PriceMid,
+                    TouchCount = zone.TouchCount,
+                    ZoneType = zone.ZoneType,
+                    Strength = zone.Strength
+                })
+                .ToList();
+        }
+
+        public async Task<List<PatternCatalogViewModel>> GetPatternCatalogAsync(CancellationToken ct = default)
+        {
+            return await _financeDbContext.PatternDefinitions
+                .AsNoTracking()
+                .Select(pattern => new PatternCatalogViewModel
+                {
+                    Id = pattern.PatternId,
+                    Label = pattern.DisplayName,
+                    Family = pattern.Family,
+                    Description = pattern.Description,
+                    Direction = pattern.Direction,
+                    FamilyLabel = pattern.FamilyLabel,
+                    DirectionLabel = pattern.DirectionLabel,
+                    AnalysisNarrative = pattern.AnalysisNarrative,
+                    Reliability = pattern.Reliability,
+                    ReliabilityLabel = pattern.ReliabilityLabel
+                })
+                .ToListAsync(ct);
+        }
+
+        public async Task<List<AnalysisConceptViewModel>> GetAnalysisConceptsAsync(CancellationToken ct = default)
+        {
+            return await _financeDbContext.AnalysisConceptExplanations
+                .AsNoTracking()
+                .Select(concept => new AnalysisConceptViewModel
+                {
+                    Code = concept.Code,
+                    Label = concept.Label,
+                    Explanation = concept.Explanation
+                })
+                .ToListAsync(ct);
         }
 
         public async Task<PatternDetailViewModel?> GetPatternDetailAsync(string analysisId, string patternId, bool holdsInstrument, CancellationToken ct = default)
@@ -172,7 +226,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Patterns
                 PatternId = row.PatternId,
                 DisplayName = string.IsNullOrWhiteSpace(assessment.DisplayName) ? row.PatternId : assessment.DisplayName,
                 Confidence = assessment.Scoring.ConfidenceScore,
-                Probability = persistedAssessment?.Probability ?? assessment.Scoring.ConfidenceScore,
+                Probability = persistedAssessment?.Probability ?? assessment.Scoring.ProbabilityScore ?? assessment.Scoring.ConfidenceScore,
                 ConfidenceLabel = assessment.Scoring.ConfidenceLabel,
                 Phase = assessment.Detection.CurrentPhaseLabel,
                 IsPrimary = string.Equals(row.PatternId, primaryPatternId, StringComparison.OrdinalIgnoreCase),

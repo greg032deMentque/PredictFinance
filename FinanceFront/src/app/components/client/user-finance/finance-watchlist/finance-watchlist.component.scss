@@ -1,0 +1,79 @@
+@use 'sass:color';
+@use '../../../../../themes/variables' as *;
+
+// ── Ligne cliquable ──────────────────────────────────────────────────────────
+.watchlist-row {
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background-color: $finance-surface-hover;
+  }
+}
+
+// ── Badges signaux ────────────────────────────────────────────────────────────
+.badge-market {
+  background-color: $finance-soft-info;
+  color: $finance-navy-2;
+  font-weight: 600;
+  font-size: 0.72rem;
+  border: 1px solid $finance-border-soft;
+}
+
+.badge-buy {
+  background-color: $finance-soft-success;
+  color: $finance-emerald;
+  font-weight: 700;
+  font-size: 0.72rem;
+  border: 1px solid color.adjust($finance-soft-success, $lightness: -6%);
+}
+
+.badge-sell {
+  background-color: $finance-soft-danger;
+  color: $finance-loss-red;
+  font-weight: 700;
+  font-size: 0.72rem;
+  border: 1px solid color.adjust($finance-soft-danger, $lightness: -6%);
+}
+
+.badge-hold {
+  background-color: $finance-soft-warning;
+  color: $finance-warning;
+  font-weight: 700;
+  font-size: 0.72rem;
+  border: 1px solid color.adjust($finance-soft-warning, $lightness: -6%);
+}
+
+.badge-neutral {
+  background-color: $finance-surface;
+  color: $finance-slate;
+  font-weight: 600;
+  font-size: 0.72rem;
+  border: 1px solid $finance-border-soft;
+}
+
+.badge-stale {
+  background-color: $finance-soft-danger;
+  color: $finance-loss-red;
+  font-size: 0.70rem;
+  border: 1px solid color.adjust($finance-soft-danger, $lightness: -8%);
+}
+
+.badge-aging {
+  background-color: $finance-soft-warning;
+  color: $finance-warning;
+  font-size: 0.70rem;
+  border: 1px solid color.adjust($finance-soft-warning, $lightness: -8%);
+}
+
+.badge-earnings-risk {
+  background-color: $finance-soft-warning;
+  color: $finance-warning;
+  font-weight: 600;
+  font-size: 0.70rem;
+  border: 1px solid color.adjust($finance-soft-warning, $lightness: -8%);
+}
+
+// ── En-têtes triables ─────────────────────────────────────────────────────────
+.col-sortable:hover {
+  background-color: $finance-surface-hover;
+}

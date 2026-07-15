@@ -6,21 +6,11 @@
     <p class="text-secondary mb-0">Définitions des termes liés aux enveloppes et produits financiers disponibles dans FinInsight.</p>
   </div>
 
-  <div class="input-group">
-    <span class="input-group-text"><i class="bi bi-search"></i></span>
-    <input
-      type="text"
-      class="form-control"
-      placeholder="Rechercher un terme..."
-      [formControl]="searchControl"
-      autocomplete="off"
-    />
-    @if (searchControl.value) {
-      <button class="btn btn-outline-secondary" type="button" (click)="searchControl.setValue('')">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    }
-  </div>
+  <app-search-bar
+    placeholder="Rechercher un terme..."
+    [value]="searchControl.value"
+    (valueChange)="searchControl.setValue($event)">
+  </app-search-bar>
 
   @if (loading()) {
     <div class="row g-3">

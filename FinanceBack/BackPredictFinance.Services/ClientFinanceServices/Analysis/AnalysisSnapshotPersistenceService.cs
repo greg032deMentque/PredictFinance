@@ -6,10 +6,10 @@ using BackPredictFinance.Datas.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using BackPredictFinance.Common.AnalysisV1;
 using AnalysisRecommendation = BackPredictFinance.Common.AnalysisV1.AnalysisRecommendation;
 using BackPredictFinance.Common.MarketData;
+using BackPredictFinance.Services.TwelveDataServices;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
@@ -57,12 +57,13 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
     {
         private const string SnapshotPayloadVersion = "analysis-snapshot-history@prompt5";
         private const string MarketDataProviderCode = "YAHOO_FINANCE";
-        private static readonly JsonSerializerOptions SnapshotSerializerOptions = CreateSnapshotSerializerOptions();
+        private readonly IFundamentalsProvider _fundamentalsProvider;
         private bool? _analysisHistorySchemaAvailable;
 
-        public AnalysisSnapshotPersistenceService(IServiceProvider serviceProvider)
+        public AnalysisSnapshotPersistenceService(IServiceProvider serviceProvider, IFundamentalsProvider fundamentalsProvider)
             : base(serviceProvider)
         {
+            _fundamentalsProvider = fundamentalsProvider;
         }
 
         private async Task UpsertCandlesAsync(
@@ -112,6 +113,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 }
                 catch (DbUpdateException)
                 {
+                    // Course entre deux analyses concurrentes sur le même actif/jour : l'insertion
+                    // échoue sur la contrainte unique (AssetId, Interval, TimestampUtc). On efface le
+                    // tracker (l'entité en échec y reste attachée) puis on relit la ligne réellement
+                    // en base pour basculer en update — évite un doublon de bougie sans lock explicite.
                     _financeDbContext.ChangeTracker.Clear();
 
                     var conflicted = await _financeDbContext.AssetCandleSnapshots
@@ -171,7 +176,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 CountryCode = asset.Country ?? string.Empty,
                 IsActive = true,
                 LastProfileSyncUtc = asset.LastProfileSyncUtc,
-                Summary = asset.Summary
+                Summary = asset.Summary,
+                EarningsDateUtc = analysisRun?.DecisionSignal?.EarningsDateUtc
             };
         }
 
@@ -222,6 +228,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             }
 
             var primaryPattern = executionArtifact.GetOrderedPatterns().FirstOrDefault();
+            var earningsDateUtc = await TryResolveEarningsDateUtcAsync(asset.Symbol, ct);
 
             var snapshotPayload = BuildSuccessfulSnapshotPayload(
                 request,
@@ -243,7 +250,17 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 Status = AnalysisRunStatusEnum.Completed,
                 StartedAtUtc = startedAtUtc,
                 CompletedAtUtc = completedAtUtc,
-                RawPayload = JsonSerializer.Serialize(snapshotPayload, SnapshotSerializerOptions),
+                // Piège connu : RawPayload doit être sérialisé avec EXACTEMENT les mêmes
+                // JsonSerializerOptions que celles utilisées côté lecture
+                // (AnalysisResultProjectionService.TryMapAnalysisRunResult). Les deux services
+                // partagent désormais AnalysisSnapshotJsonOptions.Shared (avec JsonStringEnumConverter)
+                // précisément parce qu'avant ce partage, la persistance sérialisait les enums
+                // (Outcome, ModelStatus, etc.) en chaînes tandis que la projection désérialisait avec
+                // des options par défaut (enums en entiers) : toute valeur d'enum non numérique dans
+                // RawPayload faisait alors échouer la désérialisation (JsonException silencieusement
+                // avalée par le try/catch de la projection, snapshot ignoré). Ne jamais réintroduire
+                // une instance de JsonSerializerOptions locale à ce service pour RawPayload.
+                RawPayload = JsonSerializer.Serialize(snapshotPayload, AnalysisSnapshotJsonOptions.Shared),
                 PatternAssessments = executionArtifact.Patterns
                     .Select(BuildPersistencePatternAssessment)
                     .ToList(),
@@ -256,7 +273,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                         or RecommendationKind.Sell,
                     Confidence = primaryPattern?.Confidence ?? 0m,
                     HorizonDays = recommendation.ReviewHorizonDays ?? 0,
-                    Reason = string.IsNullOrWhiteSpace(recommendation.Rationale) ? "Aucune justification" : recommendation.Rationale.Trim()
+                    Reason = string.IsNullOrWhiteSpace(recommendation.Rationale) ? "Aucune justification" : recommendation.Rationale.Trim(),
+                    EarningsDateUtc = earningsDateUtc
                 },
                 ModelSnapshot = new ModelSnapshot
                 {
@@ -280,6 +298,20 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             }
             await _financeDbContext.SaveChangesAsync(ct);
             return analysisRun;
+        }
+
+        private async Task<DateTime?> TryResolveEarningsDateUtcAsync(string symbol, CancellationToken ct)
+        {
+            try
+            {
+                var fundamentals = await _fundamentalsProvider.GetFundamentalsAsync(symbol, ct);
+                return fundamentals.EarningsDate;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"AnalysisSnapshotPersistenceService.TryResolveEarningsDateUtcAsync: calendrier de resultats indisponible pour {symbol} ({ex.GetType().Name})", ex);
+                return null;
+            }
         }
 
         private async Task<AnalysisRun?> TryPersistFailedAnalysisRunAsync(
@@ -344,7 +376,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                     : "L'analyse V1 n'a pas pu etre calculee."
             };
 
-            return JsonSerializer.Serialize(payload, SnapshotSerializerOptions);
+            // Même règle que pour le payload de succès : options partagées obligatoires (voir
+            // TryPersistAnalysisRunAsync) pour rester compatible avec la désérialisation côté projection.
+            return JsonSerializer.Serialize(payload, AnalysisSnapshotJsonOptions.Shared);
         }
 
         private static Datas.Entities.PatternAssessment BuildPersistencePatternAssessment(ExecutedPatternArtifact executedPattern)
@@ -354,6 +388,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 PatternId = executedPattern.PatternId,
                 Phase = executedPattern.Phase,
                 ProgressStatus = MapPatternStatus(executedPattern.ContractAssessment.Detection.Status),
+                Direction = executedPattern.ContractAssessment.Direction,
                 Probability = executedPattern.Probability,
                 Confidence = executedPattern.Confidence,
                 CurrentPrice = executedPattern.CurrentPrice,
@@ -391,6 +426,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             DateTime startedAtUtc,
             DateTime completedAtUtc)
         {
+            // Ordre d'affichage persisté : le pattern marqué IsPrimary passe toujours en tête, puis
+            // tri par confiance décroissante, puis par probabilité décroissante en cas d'égalité de
+            // confiance. Cet ordre est celui que la projection réutilisera tel quel (DisplayRank).
             var orderedPatterns = executionArtifact.Patterns
                 .OrderByDescending(executedPattern => executedPattern.IsPrimary)
                 .ThenByDescending(executedPattern => executedPattern.Confidence)
@@ -530,13 +568,11 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             };
         }
 
-        private static JsonSerializerOptions CreateSnapshotSerializerOptions()
-        {
-            var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            options.Converters.Add(new JsonStringEnumConverter());
-            return options;
-        }
-
+        // Détecte si le schéma d'historique d'analyse (4 tables) est déployé, pour permettre à ce
+        // service de fonctionner en environnement où la migration n'a pas encore été appliquée
+        // (dégradation silencieuse : PersistSuccessfulAnalysisAsync retourne alors un record avec un
+        // PublicId généré à la volée, sans persistance réelle). Résultat mis en cache sur la durée de
+        // vie du service (scoped) pour éviter une requête INFORMATION_SCHEMA à chaque analyse.
         private async Task<bool> CanUseAnalysisHistoryAsync(CancellationToken ct)
         {
             if (_analysisHistorySchemaAvailable.HasValue)

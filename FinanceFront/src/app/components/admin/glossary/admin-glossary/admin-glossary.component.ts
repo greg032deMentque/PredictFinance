@@ -6,13 +6,14 @@ import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { GlossaryTermAdmin, GlossaryTermUpsertRequest } from '../../../../Models/client-finance-models/glossary-product-term.model';
 import { GlossaryTermsService } from '../../../../services/glossary-terms.service';
 import { ToastService } from '../../../../services/toastr.service';
+import { SearchBarComponent } from '../../../shared/search-bar/search-bar.component';
 
 type FormMode = 'none' | 'add' | 'edit';
 
 @Component({
   selector: 'app-admin-glossary',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SearchBarComponent],
   templateUrl: './admin-glossary.component.html',
   styleUrl: './admin-glossary.component.scss'
 })

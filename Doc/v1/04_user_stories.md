@@ -112,7 +112,7 @@ Une story est « terminée » si : (a) ses critères d'acceptation passent ; (b)
 **En tant qu'**Investisseur, **je veux** voir tous les patterns crédibles, **afin de** ne pas manquer de lecture alternative.
 - **Étant donné** plusieurs patterns crédibles, **alors** l'issue est `MultipleCompatiblePatterns` et **tous** sont affichés (RM-06).
 - **Alors** un **pattern principal** est mis en avant **sans effacer** les alternatifs.
-- **Alors** seuls les patterns actifs sont exécutables ; `DOUBLE_TOP` est rejeté comme non pris en charge.
+- **Alors** seuls les **8 patterns actifs** (continuation + retournement) sont exécutables ; toute id hors whitelist (`PatternIds.RequireActivePatternId`) est rejetée comme non prise en charge.
 
 ### US-ANALYSE-03 — Absence de pattern crédible (P0, 🟢)
 **En tant qu'**Investisseur, **je veux** un message explicite quand aucun pattern n'est fiable, **afin de** ne pas être induit en erreur.

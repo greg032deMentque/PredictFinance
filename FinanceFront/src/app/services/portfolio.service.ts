@@ -3,10 +3,12 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { UserPortfolioCreateRequest, UserPortfolioRenameRequest, UserPortfolioViewModel } from '../Models/client-finance-models/user-portfolio.model';
+import { ClientFinanceMapper } from './client-finance.mapper';
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioService {
   private readonly http = inject(HttpClient);
+  private readonly mapper = inject(ClientFinanceMapper);
 
   getPortfolios(): Observable<UserPortfolioViewModel[]> {
     return this.http
@@ -31,25 +33,20 @@ export class PortfolioService {
       .pipe(map((payload) => this.mapPortfolio(payload)));
   }
 
-  deletePortfolio(id: string): Observable<void> {
-    return this.http.delete<void>(`${environment.apiUrl}ClientFinance/portfolios/${encodeURIComponent(id)}`);
+  archivePortfolio(id: string): Observable<void> {
+    return this.http.put<void>(`${environment.apiUrl}ClientFinance/portfolios/${encodeURIComponent(id)}/archive`, {});
+  }
+
+  restorePortfolio(id: string): Observable<void> {
+    return this.http.put<void>(`${environment.apiUrl}ClientFinance/portfolios/${encodeURIComponent(id)}/restore`, {});
   }
 
   private mapPortfolio(source: Record<string, unknown>): UserPortfolioViewModel {
     return new UserPortfolioViewModel({
-      Id: this.readString(source, ['id', 'Id']) ?? '',
-      Name: this.readString(source, ['name', 'Name']) ?? '',
-      PortfolioType: (this.readString(source, ['portfolioType', 'PortfolioType']) ?? 'Autre') as UserPortfolioViewModel['PortfolioType']
+      Id: this.mapper.readString(source, ['id', 'Id']) ?? '',
+      Name: this.mapper.readString(source, ['name', 'Name']) ?? '',
+      PortfolioType: (this.mapper.readString(source, ['portfolioType', 'PortfolioType']) ?? 'Autre') as UserPortfolioViewModel['PortfolioType'],
+      Status: (this.mapper.readString(source, ['status', 'Status']) ?? 'Active') as UserPortfolioViewModel['Status']
     });
-  }
-
-  private readString(source: Record<string, unknown>, keys: string[]): string | null {
-    for (const key of keys) {
-      const value = source[key];
-      if (typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
-      }
-    }
-    return null;
   }
 }

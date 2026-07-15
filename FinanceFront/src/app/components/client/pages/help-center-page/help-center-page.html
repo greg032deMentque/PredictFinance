@@ -33,7 +33,7 @@
           <span class="fw-semibold">{{ section.category }}</span>
         </div>
         <div class="accordion accordion-flush" [id]="'faq-' + sectionIdx">
-          @for (item of section.items; track item.question; let itemIdx = $index) {
+          @for (item of section.items; track item.Question; let itemIdx = $index) {
             <div class="accordion-item border-0">
               <h2 class="accordion-header">
                 <button
@@ -44,7 +44,7 @@
                   [attr.aria-expanded]="false"
                   [attr.aria-controls]="'collapse-' + sectionIdx + '-' + itemIdx"
                 >
-                  {{ item.question }}
+                  {{ item.Question }}
                 </button>
               </h2>
               <div
@@ -53,7 +53,7 @@
                 [attr.data-bs-parent]="'#faq-' + sectionIdx"
               >
                 <div class="accordion-body text-secondary">
-                  {{ item.answer }}
+                  {{ item.Answer }}
                 </div>
               </div>
             </div>

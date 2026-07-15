@@ -1,4 +1,5 @@
-﻿using BackPredictFinance.Common.enums;
+﻿using BackPredictFinance.Common;
+using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.MarketData;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
@@ -99,7 +100,7 @@ public sealed class TickerEligibilityTests
 
         var service = BuildService(catalogMock.Object);
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsAsync<CustomException>(
             () => service.GetAssetProfileAsync("BTC-USD"));
 
         Assert.Contains("crypto", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -115,7 +116,7 @@ public sealed class TickerEligibilityTests
 
         var service = BuildService(catalogMock.Object);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<CustomException>(
             () => service.GetAssetProfileAsync("ETF.PA"));
     }
 

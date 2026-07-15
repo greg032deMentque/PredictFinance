@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.MarketData;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services.TwelveDataServices;
@@ -36,8 +37,8 @@ public sealed class WatchlistRecommendationNeutralizationTests : IClassFixture<A
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll<ITickerService>();
-                services.AddSingleton<ITickerService, StubTickerService>();
+                services.RemoveAll<IMarketPriceProvider>();
+                services.AddSingleton<IMarketPriceProvider, FixedMarketPriceProvider>();
             });
         });
 
@@ -127,46 +128,29 @@ public sealed class WatchlistRecommendationNeutralizationTests : IClassFixture<A
         Assert.Equal("Attendre", item.Recommendation.DisplayLabel);
     }
 
-    private sealed class StubTickerService : ITickerService
+    private sealed class FixedMarketPriceProvider : IMarketPriceProvider
     {
-        public Task<IReadOnlyList<string>> GetExchangesAsync(CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<string>>(["XPAR"]);
+        public Task<MarketQuoteData> GetQuoteAsync(string symbol, CancellationToken ct = default)
+            => Task.FromResult(BuildQuote(symbol));
 
-        public Task<IReadOnlyList<string>> GetSymbolsByExchangeAsync(string exchange, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<IReadOnlyDictionary<string, MarketQuoteData>> GetQuotesAsync(IEnumerable<string> symbols, CancellationToken ct = default)
+        {
+            var result = symbols
+                .Select(BuildQuote)
+                .ToDictionary(x => x.Symbol, x => x, StringComparer.OrdinalIgnoreCase);
+            return Task.FromResult<IReadOnlyDictionary<string, MarketQuoteData>>(result);
+        }
 
-        public Task<IReadOnlyList<string>> GetAllSymbolsAsync(CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<IReadOnlyList<TickerCandle>> GetChartAsync(string symbol, string interval, string range, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<TickerCandle>>([]);
 
-        public Task<BackPredictFinance.Common.MarketData.TickerTimeSeriesResponse> GetTimeSeriesAsync(string symbol, string interval, int outputSize, CancellationToken ct = default)
-            => Task.FromResult(new BackPredictFinance.Common.MarketData.TickerTimeSeriesResponse());
-
-        public Task<IReadOnlyList<BackPredictFinance.Common.MarketData.MarketAssetDescriptor>> SearchAssetsAsync(string query, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<BackPredictFinance.Common.MarketData.MarketAssetDescriptor>>([]);
-
-        public Task<BackPredictFinance.Common.MarketData.MarketQuoteData> GetQuoteAsync(string symbol, CancellationToken ct = default)
-            => Task.FromResult(new BackPredictFinance.Common.MarketData.MarketQuoteData
-            {
-                Symbol = symbol,
-                AssetType = AssetTypeEnum.Stock,
-                LastPrice = 100m,
-                DayVariationPct = 0.5m,
-                AsOfUtc = DateTime.UtcNow
-            });
-
-        public Task<BackPredictFinance.Common.MarketData.MarketAssetProfileData> GetAssetProfileAsync(string symbol, CancellationToken ct = default)
-            => Task.FromResult(new BackPredictFinance.Common.MarketData.MarketAssetProfileData
-            {
-                Symbol = symbol,
-                ProviderSymbol = symbol,
-                CompanyName = symbol,
-                AssetType = AssetTypeEnum.Stock,
-                Exchange = "XPAR",
-                Currency = "EUR",
-                Country = "FR",
-                LastPrice = 100m,
-                DayVariationPct = 0.5m,
-                AsOfUtc = DateTime.UtcNow
-            });
+        private static MarketQuoteData BuildQuote(string symbol) => new()
+        {
+            Symbol = symbol,
+            AssetType = AssetTypeEnum.Stock,
+            LastPrice = 100m,
+            DayVariationPct = 0.5m,
+            AsOfUtc = DateTime.UtcNow
+        };
     }
 }

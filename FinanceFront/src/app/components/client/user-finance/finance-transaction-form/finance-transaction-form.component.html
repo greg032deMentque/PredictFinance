@@ -18,6 +18,7 @@
         [flat]="true"
         [selectedAsset]="internalAsset()"
         [options]="searchResults()"
+        [trendingOptions]="trendingOptions"
         [loading]="searchLoading()"
         (searchChanged)="onSearchChanged($event)"
         (assetSelected)="onAssetSelected($event)" />
@@ -25,52 +26,54 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="d-flex flex-column gap-2 mt-3">
 
-      <div>
-        <label class="form-label fw-semibold">Portefeuille <span class="text-danger">*</span></label>
-        @if (portfolios.length === 0) {
-          <div class="alert alert-warning py-2 mb-0">
-            Aucun portefeuille disponible. Crée un portefeuille depuis la page Portefeuille.
-          </div>
-        } @else {
-          <select class="form-select" formControlName="portfolioId"
-            [class.is-invalid]="form.controls.portfolioId.invalid && form.controls.portfolioId.touched">
-            <option value="" disabled>-- Choisir un portefeuille --</option>
-            @for (p of portfolios; track p.Id) {
-              <option [value]="p.Id">{{ p.Name }}</option>
+      @if (!hidePortfolioSelector) {
+        <div>
+          <label for="transactionPortfolioId" class="form-label fw-semibold">Portefeuille <span class="text-danger">*</span></label>
+          @if (portfolios.length === 0) {
+            <div class="alert alert-warning py-2 mb-0">
+              Aucun portefeuille disponible. Crée un portefeuille depuis la page Portefeuille.
+            </div>
+          } @else {
+            <select id="transactionPortfolioId" class="form-select" formControlName="portfolioId"
+              [class.is-invalid]="form.controls.portfolioId.invalid && form.controls.portfolioId.touched">
+              <option value="" disabled>-- Choisir un portefeuille --</option>
+              @for (p of portfolios; track p.Id) {
+                <option [value]="p.Id">{{ p.Name }}</option>
+              }
+            </select>
+            @if (form.controls.portfolioId.invalid && form.controls.portfolioId.touched) {
+              <div class="invalid-feedback">Le portefeuille est obligatoire.</div>
             }
-          </select>
-          @if (form.controls.portfolioId.invalid && form.controls.portfolioId.touched) {
-            <div class="invalid-feedback">Le portefeuille est obligatoire.</div>
           }
-        }
-      </div>
+        </div>
+      }
 
       <div>
-        <label class="form-label">Type</label>
-        <select class="form-select" formControlName="transactionType">
+        <label for="transactionType" class="form-label">Type</label>
+        <select id="transactionType" class="form-select" formControlName="transactionType">
           <option value="Buy">Achat</option>
           <option value="Sell">Vente</option>
         </select>
       </div>
 
       <div>
-        <label class="form-label">Quantité</label>
-        <input class="form-control" type="number" step="0.0001" formControlName="quantity" />
+        <label for="transactionQuantity" class="form-label">Quantité</label>
+        <input id="transactionQuantity" class="form-control" type="number" step="0.0001" formControlName="quantity" />
       </div>
 
       <div>
-        <label class="form-label">Prix unitaire</label>
-        <input class="form-control" type="number" step="0.0001" formControlName="unitPrice" />
+        <label for="transactionUnitPrice" class="form-label">Prix unitaire</label>
+        <input id="transactionUnitPrice" class="form-control" type="number" step="0.0001" formControlName="unitPrice" />
       </div>
 
       <div>
-        <label class="form-label">Frais</label>
-        <input class="form-control" type="number" step="0.01" formControlName="fees" />
+        <label for="transactionFees" class="form-label">Frais</label>
+        <input id="transactionFees" class="form-control" type="number" step="0.01" formControlName="fees" />
       </div>
 
       <div>
-        <label class="form-label">Date / heure</label>
-        <input class="form-control" type="datetime-local" formControlName="timestampUtc" />
+        <label for="transactionTimestampUtc" class="form-label">Date / heure</label>
+        <input id="transactionTimestampUtc" class="form-control" type="datetime-local" formControlName="timestampUtc" />
       </div>
 
       <button class="btn btn-primary mt-2"

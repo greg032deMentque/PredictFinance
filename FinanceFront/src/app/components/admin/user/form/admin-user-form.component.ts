@@ -11,11 +11,12 @@ import { AdminPaths, toCommands } from '../../../../Routes/app.routes.constants'
 import { GeneralService } from '../../../../services/general-service.service';
 import { ToastService } from '../../../../services/toastr.service';
 import { environment } from '../../../../../environments/environment';
+import { BackButtonComponent } from '../../../shared/back-button/back-button.component';
 
 @Component({
   selector: 'app-admin-user-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, BackButtonComponent],
   templateUrl: './admin-user-form.component.html',
   styleUrl: './admin-user-form.component.scss'
 })

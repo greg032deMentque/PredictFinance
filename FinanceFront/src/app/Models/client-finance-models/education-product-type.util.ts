@@ -7,6 +7,7 @@ export function educationProductTypeLabel(productType: string): string {
     case 'PEL': return 'PEL';
     case 'PER': return 'PER';
     case 'General': return 'Général';
+    case 'AnalyseTechnique': return 'Analyse technique';
     default: return productType;
   }
 }

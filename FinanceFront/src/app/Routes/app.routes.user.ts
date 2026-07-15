@@ -22,6 +22,8 @@ export const USER_ROUTES: Routes = [
       { path: AppRoutes.Simulation, loadComponent: () => import('../components/client/pages/simulation-page/simulation-page.component').then(m => m.SimulationPageComponent) },
       { path: AppRoutes.Patterns, loadComponent: () => import('../components/client/pages/pattern-explorer-page/pattern-explorer-page.component').then(m => m.PatternExplorerPageComponent) },
       { path: buildRoute(AppRoutes.Instruments, ':symbol'), loadComponent: () => import('../components/client/pages/instrument-detail-page/instrument-detail-page.component').then(m => m.InstrumentDetailPageComponent) },
+      { path: AppRoutes.Tax, loadComponent: () => import('../components/client/pages/tax-page/tax-page.component').then(m => m.TaxPageComponent) },
+      { path: AppRoutes.Screener, loadComponent: () => import('../components/client/pages/screener-page/screener-page.component').then(m => m.ScreenerPageComponent) },
       { path: buildRoute(AppRoutes.Parameters, ':parameterId'), loadComponent: () => import('../components/client/pages/parameter-detail-page/parameter-detail-page').then(m => m.ParameterDetailPageComponent) },
       { path: AppRoutes.Learn, loadComponent: () => import('../components/client/pages/learn-page/learn-page').then(m => m.LearnPageComponent) },
       { path: AppRoutes.Education, loadComponent: () => import('../components/client/pages/education-list-page/education-list-page.component').then(m => m.EducationListPageComponent) },

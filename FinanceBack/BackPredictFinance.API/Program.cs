@@ -1,5 +1,6 @@
 using AutoMapper;
 using BackPredictFinance.API.Data;
+using BackPredictFinance.API.HealthChecks;
 using BackPredictFinance.API.Middleware;
 using BackPredictFinance.API.ProgramSubFiles;
 using BackPredictFinance.Common;
@@ -9,6 +10,7 @@ using BackPredictFinance.Common.Jwt;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,6 +18,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using Serilog.Events;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -43,6 +46,9 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddDbContext<FinanceDbContext>(options =>
     options.UseSqlServer(connectionString, sql => sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database");
+
 builder.Services
     .AddIdentity<User, IdentityRole>(options =>
     {
@@ -58,6 +64,7 @@ builder.Services
 
         options.User.RequireUniqueEmail = true;
     })
+    .AddErrorDescriber<LocalizedIdentityErrorDescriber>()
     .AddEntityFrameworkStores<FinanceDbContext>()
     .AddDefaultTokenProviders();
 
@@ -131,8 +138,8 @@ builder.Services.AddCors(o =>
 {
     o.AddPolicy("default", p =>
         p.WithOrigins([.. corsOrigins])
-         .AllowAnyHeader()
-         .AllowAnyMethod()
+         .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+         .WithHeaders("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With")
          .AllowCredentials());
 });
 
@@ -140,7 +147,31 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 builder.Services.AddLocalization();
 
-ProgramServiceDeclarator.ServicesDeclarator(builder.Services);
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    var knownProxies = configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+    foreach (var knownProxy in knownProxies)
+    {
+        if (IPAddress.TryParse(knownProxy.Trim(), out var proxyAddress))
+        {
+            options.KnownProxies.Add(proxyAddress);
+        }
+    }
+
+    var knownNetworks = configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+    foreach (var knownNetwork in knownNetworks)
+    {
+        if (System.Net.IPNetwork.TryParse(knownNetwork.Trim(), out var parsedNetwork))
+        {
+            options.KnownIPNetworks.Add(parsedNetwork);
+        }
+    }
+});
+
+ProgramServiceDeclarator.ServicesDeclarator(builder.Services, builder.Configuration);
+ProgramServiceDeclarator.ConfigureOptions(builder.Services, builder.Configuration);
 
 var mapperConfiguration = new MapperConfiguration(cfg =>
 {
@@ -150,7 +181,13 @@ var mapperConfiguration = new MapperConfiguration(cfg =>
 builder.Services.AddSingleton<IMapper>(mapperConfiguration.CreateMapper());
 
 builder.Services.Configure<EmailServiceConfiguration>(configuration.GetSection("EmailService"));
-builder.Services.Configure<MarketDataOptions>(configuration.GetSection("MarketData"));
+
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddHostedService<BackPredictFinance.API.SeedData.ConceptsSeedService>();
+    builder.Services.AddHostedService<BackPredictFinance.API.SeedData.GlossaryTermsSeedService>();
+    builder.Services.AddHostedService<BackPredictFinance.API.SeedData.EducationArticlesSeedService>();
+}
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -182,6 +219,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -193,6 +232,7 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseSecurityHeaders();
 app.UseCors("default");
 app.UseGlobalExceptionHandler();
 app.UseMiddleware<RateLimitingMiddleware>();
@@ -202,6 +242,7 @@ app.UseAuthorization();
 app.UseMiddleware<RequestHandlerMiddleware>();
 
 app.MapControllers();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {

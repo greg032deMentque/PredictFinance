@@ -2,7 +2,7 @@ using BackPredictFinance.Common.enums;
 
 namespace BackPredictFinance.ViewModels.AdminViewModels.SnapshotAudit
 {
-    public sealed class SnapshotAuditItemViewModel
+    public class SnapshotAuditItemViewModel
     {
         public string AnalysisRunId { get; set; } = string.Empty;
         public string UserId { get; set; } = string.Empty;

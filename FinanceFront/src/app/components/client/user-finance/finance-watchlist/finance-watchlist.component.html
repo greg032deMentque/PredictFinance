@@ -1,73 +1,190 @@
 <div class="card border-0 shadow-sm">
   <div class="card-body">
-    <h2 class="h6 text-uppercase text-muted mb-3">Watchlist et positions</h2>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <h2 class="h6 text-uppercase text-muted mb-0">Watchlist et positions</h2>
+      <button class="btn btn-sm btn-outline-secondary" type="button" (click)="toggleDensity()"
+              [title]="density() === 'compact' ? 'Passer en vue standard' : 'Passer en vue compacte'">
+        <i class="bi" [class.bi-layout-three-columns]="density() === 'compact'"
+                       [class.bi-table]="density() === 'regular'"></i>
+        {{ density() === 'compact' ? 'Standard' : 'Compact' }}
+      </button>
+    </div>
+
+    <!-- Barre de filtres / recherche -->
+    <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+      <!-- Recherche symbole / nom -->
+      <div style="max-width: 220px;">
+        <app-search-bar
+          size="sm"
+          placeholder="Symbole ou nom…"
+          [value]="searchText()"
+          (valueChange)="setSearchText($event)">
+        </app-search-bar>
+      </div>
+
+      <!-- Filtre recommandation / détenu -->
+      <select class="form-select form-select-sm" style="max-width: 180px;"
+              [value]="recoFilter()"
+              (change)="setRecoFilter($any($event.target).value)"
+              aria-label="Filtrer par recommandation">
+        <option value="all">Toutes les valeurs</option>
+        <option value="held">Détenues seulement</option>
+        @for (label of recoLabels(); track label) {
+          <option [value]="label">{{ label }}</option>
+        }
+      </select>
+    </div>
 
     <div class="table-responsive">
-      <table class="table align-middle mb-0">
+      <table class="table align-middle mb-0" [class.table-sm]="density() === 'compact'">
         <thead class="table-light">
           <tr>
-            <th>Valeur</th>
+            <!-- En-têtes triables -->
+            <th class="col-sortable" (click)="toggleSort('Symbol')" style="cursor:pointer; user-select:none;">
+              Valeur <i class="bi small" [ngClass]="sortIcon('Symbol')"></i>
+            </th>
             <th>Dernier cours</th>
-            <th>Variation</th>
-            <th>Qt detenu</th>
+            <th class="col-sortable" (click)="toggleSort('DayVariationPct')" style="cursor:pointer; user-select:none;">
+              Variation <i class="bi small" [ngClass]="sortIcon('DayVariationPct')"></i>
+            </th>
+            <th class="col-sortable" (click)="toggleSort('HeldQuantity')" style="cursor:pointer; user-select:none;">
+              Qt détenu <i class="bi small" [ngClass]="sortIcon('HeldQuantity')"></i>
+            </th>
             <th>Prix moyen</th>
-            <th>Encours</th>
+            <th class="col-sortable" (click)="toggleSort('OutstandingAmount')" style="cursor:pointer; user-select:none;">
+              Encours <i class="bi small" [ngClass]="sortIcon('OutstandingAmount')"></i>
+            </th>
+            <th class="col-sortable" (click)="toggleSort('Recommendation')" style="cursor:pointer; user-select:none;">
+              Signal <i class="bi small" [ngClass]="sortIcon('Recommendation')"></i>
+            </th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          @for (item of watchlist; track item.UserAssetId) {
-            <tr>
+          @for (item of filteredList(); track item.UserAssetId) {
+            <tr class="watchlist-row" (click)="onAnalyzeSymbol(item.Symbol)" style="cursor:pointer;"
+                [title]="'Voir l\'analyse de ' + item.Symbol">
+              <!-- Valeur -->
               <td>
                 <div class="fw-semibold">{{ item.Symbol }}</div>
-                <small class="text-muted">{{ item.CompanyName }}</small>
+                @if (density() === 'regular') {
+                  <small class="text-muted">{{ item.CompanyName }}</small>
+                }
               </td>
+
+              <!-- Cours -->
               <td>{{ item.LastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
-              <td [class.text-success]="item.DayVariationPct >= 0" [class.text-danger]="item.DayVariationPct < 0">
+
+              <!-- Variation -->
+              <td [class.text-success]="item.DayVariationPct >= 0"
+                  [class.text-danger]="item.DayVariationPct < 0">
                 {{ item.DayVariationPct | number: '1.2-2' }}%
               </td>
-              <td>{{ item.HeldQuantity | number: '1.2-4' }}</td>
-              <td>{{ item.AverageBuyPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
-              <td>{{ item.OutstandingAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
-              <td>
-                <div class="d-flex gap-2 justify-content-end">
-                  <button class="btn btn-sm btn-outline-primary" type="button" (click)="onSelectSymbol(item.Symbol)">
-                    Cours live
+
+              <!-- Qté -->
+              <td>{{ item.HeldQuantity > 0 ? (item.HeldQuantity | number: '1.2-4') : '—' }}</td>
+
+              <!-- Prix moyen -->
+              <td>{{ item.HeldQuantity > 0 ? (item.AverageBuyPrice | currency: 'USD' : 'symbol' : '1.2-2') : '—' }}</td>
+
+              <!-- Encours -->
+              <td>{{ item.HeldQuantity > 0 ? (item.OutstandingAmount | currency: 'USD' : 'symbol' : '1.2-2') : '—' }}</td>
+
+              <!-- Signal (badges) -->
+              <td (click)="$event.stopPropagation()">
+                @if (item.HasPersistedAnalysis) {
+                  <div class="d-flex flex-column gap-1 align-items-start">
+                    <!-- Badge lecture de marché -->
+                    @if (item.MarketReading.OutcomeDisplayLabel) {
+                      <span class="badge badge-market" [title]="item.MarketReading.ConfidenceLabel ?? ''">
+                        {{ item.MarketReading.OutcomeDisplayLabel }}
+                      </span>
+                    }
+                    <!-- Badge recommandation -->
+                    @if (item.Recommendation.DisplayLabel) {
+                      <span class="badge" [ngClass]="recoBadge(item.Recommendation.DisplayLabel).cssClass">
+                        {{ recoBadge(item.Recommendation.DisplayLabel).label }}
+                      </span>
+                    }
+                    <!-- Badge alerte earnings -->
+                    @if (item.EarningsWithinHorizonWarning && item.Recommendation.DisplayLabel) {
+                      <span class="badge badge-earnings-risk" [title]="'Résultats prévus le ' + (item.NextEarningsDateUtc | date: 'dd/MM') + ' — signal à risque accru'">
+                        <i class="bi bi-calendar-exclamation me-1"></i>Résultats le {{ item.NextEarningsDateUtc | date: 'dd/MM' }}
+                      </span>
+                    }
+                    <!-- Pastille fraîcheur -->
+                    @if (isStaleAlert(item)) {
+                      <span class="badge badge-stale" [title]="'Analyse obsolète — ' + item.Freshness.DisplayLabel">
+                        <i class="bi bi-clock-history me-1"></i>À relancer
+                      </span>
+                    } @else if (isAgingAlert(item)) {
+                      <span class="badge badge-aging" [title]="'Analyse vieillissante — ' + item.Freshness.DisplayLabel">
+                        <i class="bi bi-hourglass-split me-1"></i>Vieillissante
+                      </span>
+                    }
+                  </div>
+                } @else {
+                  <!-- Aucune analyse — bouton Analyser, pas de placeholder trompeur -->
+                  <button class="btn btn-sm btn-outline-primary"
+                          type="button"
+                          (click)="onAnalyzeSymbol(item.Symbol)"
+                          title="Lancer l'analyse de {{ item.Symbol }}">
+                    <i class="bi bi-bar-chart-line me-1"></i>Analyser
                   </button>
-                  <button class="btn btn-sm btn-primary" type="button" (click)="onAnalyzeSymbol(item.Symbol)">
-                    Analyser
+                }
+              </td>
+
+              <!-- Actions -->
+              <td (click)="$event.stopPropagation()">
+                <div class="d-flex gap-1 justify-content-end">
+                  <button class="btn btn-sm btn-outline-secondary" type="button"
+                          (click)="onSelectSymbol(item.Symbol)"
+                          title="Cours live">
+                    <i class="bi bi-lightning-charge"></i>
+                    @if (density() === 'regular') { <span class="ms-1">Cours</span> }
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" type="button" (click)="onRemoveSymbol(item.Symbol)">
-                    Retirer
+                  <button class="btn btn-sm btn-outline-danger" type="button"
+                          (click)="onRemoveSymbol(item.Symbol)"
+                          title="Retirer de la watchlist">
+                    <i class="bi bi-x-lg"></i>
+                    @if (density() === 'regular') { <span class="ms-1">Retirer</span> }
                   </button>
                 </div>
               </td>
             </tr>
           } @empty {
             <tr>
-              <td colspan="7" class="text-center text-muted py-4">Aucune valeur suivie.</td>
+              <td colspan="8" class="text-center text-muted py-4">
+                @if (searchText() || recoFilter() !== 'all') {
+                  Aucune valeur ne correspond aux filtres actifs.
+                } @else {
+                  Aucune valeur suivie.
+                }
+              </td>
             </tr>
           }
         </tbody>
       </table>
     </div>
 
+    <!-- Live quote panel -->
     @if (quote; as liveQuote) {
       <div class="finance-soft-panel mt-3">
         <div class="d-flex justify-content-between align-items-center">
           <div>
-            <div class="fw-semibold">{{ liveQuote.Symbol }} - Cours live</div>
-            <small class="text-muted">Mise a jour {{ liveQuote.AsOfUtc | date: 'dd/MM HH:mm:ss' }}</small>
+            <div class="fw-semibold">{{ liveQuote.Symbol }} — Cours live</div>
+            <small class="text-muted">Mise à jour {{ liveQuote.AsOfUtc | date: 'dd/MM HH:mm:ss' }}</small>
           </div>
           <div class="text-end">
             <div class="h5 mb-0">{{ liveQuote.LastPrice | currency: 'USD' : 'symbol' : '1.2-2' }}</div>
-            <small [class.text-success]="liveQuote.DayVariationPct >= 0" [class.text-danger]="liveQuote.DayVariationPct < 0">
+            <small [class.text-success]="liveQuote.DayVariationPct >= 0"
+                   [class.text-danger]="liveQuote.DayVariationPct < 0">
               {{ liveQuote.DayVariationPct | number: '1.2-2' }}%
             </small>
           </div>
         </div>
         @if (quoteLoading) {
-          <div class="small text-muted mt-2">Rafraichissement en cours...</div>
+          <div class="small text-muted mt-2">Rafraîchissement en cours…</div>
         }
       </div>
     }

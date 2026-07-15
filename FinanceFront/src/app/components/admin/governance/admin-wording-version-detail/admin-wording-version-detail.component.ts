@@ -19,7 +19,7 @@ interface WordingScenarioTemplateSummary {
   RecommendationKind: string | number;
   HoldingStatus: string | number;
   ActionVerbFamilyCode: string;
-  SupportedStrengths: Array<string | number>;
+  SupportedStrengths: (string | number)[];
   TemplateSummary: string;
 }
 

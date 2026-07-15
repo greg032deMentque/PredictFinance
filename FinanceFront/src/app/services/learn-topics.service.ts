@@ -12,7 +12,7 @@ export class LearnTopicsService {
     return this.http.get<LearnTopicAdminItem[]>(`${environment.apiUrl}admin/learn-topics`);
   }
 
-  getAdminById(id: number): Observable<LearnTopicAdminItem> {
+  getAdminById(id: string): Observable<LearnTopicAdminItem> {
     return this.http.get<LearnTopicAdminItem>(`${environment.apiUrl}admin/learn-topics/${id}`);
   }
 
@@ -20,11 +20,11 @@ export class LearnTopicsService {
     return this.http.post<void>(`${environment.apiUrl}admin/learn-topics`, payload);
   }
 
-  updateAdmin(id: number, payload: LearnTopicUpsertRequest): Observable<void> {
+  updateAdmin(id: string, payload: LearnTopicUpsertRequest): Observable<void> {
     return this.http.put<void>(`${environment.apiUrl}admin/learn-topics/${id}`, payload);
   }
 
-  deleteAdmin(id: number): Observable<void> {
+  deleteAdmin(id: string): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}admin/learn-topics/${id}`);
   }
 }

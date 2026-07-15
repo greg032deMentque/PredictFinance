@@ -7,14 +7,14 @@ namespace BackPredictFinance.Common.Fundamentals
     public static class FundamentalScoringPolicyDefaults
     {
         public const string SupportedUniverseId = "PEA_FR_EQUITIES";
-        public const string ScoringVersion = "FUNDAMENTAL_PERCENTILE_V1";
+        public const string ScoringVersion = "FUNDAMENTAL_PERCENTILE_V2";
         public const string EligibilityPolicyVersion = "PEA_REGISTRY_V1";
         public const string ProviderId = "YAHOO_FINANCE";
         public const string AsOfUtcSemantics = "LIVE_BEST_EFFORT";
-        public static readonly string[] CategoryCodes = ["profitability", "liquidity", "debt", "valuation", "dividend"];
-        public static readonly string[] HigherIsBetterMetricCodes = ["returnOnEquity", "operatingMargin", "currentRatio", "dividendYield"];
-        public static readonly string[] LowerIsBetterMetricCodes = ["debtToEquity", "trailingPe"];
+        public static readonly string[] CategoryCodes = ["profitability", "liquidity", "debt", "valuation", "dividend", "growth"];
+        public static readonly string[] HigherIsBetterMetricCodes = ["returnOnEquity", "operatingMargin", "currentRatio", "dividendYield", "revenueGrowth", "earningsGrowth"];
+        public static readonly string[] LowerIsBetterMetricCodes = ["debtToEquity", "trailingPe", "pegRatio", "priceToBook"];
         public const int MinimumCategoriesRequiredFloor = 1;
-        public const int MinimumCategoriesRequiredCeiling = 5;
+        public const int MinimumCategoriesRequiredCeiling = 6;
     }
 }

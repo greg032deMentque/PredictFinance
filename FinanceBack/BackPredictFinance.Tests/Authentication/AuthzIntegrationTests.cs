@@ -81,8 +81,8 @@ public sealed class AuthzIntegrationTests : IClassFixture<ApiIntegrationTestFact
         Assert.Equal(ApiIntegrationTestFactory.AdminUserId, root.GetProperty("UserId").GetString());
         Assert.Equal("Alice Admin", root.GetProperty("DisplayName").GetString());
         Assert.Equal("admin@example.com", root.GetProperty("Email").GetString());
-        Assert.Equal(["Admin"], root.GetProperty("Roles").EnumerateArray().Select(value => value.GetString()).ToArray());
-        Assert.Equal(["User", "Admin"], root.GetProperty("AllowedAreas").EnumerateArray().Select(value => value.GetString()).ToArray());
+        Assert.Equal(new string?[] { "Admin" }, root.GetProperty("Roles").EnumerateArray().Select(value => value.GetString()).ToArray());
+        Assert.Equal(new string?[] { "User", "Admin" }, root.GetProperty("AllowedAreas").EnumerateArray().Select(value => value.GetString()).ToArray());
     }
 
     [Fact]
@@ -113,10 +113,16 @@ public sealed class AuthzIntegrationTests : IClassFixture<ApiIntegrationTestFact
         var response = await client.GetAsync($"/api/admin/users/{ApiIntegrationTestFactory.TargetUserId}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadFromJsonAsync<UserViewModel>(JsonOptions);
+        var rawJson = await response.Content.ReadAsStringAsync();
+        var payload = JsonSerializer.Deserialize<UserViewModel>(rawJson, JsonOptions);
         Assert.NotNull(payload);
         Assert.Equal(ApiIntegrationTestFactory.TargetUserId, payload!.Id);
         Assert.Equal("target@example.com", payload.Email);
+
+        using var document = JsonDocument.Parse(rawJson);
+        Assert.False(document.RootElement.TryGetProperty("Password", out _));
+        Assert.False(document.RootElement.TryGetProperty("RefreshToken", out _));
+        Assert.False(document.RootElement.TryGetProperty("RefreshTokenExpiryTime", out _));
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

@@ -51,10 +51,6 @@ namespace BackPredictFinance.Services.AuthServices
         /// </summary>
         Task<IdentityResult> ResetPassword(ResetPasswordRequestViewModel model);
         /// <summary>
-        /// Enregistre un identifiant de terminal associé à un utilisateur.
-        /// </summary>
-        Task RegisterDevice(string mobileId, string userId);
-        /// <summary>
         /// Termine la session courante et révoque le refresh token fourni si présent.
         /// </summary>
         Task Logout(TokenViewModel? request);
@@ -177,23 +173,20 @@ namespace BackPredictFinance.Services.AuthServices
 
         private async Task<bool> ValidatePasswordAndLockoutAsync(User user, string email, string password, bool requiresAdmin)
         {
-            var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: false);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
             if (result.Succeeded)
             {
                 await _userManager.ResetAccessFailedCountAsync(user);
                 return true;
             }
 
-            LogFailed(requiresAdmin, email);
-            await _userManager.AccessFailedAsync(user);
-
-            var failedCount = await _userManager.GetAccessFailedCountAsync(user);
-            if (failedCount >= 5)
+            if (result.IsLockedOut)
             {
-                await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
-                LogLockedPermanent(requiresAdmin, email);
+                LogLocked(requiresAdmin, email);
+                return false;
             }
 
+            LogFailed(requiresAdmin, email);
             return false;
         }
 
@@ -326,17 +319,6 @@ namespace BackPredictFinance.Services.AuthServices
                 body,
                 isBodyHtml: true,
                 attachments: null);
-        }
-
-        public Task RegisterDevice(string mobileId, string userId)
-        {
-            if (string.IsNullOrWhiteSpace(mobileId) || string.IsNullOrWhiteSpace(userId))
-            {
-                return Task.CompletedTask;
-            }
-
-            _logger.LogInformation("register device requested for user {UserId}", userId);
-            return Task.CompletedTask;
         }
 
         public async Task Logout(TokenViewModel? request)
@@ -477,17 +459,6 @@ namespace BackPredictFinance.Services.AuthServices
             }
 
             _logger.LogWarning("[BACKOFFICE] Inactive account: {Email}", email);
-        }
-
-        private void LogLockedPermanent(bool requiresAdmin, string email)
-        {
-            if (requiresAdmin)
-            {
-                _logger.LogWarning("[ADMIN_AUTH] {Email} permanently locked.", email);
-                return;
-            }
-
-            _logger.LogWarning("[BACKOFFICE] {Email} account permanently locked.", email);
         }
     }
 }

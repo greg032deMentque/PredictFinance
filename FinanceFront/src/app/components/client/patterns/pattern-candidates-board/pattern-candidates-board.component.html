@@ -1,44 +1,59 @@
-<div class="d-flex flex-column gap-2">
-  @if (candidates.length === 0) {
-    <div class="text-body-secondary small py-3 text-center">Aucun pattern candidat identifié pour cette valeur.</div>
-  } @else {
-    @for (candidate of sortedCandidates; track candidate.PatternId) {
-      <button
-        type="button"
-        class="btn text-start border rounded-2 p-3 pattern-candidate-btn"
-        [class.border-primary]="selectedPatternId === candidate.PatternId"
-        [class.shadow-sm]="selectedPatternId !== candidate.PatternId"
-        (click)="onSelect(candidate.PatternId)"
-      >
-        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-          <div>
-            <div class="fw-semibold d-flex align-items-center gap-2">
-              {{ candidate.DisplayName }}
-              @if (candidate.IsPrimary) {
-                <span class="badge bg-primary-subtle text-primary-emphasis small">Principal</span>
-              }
+<div class="d-flex flex-column gap-3">
+
+  <!-- Patterns détectés sur la valeur : sélectionnables pour afficher le détail -->
+  @if (detectedRows.length > 0) {
+    <div class="d-flex flex-column gap-2">
+      <div class="small text-uppercase text-body-secondary fw-semibold">Détectés sur cette valeur</div>
+      @for (row of detectedRows; track row.catalog.Id) {
+        <button
+          type="button"
+          class="btn text-start border rounded-2 p-3 pattern-candidate-btn"
+          [class.border-primary]="selectedPatternId === row.catalog.Id"
+          [class.shadow-sm]="selectedPatternId !== row.catalog.Id"
+          (click)="onSelect(row)"
+        >
+          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+            <div>
+              <div class="fw-semibold d-flex align-items-center gap-2">
+                {{ row.catalog.Label }}
+                @if (row.candidate!.IsPrimary) {
+                  <span class="badge bg-primary-subtle text-primary-emphasis small">Principal</span>
+                }
+              </div>
+              <div class="small text-body-secondary mt-1 d-flex flex-wrap gap-1">
+                <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ row.candidate!.Phase }}</span>
+                <span class="badge" [ngClass]="getConfidenceBadgeClass(row.candidate!.ConfidenceLabel)">{{ row.candidate!.ConfidenceLabel }}</span>
+                <span class="badge" [ngClass]="getReliabilityBadgeClass(row.catalog.ReliabilityLabel)">Fiabilité {{ row.catalog.ReliabilityLabel }}</span>
+              </div>
             </div>
-            <div class="small text-body-secondary mt-1">
-              <span class="badge me-1 bg-secondary-subtle text-secondary-emphasis">{{ candidate.Phase }}</span>
-              <span class="badge" [ngClass]="getConfidenceBadgeClass(candidate.ConfidenceLabel)">{{ candidate.ConfidenceLabel }}</span>
+            <div class="text-end flex-shrink-0">
+              <div class="small text-muted">Probabilité de figure</div>
+              <div class="fw-semibold">{{ row.candidate!.Probability | percent: '1.0-0' }}</div>
             </div>
           </div>
-          <div class="text-end flex-shrink-0">
-            <div class="small text-muted">Probabilité de figure</div>
-            <div class="fw-semibold">{{ candidate.Probability | percent:'1.0-0' }}</div>
-          </div>
-        </div>
-        @if (candidate.NecklinePrice != null || candidate.InvalidationPrice != null) {
-          <div class="mt-2 d-flex gap-3 small text-body-secondary">
-            @if (candidate.NecklinePrice != null) {
-              <span>Cou : {{ candidate.NecklinePrice | number:'1.2-2' }}</span>
-            }
-            @if (candidate.InvalidationPrice != null) {
-              <span>Invalidation : {{ candidate.InvalidationPrice | number:'1.2-2' }}</span>
-            }
-          </div>
-        }
-      </button>
-    }
+        </button>
+      }
+    </div>
   }
+
+  <!-- Autres patterns du catalogue : non détectés, présentés avec leur fiabilité historique -->
+  @if (otherRows.length > 0) {
+    <div class="d-flex flex-column gap-2">
+      <div class="small text-uppercase text-body-secondary fw-semibold">Non détectés actuellement</div>
+      @for (row of otherRows; track row.catalog.Id) {
+        <div class="border rounded-2 p-3 pattern-other-card">
+          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+            <div class="fw-semibold text-body-secondary">{{ row.catalog.Label }}</div>
+            <span class="badge flex-shrink-0" [ngClass]="getReliabilityBadgeClass(row.catalog.ReliabilityLabel)">
+              Fiabilité {{ row.catalog.ReliabilityLabel }} &middot; {{ row.catalog.Reliability | percent: '1.0-0' }}
+            </span>
+          </div>
+          @if (row.catalog.AnalysisNarrative) {
+            <p class="small text-body-secondary mb-0 mt-1">{{ row.catalog.AnalysisNarrative }}</p>
+          }
+        </div>
+      }
+    </div>
+  }
+
 </div>

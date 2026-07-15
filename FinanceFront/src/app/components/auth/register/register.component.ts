@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -8,6 +8,8 @@ import { AuthPaths, toCommands } from '../../../Routes/app.routes.constants';
 import { AccountService } from '../../../services/account.service';
 import { ToastService } from '../../../services/toastr.service';
 import { environment } from '../../../../environments/environment';
+import { PasswordFieldComponent } from '../../shared/password-field/password-field.component';
+import { STRONG_PASSWORD_PATTERN } from '../password-policy';
 
 type RegisterPageState = 'form' | 'email-sent' | 'confirming' | 'confirmed' | 'confirm-failed';
 
@@ -22,11 +24,11 @@ function passwordsMatchValidator(): ValidatorFn {
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, PasswordFieldComponent],
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss'
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -49,7 +51,7 @@ export class RegisterComponent {
   readonly form = this.fb.nonNullable.group(
     {
       Email: this.fb.nonNullable.control('', [Validators.required, Validators.email]),
-      Password: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6)]),
+      Password: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6), Validators.pattern(STRONG_PASSWORD_PATTERN)]),
       ConfirmPassword: this.fb.nonNullable.control('', [Validators.required, Validators.minLength(6)]),
       AcceptLegal: this.fb.nonNullable.control(false, [Validators.requiredTrue])
     },

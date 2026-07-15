@@ -1,9 +1,10 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AllModule } from '../../module/allModule.module';
+import { PasswordFieldComponent } from '../shared/password-field/password-field.component';
 import { AuthStore } from '../../core/auth.store';
 import { AuthService } from '../../services/AuthService.service';
 import { ToastService } from '../../services/toastr.service';
@@ -13,11 +14,11 @@ import { AdminPaths, AuthPaths, UserPaths } from '../../Routes/app.routes.consta
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [AllModule],
+  imports: [AllModule, PasswordFieldComponent],
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toastr = inject(ToastService);
   private readonly fb = inject(FormBuilder);

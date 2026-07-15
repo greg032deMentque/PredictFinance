@@ -1,9 +1,8 @@
 <section class="page-shell">
   <div class="page-heading mb-4 gap-3">
     <div class="page-subtitle">
-      <span class="chip chip-dark mb-2"><i class="bi bi-chat-left-text"></i> Wording versions</span>
-      <h1 class="h2 fw-bold mb-2">Détail d’une version de wording</h1>
-      <p class="muted mb-0">Vue versionnée alignée sur l’API de gouvernance, sans reconstruire les scénarios dans le front.</p>
+      <span class="chip chip-dark mb-2"><i class="bi bi-chat-left-text"></i> Versions wording</span>
+      <h1 class="h2 fw-bold mb-0">Détail d’une version de wording</h1>
     </div>
     <a class="btn btn-outline-secondary rounded-pill" [routerLink]="toCommands(adminPaths.WordingVersions)">Retour à la liste</a>
   </div>
@@ -23,9 +22,9 @@
         <dl class="row mb-0">
           <dt class="col-md-3 muted">Activation</dt>
           <dd class="col-md-9">{{ detail.PublicationState.ActivatedAtUtc ? (detail.PublicationState.ActivatedAtUtc | date:'dd/MM/yyyy HH:mm') : 'Jamais activée' }}</dd>
-          <dt class="col-md-3 muted">Recommendation policy</dt>
+          <dt class="col-md-3 muted">Politique de recommandation</dt>
           <dd class="col-md-9">{{ detail.PublicationState.RecommendationPolicyVersion }}</dd>
-          <dt class="col-md-3 muted">Explanation policy</dt>
+          <dt class="col-md-3 muted">Politique d'explication</dt>
           <dd class="col-md-9">{{ detail.PublicationState.ExplanationPolicyVersion }}</dd>
           <dt class="col-md-3 muted">Domaines</dt>
           <dd class="col-md-9">
@@ -52,10 +51,10 @@
               <thead class="table-light">
                 <tr>
                   <th>ScenarioCode</th>
-                  <th>Kind</th>
+                  <th>Type</th>
                   <th>Holding</th>
-                  <th>Action family</th>
-                  <th>Strengths</th>
+                  <th>Famille d'action</th>
+                  <th>Points forts</th>
                 </tr>
               </thead>
               <tbody>

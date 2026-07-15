@@ -100,6 +100,7 @@ namespace BackPredictFinance.Services.Notifications
             catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
             {
                 _logger.LogDebug(
+                    ex,
                     "ProactiveAlertEmitter: contrainte unique sur trigger={Trigger} user={UserId} entity={EntityId} — no-op",
                     trigger, userId, targetEntityId);
 

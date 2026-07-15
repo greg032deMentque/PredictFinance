@@ -2,12 +2,14 @@
 using BackPredictFinance.API.Controllers.ClientFinance;
 using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Patterns;
 using BackPredictFinance.Patterns.Abstractions;
 using BackPredictFinance.Patterns.Contracts;
 using BackPredictFinance.Services.AuthServices;
 using BackPredictFinance.Services.ClientFinanceServices;
 using BackPredictFinance.Services.ClientFinanceServices.Alerts;
+using BackPredictFinance.Services.ClientFinanceServices.Analysis;
 using BackPredictFinance.Services.ClientFinanceServices.Patterns;
 using BackPredictFinance.Services.TwelveDataServices;
 using BackPredictFinance.Services.UserServices;
@@ -26,8 +28,10 @@ using BackPredictFinance.ViewModels.ClientFinanceViewModels.Watchlist;
 using BackPredictFinance.ViewModels.UserViewModels;
 using BackPredictFinance.ViewModels.UserViewModels.AuthViewModels;
 using BackPredictFinance.ViewModels.WebViewModels.PaginateViewModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace BackPredictFinance.Tests.Infrastructure;
@@ -47,17 +51,31 @@ internal static class TestInfrastructure
     public static Mock<IUserService> CreateUserServiceMock() => new(MockBehavior.Strict);
     public static Mock<IPortfolioService> CreatePortfolioServiceMock() => new(MockBehavior.Strict);
 
+    public static FinanceDbContext CreateInMemoryFinanceDbContext()
+    {
+        var options = new DbContextOptionsBuilder<FinanceDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var accessor = new Mock<IHttpContextAccessor>();
+        accessor.Setup(x => x.HttpContext).Returns((HttpContext?)null);
+        var context = new FinanceDbContext(options, accessor.Object);
+        context.Database.EnsureCreated(); // applique les données seed (HasData)
+        return context;
+    }
+
     public static ClientFinanceAnalysisController CreateClientFinanceAnalysisController(
         Mock<IClientFinanceService>? clientFinanceServiceMock = null,
         Mock<IClientFinanceDashboardHistoryService>? dashboardHistoryServiceMock = null,
         Mock<IClientFinanceSnapshotComparisonService>? snapshotComparisonServiceMock = null,
         Mock<IClientFinanceParameterDetailService>? parameterDetailServiceMock = null,
-        Mock<IPatternExplorerService>? patternExplorerServiceMock = null) => new(
+        Mock<IPatternExplorerService>? patternExplorerServiceMock = null,
+        Mock<IExPostStatisticsService>? exPostStatisticsServiceMock = null) => new(
             (clientFinanceServiceMock ?? CreateClientFinanceServiceMock()).Object,
             (dashboardHistoryServiceMock ?? CreateDashboardHistoryServiceMock()).Object,
             (snapshotComparisonServiceMock ?? CreateSnapshotComparisonServiceMock()).Object,
             (parameterDetailServiceMock ?? new Mock<IClientFinanceParameterDetailService>(MockBehavior.Strict)).Object,
-            (patternExplorerServiceMock ?? new Mock<IPatternExplorerService>(MockBehavior.Strict)).Object);
+            (patternExplorerServiceMock ?? new Mock<IPatternExplorerService>(MockBehavior.Strict)).Object,
+            (exPostStatisticsServiceMock ?? new Mock<IExPostStatisticsService>(MockBehavior.Strict)).Object);
 
     public static ClientFinancePortfolioController CreateClientFinancePortfolioController(
         Mock<IClientFinanceWatchlistPortfolioService>? watchlistPortfolioServiceMock = null,
@@ -128,7 +146,6 @@ internal static class TestInfrastructure
         OpenPositions = 2,
         AnalysesThisWeek = 3,
         WatchlistCount = 4,
-        RecommendationWinRate = 0.75m,
         NextMarketOpenAt = new DateTime(2026, 4, 10, 7, 0, 0, DateTimeKind.Utc),
         TotalInvested = 800m,
         TotalOutstanding = 1000m
@@ -154,6 +171,37 @@ internal static class TestInfrastructure
         NecklinePrice = 140m,
         TargetPrice = 160m,
         InvalidationPrice = 136m
+    };
+
+    public static AnalysisDossierViewModel CreateAnalysisDossier(string pattern, string phase, RecommendationActionEnum action) => new()
+    {
+        Id = Guid.NewGuid().ToString("N"),
+        Symbol = "AIR.PA",
+        CompanyName = "Airbus",
+        Outcome = "CrediblePatternFound",
+        OutcomeMessage = "Pattern confirmed.",
+        GlobalSummary = "Analyse pédagogique.",
+        PredictedAt = new DateTime(2026, 4, 9, 8, 0, 0, DateTimeKind.Utc),
+        ModelStatus = "Go",
+        ModelMessage = "Ready",
+        MainPattern = new AnalysisPatternViewModel
+        {
+            PatternId = pattern,
+            DisplayName = pattern,
+            PhaseCode = phase,
+            PhaseLabel = phase,
+            ConfidenceScore = 0.81m,
+            IsCompatible = true,
+            IsCredible = true,
+            CurrentPrice = 145m,
+            SuggestedTakeProfit = 160m,
+            InvalidationLevel = 136m,
+            RecommendationAction = action.ToString(),
+            RecommendationReason = "Pattern confirmed.",
+            IsActionable = action != RecommendationActionEnum.Hold,
+            RiskLevel = "Moderate",
+            RecommendationHorizonDays = 20
+        }
     };
 
     public static SimulationResultViewModel CreateSimulationResult(string pattern, RecommendationActionEnum action) => new()
@@ -197,7 +245,7 @@ internal static class TestInfrastructure
         InvestedAmount = 220m,
         OutstandingAmount = 246.90m,
         HoldingStatus = HoldingStatusEnum.Held,
-        MarketReading = new MarketReadingSummaryViewModel
+        MarketReading = new MarketReadingViewModel
         {
             Outcome = TechnicalAnalysisOutcomeTypeEnum.CrediblePatternFound,
             OutcomeDisplayLabel = "Pattern crédible détecté",
@@ -209,7 +257,7 @@ internal static class TestInfrastructure
             ValidationState = ValidationStateEnum.Validated,
             RiskHint = "Risk hint"
         },
-        SupportReading = new SupportReadingSummaryViewModel
+        SupportReading = new SupportReadingViewModel
         {
             AvailabilityStatus = SupportAvailabilityStatusEnum.Unavailable,
             AvailabilityDisplayLabel = "Lecture support indisponible",
@@ -403,7 +451,7 @@ internal static class TestInfrastructure
         Symbol = symbol,
         Items =
         [
-            new InstrumentHistoryItemViewModel
+            new HistoryItemViewModel
             {
                 AnalysisId = "analysis-1",
                 SnapshotId = "snapshot-1",

@@ -13,6 +13,7 @@ namespace BackPredictFinance.Datas.Entities
         public string PatternId { get; set; } = string.Empty;
         public string Phase { get; set; } = string.Empty;
         public PatternProgressStatusEnum ProgressStatus { get; set; } = PatternProgressStatusEnum.Forming;
+        public PatternDirectionEnum Direction { get; set; } = PatternDirectionEnum.Unknown;
         public decimal Probability { get; set; }
         public decimal Confidence { get; set; }
         public decimal CurrentPrice { get; set; }

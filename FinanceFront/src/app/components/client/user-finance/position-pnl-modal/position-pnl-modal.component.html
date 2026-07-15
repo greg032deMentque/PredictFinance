@@ -1,0 +1,99 @@
+<div class="modal fade" id="pnlDetailModal" tabindex="-1" aria-labelledby="pnlDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      @if (position) {
+        <div class="modal-header">
+          <h5 class="modal-title" id="pnlDetailModalLabel">
+            Détail PnL — {{ position.Instrument.Symbol }}
+            <span class="text-muted fw-normal small ms-1">{{ position.Instrument.DisplayName }}</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- Cours actuel -->
+          <div class="mb-4">
+            <div class="text-uppercase text-muted small fw-semibold mb-2">Cours actuel</div>
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="text-body-secondary">Prix {{ position.Currency }}</span>
+              <span class="fw-semibold">{{ position.CurrentPriceNative | number:'1.2-4':'fr-FR' }} {{ position.Currency }}</span>
+            </div>
+            @if (hasConversion) {
+              <div class="d-flex justify-content-between align-items-start mt-1">
+                <span class="text-body-secondary small">
+                  Taux {{ position.Currency }}/EUR
+                </span>
+                <span class="small text-muted">
+                  × {{ position.ForexRateUsed | number:'1.4-6':'fr-FR' }}
+                </span>
+              </div>
+              <div class="d-flex justify-content-between align-items-start mt-1">
+                <span class="text-body-secondary">Prix en EUR</span>
+                <span class="fw-semibold">{{ currentPriceEur | currency:'EUR':'symbol':'1.2-4':'fr-FR' }}</span>
+              </div>
+            }
+          </div>
+
+          <hr class="my-3">
+
+          <!-- Valorisation -->
+          <div class="mb-4">
+            <div class="text-uppercase text-muted small fw-semibold mb-2">Valorisation actuelle</div>
+            <div class="d-flex justify-content-between">
+              <span class="text-body-secondary">
+                {{ position.QuantityHeld | number:'1.0-4':'fr-FR' }} actions × {{ currentPriceEur | currency:'EUR':'symbol':'1.2-4':'fr-FR' }}
+              </span>
+              <span class="fw-semibold">{{ position.OutstandingAmount | currency:'EUR':'symbol':'1.0-2':'fr-FR' }}</span>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- Coût d'acquisition -->
+          <div class="mb-4">
+            <div class="text-uppercase text-muted small fw-semibold mb-2">Coût d'acquisition</div>
+            <div class="d-flex justify-content-between">
+              <span class="text-body-secondary">Coût moyen / action (frais inclus)</span>
+              <span class="fw-semibold">{{ position.AverageCost | currency:'EUR':'symbol':'1.2-4':'fr-FR' }}</span>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+              <span class="text-body-secondary">
+                {{ position.QuantityHeld | number:'1.0-4':'fr-FR' }} actions × {{ position.AverageCost | currency:'EUR':'symbol':'1.2-4':'fr-FR' }}
+              </span>
+              <span class="fw-semibold">{{ investedAmount | currency:'EUR':'symbol':'1.0-2':'fr-FR' }}</span>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- Résultat -->
+          <div>
+            <div class="text-uppercase text-muted small fw-semibold mb-2">Résultat</div>
+            <div class="d-flex justify-content-between">
+              <span class="text-body-secondary">
+                {{ position.OutstandingAmount | currency:'EUR':'symbol':'1.0-2':'fr-FR' }} − {{ investedAmount | currency:'EUR':'symbol':'1.0-2':'fr-FR' }}
+              </span>
+              <span class="fw-semibold" [class.text-success]="pnl >= 0" [class.text-danger]="pnl < 0">
+                {{ pnl | currency:'EUR':'symbol':'1.0-2':'fr-FR' }}
+              </span>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+              <span class="text-body-secondary">Performance</span>
+              <span class="fw-semibold" [class.text-success]="pnlPct >= 0" [class.text-danger]="pnlPct < 0">
+                {{ pnlPct | number:'1.2-2':'fr-FR' }} %
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fermer</button>
+        </div>
+      }
+
+    </div>
+  </div>
+</div>

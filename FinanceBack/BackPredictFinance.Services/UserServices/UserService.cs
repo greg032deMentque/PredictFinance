@@ -20,10 +20,6 @@ namespace BackPredictFinance.Services.UserServices
         /// </summary>
         Task<PublicSignupResponseViewModel> RegisterPublic(PublicSignupRequestViewModel model, CancellationToken ct = default);
         /// <summary>
-        /// Crée un utilisateur standard puis retourne son jeton de connexion.
-        /// </summary>
-        Task<TokenViewModel?> Register(UserViewModel model, CancellationToken ct = default);
-        /// <summary>
         /// Met à jour le profil de l'utilisateur courant.
         /// </summary>
         Task<UserViewModel> UpdateUser(UserViewModel model, CancellationToken ct = default);
@@ -154,29 +150,6 @@ namespace BackPredictFinance.Services.UserServices
                 LastName = user.LastName ?? string.Empty,
                 PhoneNumber = user.PhoneNumber ?? string.Empty
             };
-        }
-
-        public async Task<TokenViewModel?> Register(UserViewModel model, CancellationToken ct = default)
-        {
-            ArgumentNullException.ThrowIfNull(model);
-
-            var email = NormalizeRequiredEmail(model.Email);
-            var password = model.Password ?? string.Empty;
-
-            await CreateUserAsync(
-                email,
-                password,
-                model.FirstName?.Trim() ?? string.Empty,
-                model.LastName?.Trim() ?? string.Empty,
-                model.IsActive);
-
-            var loginVm = new LoginViewModel
-            {
-                Email = email,
-                Password = password
-            };
-
-            return await _accountService.Login(loginVm);
         }
 
         public async Task<UserViewModel> UpdateUser(UserViewModel model, CancellationToken ct = default)

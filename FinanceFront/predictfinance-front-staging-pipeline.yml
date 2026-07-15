@@ -1,3 +1,8 @@
+trigger:
+  branches:
+    include:
+      - dev
+
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -19,6 +24,13 @@ steps:
   inputs:
     command: 'install'
     workingDir: 'FinanceFront'
+
+- task: Npm@1
+  displayName: 'npm audit (blocking on high/critical)'
+  inputs:
+    command: 'custom'
+    workingDir: 'FinanceFront'
+    customCommand: 'audit --audit-level=high'
 
 - task: Npm@1
   displayName: 'npm run lint'

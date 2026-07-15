@@ -6,5 +6,6 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Portfolio
         public decimal TotalInvestedAmount { get; set; }
         public decimal TotalOutstandingAmount { get; set; }
         public int OpenPositionCount { get; set; }
+        public PortfolioAllocationViewModel? Allocation { get; set; }
     }
 }

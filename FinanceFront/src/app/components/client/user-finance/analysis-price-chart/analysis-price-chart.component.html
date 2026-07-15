@@ -1,0 +1,69 @@
+<div class="chart-wrapper">
+  @if (priceSeries.length > 0) {
+    <!-- Canvas avec équivalent texte pour lecteurs d'écran (WCAG 1.1.1) -->
+    <div class="chart-canvas-container" role="img" [attr.aria-label]="chartTitle || 'Graphe de prix'">
+      <canvas
+        #chartCanvas
+        [attr.aria-describedby]="'chart-summary-' + (chartTitle | slice: 0 : 10)"
+        tabindex="-1"
+        focusable="false"
+      ></canvas>
+    </div>
+
+    <!-- Résumé textuel accessible — associé au canvas via aria-describedby -->
+    <p
+      [id]="'chart-summary-' + (chartTitle | slice: 0 : 10)"
+      class="visually-hidden"
+    >
+      {{ accessibleSummary }}
+      @if (structuralPointsSummary) {
+        Points clés : {{ structuralPointsSummary }}.
+      }
+    </p>
+
+    <!-- Légende différenciée style + couleur (WCAG 1.4.1) -->
+    @if (pattern) {
+      <div class="chart-legend" aria-label="Légende des niveaux">
+        <div class="legend-item">
+          <span class="legend-line legend-line--solid legend-line--price" aria-hidden="true"></span>
+          <span class="legend-label">Cours</span>
+        </div>
+        @if (pattern.SuggestedTakeProfit !== null) {
+          <div class="legend-item">
+            <span class="legend-line legend-line--solid legend-line--target" aria-hidden="true"></span>
+            <span class="legend-label">Cible (—)</span>
+          </div>
+        }
+        @if (pattern.ValidationLevel !== null) {
+          <div class="legend-item">
+            <span class="legend-line legend-line--dashed legend-line--validation" aria-hidden="true"></span>
+            <span class="legend-label">Validation (- - -)</span>
+          </div>
+        }
+        @if (pattern.InvalidationLevel !== null) {
+          <div class="legend-item">
+            <span class="legend-line legend-line--dotted legend-line--invalidation" aria-hidden="true"></span>
+            <span class="legend-label">Invalidation (· · ·)</span>
+          </div>
+        }
+        @if (pattern.SuggestedStopLoss !== null) {
+          <div class="legend-item">
+            <span class="legend-line legend-line--dotted legend-line--stop" aria-hidden="true"></span>
+            <span class="legend-label">Stop-loss (.. ..)</span>
+          </div>
+        }
+        @if (pattern.StructuralPoints.length > 0) {
+          <div class="legend-item">
+            <span class="legend-triangle" aria-hidden="true">▲</span>
+            <span class="legend-label">Points structurels</span>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    <div class="empty-state" role="status">
+      <span class="empty-state-icon bi bi-graph-up" aria-hidden="true"></span>
+      <p class="mb-0 text-body-secondary">Aucune donnée de prix disponible pour ce pattern.</p>
+    </div>
+  }
+</div>

@@ -1,14 +1,7 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis
 {
-    /// <summary>
-    /// Représente l'évaluation ex post d'une analyse : ce qui s'est réellement passé
-    /// à l'horizon de revue prévu (RM-28 : boucle ex post, C-11).
-    /// </summary>
     public sealed class ExPostEvaluationViewModel
     {
-        // NOT_APPLICABLE | PENDING | DATA_UNAVAILABLE | TARGET_REACHED | INVALIDATED | NEUTRAL
         public string Status { get; set; } = "NOT_APPLICABLE";
         public string StatusLabel { get; set; } = string.Empty;
         public DateTime? ReviewScheduledAtUtc { get; set; }
@@ -16,6 +9,8 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis
         public decimal? TargetPrice { get; set; }
         public decimal? InvalidationPrice { get; set; }
         public string? PedagogicalNote { get; set; }
+        public int? DaysToOutcome { get; set; }
+        public DateTime? OutcomeDate { get; set; }
 
         public static ExPostEvaluationViewModel NotApplicable() => new()
         {
@@ -38,6 +33,31 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis
             ReviewScheduledAtUtc = reviewScheduledAt,
             PedagogicalNote = "Les données de clôture pour la date de revue ne sont pas disponibles. Relancez une analyse sur cet instrument pour actualiser les données."
         };
+
+        public static ExPostEvaluationViewModel PathDependent(
+            DateTime reviewScheduledAt,
+            string status,
+            string statusLabel,
+            decimal priceAtOutcome,
+            decimal? targetPrice,
+            decimal? invalidationPrice,
+            int daysToOutcome,
+            DateTime outcomeDate,
+            string pedagogicalNote)
+        {
+            return new ExPostEvaluationViewModel
+            {
+                Status = status,
+                StatusLabel = statusLabel,
+                ReviewScheduledAtUtc = reviewScheduledAt,
+                PriceAtReview = priceAtOutcome,
+                TargetPrice = targetPrice,
+                InvalidationPrice = invalidationPrice,
+                PedagogicalNote = pedagogicalNote,
+                DaysToOutcome = daysToOutcome,
+                OutcomeDate = outcomeDate
+            };
+        }
 
         public static ExPostEvaluationViewModel Evaluate(
             DateTime reviewScheduledAt,

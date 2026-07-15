@@ -14,5 +14,6 @@ namespace BackPredictFinance.Patterns.Contracts
         public bool IsActive { get; set; }
         public DateTime? LastProfileSyncUtc { get; set; }
         public string? Summary { get; set; }
+        public DateTime? EarningsDateUtc { get; set; }
     }
 }

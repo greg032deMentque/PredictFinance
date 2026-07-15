@@ -1,6 +1,11 @@
+import { HttpClient } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
+import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { TokenResponse } from '../Models/token-response';
 import { AuthService } from '../services/AuthService.service';
+import { StorageService } from '../services/storage.service';
+import { AuthStore } from '../core/auth.store';
 
 describe('AuthService', () => {
   const createJwt = (payload: Record<string, unknown>) => {
@@ -42,12 +47,21 @@ describe('AuthService', () => {
       syncFromStorage: jasmine.createSpy()
     };
 
+    const injector = Injector.create({
+      providers: [
+        { provide: HttpClient, useValue: http },
+        { provide: StorageService, useValue: storageService },
+        { provide: Router, useValue: router },
+        { provide: AuthStore, useValue: authStore }
+      ]
+    });
+
     return {
       storageService,
       http,
       router,
       authStore,
-      service: new AuthService(http as never, storageService as never, router as never, authStore as never)
+      service: runInInjectionContext(injector, () => new AuthService())
     };
   };
 

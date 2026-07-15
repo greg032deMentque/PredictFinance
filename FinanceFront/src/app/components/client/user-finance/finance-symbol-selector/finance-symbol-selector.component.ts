@@ -1,10 +1,44 @@
-﻿import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  EventEmitter,
+  inject,
+  Input,
+  OnChanges,
+  OnInit,
+  Output,
+  signal,
+  SimpleChanges
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { MarketAssetOption } from '../../../../Models/client-finance-models/client-finance-models';
+import { translateCountry, translateSector } from '../../../../Models/client-finance-models/finance-localization.util';
+
+const RECENT_KEY = 'pf_recent_symbols';
+const RECENT_MAX = 5;
+
+function loadRecentSymbols(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    return raw ? (JSON.parse(raw) as string[]).slice(0, RECENT_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+function pushRecentSymbol(symbol: string): void {
+  try {
+    const existing = loadRecentSymbols().filter(s => s !== symbol);
+    localStorage.setItem(RECENT_KEY, JSON.stringify([symbol, ...existing].slice(0, RECENT_MAX)));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 @Component({
   selector: 'app-finance-symbol-selector',
@@ -15,7 +49,16 @@ import { MarketAssetOption } from '../../../../Models/client-finance-models/clie
 })
 export class FinanceSymbolSelectorComponent implements OnChanges, OnInit {
   @Input() selectedAsset: MarketAssetOption | null = null;
-  @Input() options: MarketAssetOption[] = [];
+
+  // ── Inputs signal-backed : les computed() réagissent aux changements ────────
+  private readonly _options = signal<MarketAssetOption[]>([]);
+  @Input() set options(v: MarketAssetOption[]) { this._options.set(v); }
+  get options(): MarketAssetOption[] { return this._options(); }
+
+  private readonly _trendingOptions = signal<MarketAssetOption[]>([]);
+  @Input() set trendingOptions(v: MarketAssetOption[]) { this._trendingOptions.set(v); }
+  get trendingOptions(): MarketAssetOption[] { return this._trendingOptions(); }
+
   @Input() loading = false;
   @Input() peaFilterVisible = false;
   @Input() flat = false;
@@ -25,14 +68,71 @@ export class FinanceSymbolSelectorComponent implements OnChanges, OnInit {
   @Output() peaEligibleOnlyChanged = new EventEmitter<boolean>();
 
   selectedSymbol: string | null = null;
-  peaEligibleOnly = false;
-
-  /** Recherche serveur pure : ng-select pousse le terme saisi ici via [typeahead],
-   *  ce qui desactive son filtrage client (sinon il masque les resultats dont le
-   *  Symbol ne matche pas le terme, ex. "Microsoft" -> MSFT). */
   readonly searchInput$ = new Subject<string>();
+
+  // ── Filtres ──────────────────────────────────────────────────────────────
+  readonly filterSector  = signal<string | null>(null);
+  readonly filterCountry = signal<string | null>(null);
+  readonly filterType    = signal<string | null>(null);
+  readonly filterPea     = signal(false);
+
+  // ── currentTerm en signal : displayedOptions() se recompute à chaque frappe
+  private readonly _currentTerm = signal('');
+
   private readonly destroyRef = inject(DestroyRef);
-  private currentTerm = '';
+
+  // ── Listes dédupliquées pour les dropdowns de filtres ────────────────────
+  readonly availableSectors = computed(() =>
+    [...new Set(this._options().map(o => o.Sector).filter((s): s is string => s !== null && s.length > 0))]
+  );
+  readonly availableCountries = computed(() =>
+    [...new Set(this._options().map(o => o.Country).filter((c): c is string => c !== null && c.length > 0))]
+  );
+  readonly availableTypes = computed(() =>
+    [...new Set(this._options().map(o => o.AssetType).filter((t): t is string => t !== null && t.length > 0))]
+  );
+
+  readonly hasActiveFilters = computed(() =>
+    this.filterSector() !== null ||
+    this.filterCountry() !== null ||
+    this.filterType() !== null ||
+    this.filterPea()
+  );
+
+  readonly filteredOptions = computed(() => {
+    const sector  = this.filterSector();
+    const country = this.filterCountry();
+    const type    = this.filterType();
+    const pea     = this.filterPea();
+    let items = this._options();
+    if (sector)  items = items.filter(o => o.Sector  === sector);
+    if (country) items = items.filter(o => o.Country === country);
+    if (type)    items = items.filter(o => o.AssetType === type);
+    if (pea)     items = items.filter(o => o.IsPeaEligible);
+    return items;
+  });
+
+  readonly recentSymbols = signal<string[]>(loadRecentSymbols());
+
+  readonly zeroQueryItems = computed((): MarketAssetOption[] => {
+    const recents = this.recentSymbols();
+    const pool = [...this._options(), ...this._trendingOptions()];
+    const recentItems = recents
+      .map(sym => pool.find(o => o.Symbol === sym))
+      .filter((o): o is MarketAssetOption => o !== undefined);
+
+    const trending = this._trendingOptions().slice(0, RECENT_MAX);
+    const recentSymSet = new Set(recentItems.map(o => o.Symbol));
+    const merged = [...recentItems, ...trending.filter(o => !recentSymSet.has(o.Symbol))];
+    return merged.slice(0, RECENT_MAX * 2);
+  });
+
+  readonly displayedOptions = computed((): MarketAssetOption[] => {
+    if (this._currentTerm().length === 0 && this._options().length === 0) {
+      return this.zeroQueryItems();
+    }
+    return this.filteredOptions();
+  });
 
   ngOnInit(): void {
     this.searchInput$
@@ -42,8 +142,15 @@ export class FinanceSymbolSelectorComponent implements OnChanges, OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((term) => {
-        this.currentTerm = (term ?? '').trim();
-        this.searchChanged.emit(this.currentTerm);
+        const trimmed = (term ?? '').trim();
+        this._currentTerm.set(trimmed);
+        this.searchChanged.emit(trimmed);
+        if (trimmed.length === 0) {
+          this.filterSector.set(null);
+          this.filterCountry.set(null);
+          this.filterType.set(null);
+          this.filterPea.set(false);
+        }
       });
   }
 
@@ -53,21 +160,36 @@ export class FinanceSymbolSelectorComponent implements OnChanges, OnInit {
     }
   }
 
-  onSelectionChanged(item: MarketAssetOption | null): void {
-    if (!item) {
+  onSelectionChanged(value: MarketAssetOption | null): void {
+    if (!value) {
       this.selectedSymbol = null;
       return;
     }
-    this.assetSelected.emit(item);
+    // ng-select (change) émet toujours l'objet complet (x.value), pas la chaîne bindValue
+    this.selectedSymbol = value.Symbol;
+    pushRecentSymbol(value.Symbol);
+    this.recentSymbols.set(loadRecentSymbols());
+    this.assetSelected.emit(value);
   }
 
   onTogglePea(): void {
-    this.peaEligibleOnly = !this.peaEligibleOnly;
-    this.peaEligibleOnlyChanged.emit(this.peaEligibleOnly);
-    this.searchChanged.emit(this.currentTerm);
+    this.filterPea.update(v => !v);
+    this.peaEligibleOnlyChanged.emit(this.filterPea());
+    this.searchChanged.emit(this._currentTerm());
   }
 
   onDropdownOpened(): void {
-    this.searchChanged.emit(this.currentTerm);
+    this.searchChanged.emit(this._currentTerm());
+  }
+
+  readonly translateSector = translateSector;
+  readonly translateCountry = translateCountry;
+
+  clearFilters(): void {
+    this.filterSector.set(null);
+    this.filterCountry.set(null);
+    this.filterType.set(null);
+    this.filterPea.set(false);
+    this.peaEligibleOnlyChanged.emit(false);
   }
 }

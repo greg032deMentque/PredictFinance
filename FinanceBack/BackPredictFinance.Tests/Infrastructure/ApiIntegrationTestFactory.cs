@@ -31,6 +31,12 @@ public sealed class ApiIntegrationTestFactory : WebApplicationFactory<Program>, 
         .AddEntityFrameworkInMemoryDatabase()
         .BuildServiceProvider();
 
+    static ApiIntegrationTestFactory()
+    {
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
+        Environment.SetEnvironmentVariable("DOTNET_ENVIRONMENT", "Testing");
+    }
+
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");

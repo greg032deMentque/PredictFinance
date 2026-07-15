@@ -1,25 +1,54 @@
-<div class="app-root py-4 py-lg-4">
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="mb-4">
-        <div class="text-uppercase small opacity-75 mb-2">Mon espace</div>
-        <div class="fw-semibold fs-5">Navigation</div>
-      </div>
-      <nav class="nav flex-column gap-2 mb-4">
-        @for (block of menuBlocks; track block.label) {
-          @for (link of block.links; track link.label) {
-            <a class="nav-link" [routerLink]="link.commands" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: link.exact ?? true }" (click)="onLinkClick($event, link)">
-              @if (link.icon) { <i class="bi" [class]="link.icon"></i> }
-              <span>{{ link.label }}</span>
-            </a>
+<div class="app-root py-3">
+  <div class="app-shell" [class.sidebar-collapsed]="sidebarCollapsed()">
+
+    <aside class="sidebar" [class.sidebar--collapsed]="sidebarCollapsed()">
+
+      <!-- Bouton collapse -->
+      <button
+        class="sidebar-toggle btn btn-sm"
+        type="button"
+        (click)="toggleSidebar()"
+        [title]="sidebarCollapsed() ? 'Déplier le menu' : 'Replier le menu'"
+        aria-label="Basculer le menu latéral"
+      >
+        <i class="bi" [class.bi-chevron-double-left]="!sidebarCollapsed()" [class.bi-chevron-double-right]="sidebarCollapsed()"></i>
+      </button>
+
+      <!-- Blocs de navigation -->
+      @for (block of menuBlocks; track block.label) {
+        <nav class="sidebar-block mb-3">
+          @if (!sidebarCollapsed()) {
+            <div class="sidebar-section-label">{{ block.label }}</div>
           }
-        }
-      </nav>
+          <ul class="nav flex-column gap-1">
+            @for (link of block.links; track link.label) {
+              <li class="nav-item">
+                <a
+                  class="nav-link"
+                  [routerLink]="link.commands"
+                  routerLinkActive="active"
+                  [routerLinkActiveOptions]="{ exact: link.exact ?? true }"
+                  (click)="onLinkClick($event, link)"
+                  [title]="sidebarCollapsed() ? link.label : ''"
+                >
+                  @if (link.icon) {
+                    <i class="bi" [class]="link.icon" aria-hidden="true"></i>
+                  }
+                  @if (!sidebarCollapsed()) {
+                    <span class="sidebar-link-label">{{ link.label }}</span>
+                  }
+                </a>
+              </li>
+            }
+          </ul>
+        </nav>
+      }
+
     </aside>
 
     <main class="main-col d-flex flex-column gap-4">
       <router-outlet></router-outlet>
-      <div class="footer-divider pt-3 small muted">FinInsight — votre copilote d’investissement au quotidien.</div>
     </main>
+
   </div>
 </div>

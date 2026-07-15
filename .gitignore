@@ -7,25 +7,12 @@
 # Visual Studio
 **/.vs/
 
-# Rapport d'audit securite — local uniquement, ne jamais publier
-SECURITY_AUDIT.md
+# Configuration files — tous les appsettings (deployer manuellement sur chaque serveur)
+FinanceBack/BackPredictFinance.API/appsettings*.json
 
-# Secrets / config locale — NE JAMAIS COMMITER
-# Tous les appsettings specifiques a un environnement (Development, Local, prod,
-# Production, Staging...) sont ignores. Seuls appsettings.json (placeholders) et
-# les *.example sont versionnes.
-**/appsettings.*.json
-.env
-.env.*
-*.pfx
+# Exception : config de test (valeurs placeholder, aucun secret reel) versionnee
+# pour que les tests d'integration tournent en CI sans deploiement manuel
+!FinanceBack/BackPredictFinance.API/appsettings.Testing.json
 
-# Les cles privees ne sont PAS filtrees par nom ici : un .gitignore ne protege que
-# contre des noms connus, jamais contre un contenu. Le filet reel est le job gitleaks
-# dans .github/workflows/ci.yml, qui detecte une cle a son contenu quel que soit son nom.
-
-# Toolchain / caches locaux (reconstructibles via dotnet restore)
-**/.dotnet/
-**/.nuget/
-
-# Archives
-*.zip
+# Cache local du SDK .NET / NuGet — ne doit jamais etre versionne
+FinanceBack/.dotnet/

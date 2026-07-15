@@ -75,14 +75,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .AsNoTracking()
                 .CountAsync(x => userAssetIds.Contains(x.UserAssetId) && x.RecommendedAtUtc >= analysesWeekStart, ct);
 
-            var recommendationCount = await _financeDbContext.Set<Recommendation>()
-                .AsNoTracking()
-                .CountAsync(x => userAssetIds.Contains(x.UserAssetId), ct);
-
-            var recommendationWinRate = recommendationCount == 0 || watchlist.Count == 0
-                ? 0m
-                : Math.Round((decimal)watchlist.Count(x => x.DayVariationPct > 0m) / watchlist.Count, 4);
-
             var recentAnalyses = await BuildDashboardRecentAnalysesAsync(5, ct);
             var attentionItems = watchlist
                 .OrderByDescending(x => x.HoldingStatus == HoldingStatusEnum.Held)
@@ -121,7 +113,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 OpenPositions = portfolio.OpenPositionCount,
                 AnalysesThisWeek = analysesThisWeek,
                 WatchlistCount = watchlist.Count,
-                RecommendationWinRate = recommendationWinRate,
                 NextMarketOpenAt = ComputeNextMarketOpenUtc(),
                 TotalInvested = decimal.Round(portfolio.TotalInvestedAmount, 2),
                 TotalOutstanding = decimal.Round(portfolio.TotalOutstandingAmount, 2),
@@ -223,34 +214,76 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             }
 
             var reviewScheduledAtUtc = analysisCompletedAtUtc.AddDays(reviewHorizonDays.Value);
+            var targetPrice = primaryPattern.RiskHints.SuggestedTakeProfit;
+            var invalidationPrice = primaryPattern.Invalidation.InvalidationLevel;
+
+            if (!targetPrice.HasValue && !invalidationPrice.HasValue)
+            {
+                return ExPostEvaluationViewModel.NotApplicable();
+            }
 
             if (reviewScheduledAtUtc > DateTime.UtcNow)
             {
                 return ExPostEvaluationViewModel.Pending(reviewScheduledAtUtc);
             }
 
-            // Cherche la bougie la plus proche de la date de revue (±3 jours pour week-ends/jours fériés)
-            var windowStart = reviewScheduledAtUtc.AddDays(-3);
-            var windowEnd = reviewScheduledAtUtc.AddDays(3);
-            var nearbyCandles = await _financeDbContext.AssetCandleSnapshots
+            var scanStart = analysisCompletedAtUtc.Date;
+            var scanEnd = reviewScheduledAtUtc.AddDays(3);
+
+            var candles = await _financeDbContext.AssetCandleSnapshots
                 .AsNoTracking()
                 .Where(c => c.AssetId == assetId && c.Interval == "1d"
-                    && c.TimestampUtc >= windowStart && c.TimestampUtc <= windowEnd)
+                    && c.TimestampUtc >= scanStart && c.TimestampUtc <= scanEnd)
+                .OrderBy(c => c.TimestampUtc)
                 .ToListAsync(ct);
 
-            var candle = nearbyCandles
-                .OrderBy(c => Math.Abs((c.TimestampUtc - reviewScheduledAtUtc).TotalDays))
-                .FirstOrDefault();
-
-            if (candle == null)
+            if (candles.Count == 0)
             {
                 return ExPostEvaluationViewModel.DataUnavailable(reviewScheduledAtUtc);
             }
 
-            var targetPrice = primaryPattern.RiskHints.SuggestedTakeProfit;
-            var invalidationPrice = primaryPattern.Invalidation.InvalidationLevel;
+            var hit = SignalDirectionalScanEvaluator.ScanForFirstHit(candles, primaryPattern.Direction, targetPrice, invalidationPrice);
 
-            return ExPostEvaluationViewModel.Evaluate(reviewScheduledAtUtc, candle.Close, targetPrice, invalidationPrice);
+            if (hit.Kind == SignalDirectionalHitKind.InvalidationHit)
+            {
+                var invalidationValue = invalidationPrice!.Value;
+                return ExPostEvaluationViewModel.PathDependent(
+                    reviewScheduledAtUtc,
+                    "INVALIDATED",
+                    "Invalidation déclenchée",
+                    hit.Candle!.Close,
+                    targetPrice,
+                    invalidationPrice,
+                    hit.CandleIndex,
+                    hit.Candle.TimestampUtc,
+                    $"L'invalidation ({invalidationValue:N2}) a été franchie le {hit.Candle.TimestampUtc:dd/MM/yyyy} (bougie {hit.CandleIndex + 1}). Le scénario ne s'est pas réalisé — c'est une leçon utile.");
+            }
+
+            if (hit.Kind == SignalDirectionalHitKind.TargetHit)
+            {
+                var targetValue = targetPrice!.Value;
+                var directionLabel = primaryPattern.Direction == PatternDirectionEnum.Bearish ? "baissier" : "haussier";
+                return ExPostEvaluationViewModel.PathDependent(
+                    reviewScheduledAtUtc,
+                    "TARGET_REACHED",
+                    "Cible atteinte",
+                    hit.Candle!.Close,
+                    targetPrice,
+                    invalidationPrice,
+                    hit.CandleIndex,
+                    hit.Candle.TimestampUtc,
+                    $"La cible ({targetValue:N2}) a été atteinte le {hit.Candle.TimestampUtc:dd/MM/yyyy} (bougie {hit.CandleIndex + 1}). Le scénario {directionLabel} s'est réalisé.");
+            }
+
+            return new ExPostEvaluationViewModel
+            {
+                Status = "PENDING",
+                StatusLabel = "En cours",
+                ReviewScheduledAtUtc = reviewScheduledAtUtc,
+                TargetPrice = targetPrice,
+                InvalidationPrice = invalidationPrice,
+                PedagogicalNote = $"Aucun niveau n'a été touché sur les {candles.Count} bougies disponibles. Le scénario reste ouvert."
+            };
         }
 
         private async Task<List<DashboardRecentAnalysisItemViewModel>> BuildDashboardRecentAnalysesAsync(int take, CancellationToken ct)

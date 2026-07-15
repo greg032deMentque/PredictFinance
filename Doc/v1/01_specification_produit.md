@@ -40,7 +40,7 @@ L'information de marché est abondante, hétérogène et difficile à interprét
 ### 4.1 Positionnement
 
 - ✅ Outil d'**aide pédagogique** à l'investissement.
-- ✅ Outil d'**analyse technique** centrée patterns de continuation.
+- ✅ Outil d'**analyse technique** par patterns déterministes (continuation **et** retournement).
 - ✅ Outil de **lecture fondamentale** relative et d'**éligibilité PEA**.
 - ✅ Outil de **recommandation pédagogique contextualisée**.
 - ❌ **N'est pas** un robot d'exécution, un courtier, ni un système de trading temps réel.

@@ -3,126 +3,394 @@
     <h2 class="h6 text-uppercase text-muted mb-3">Simulation d'investissement</h2>
 
     @if (selectedSymbol.length === 0) {
-      <div class="alert alert-warning py-2">
-        Selectionne une valeur pour lancer la simulation.
+      <div class="alert alert-warning py-2" role="alert">
+        Sélectionne une valeur pour lancer la simulation.
       </div>
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="d-flex flex-column gap-2">
-      <div>
-        <label class="form-label">Valeur</label>
-        <input class="form-control" [value]="selectedSymbol || '-'" readonly />
-      </div>
 
+      <!-- Sélection multi-patterns par checkboxes -->
       <div>
-        <label class="form-label">Pattern</label>
-        <select class="form-select" formControlName="pattern" [disabled]="availablePatterns().length === 0">
-          @for (pattern of availablePatterns(); track pattern.Id) {
-            <option [value]="pattern.Id">{{ pattern.Label }}</option>
+        <fieldset>
+          <legend class="form-label mb-1">Patterns</legend>
+          @if (availablePatterns().length === 0) {
+            <small class="text-muted d-block">Aucun pattern actif disponible.</small>
+          } @else {
+            <div class="pattern-checkbox-list d-flex flex-column gap-1">
+              @for (pattern of availablePatterns(); track pattern.Id) {
+                <div class="form-check d-flex align-items-center gap-1">
+                  <input
+                    class="form-check-input"
+                    type="checkbox"
+                    [id]="'pattern-' + pattern.Id"
+                    [checked]="isPatternSelected(pattern.Id)"
+                    (change)="togglePattern(pattern.Id)"
+                  />
+                  <label class="form-check-label" [for]="'pattern-' + pattern.Id">
+                    {{ pattern.Label }}
+                  </label>
+                  @if (pattern.Description) {
+                    <button
+                      type="button"
+                      class="btn btn-link p-0 text-muted border-0"
+                      style="font-size: 0.85em; line-height: 1;"
+                      data-bs-toggle="modal"
+                      data-bs-target="#patternInfoModal"
+                      (click)="openPatternInfo(pattern)"
+                      [attr.aria-label]="'En savoir plus sur ' + pattern.Label"
+                    >
+                      <i class="bi bi-question-circle" aria-hidden="true"></i>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
           }
-        </select>
-        @if (availablePatterns().length === 0) {
-          <small class="text-muted d-block mt-1">Aucun pattern actif n'est disponible pour le moment.</small>
-        }
+          @if (selectedPatternIds.length === 0 && availablePatterns().length > 0) {
+            <small class="text-danger d-block mt-1">Sélectionne au moins un pattern.</small>
+          }
+        </fieldset>
       </div>
 
+      <!-- Curseur montant -->
       <div>
-        <label class="form-label">Montant investi</label>
-        <input class="form-control" type="number" step="1" formControlName="investmentAmount" />
+        <label class="form-label" for="sim-amount">
+          Montant investi
+          <span class="fw-bold ms-1" aria-live="polite" [attr.aria-label]="'Montant : ' + formatAriaAmount(form.controls.investmentAmount.value)">
+            {{ form.controls.investmentAmount.value | currency: 'EUR' : 'symbol' : '1.0-0' : 'fr-FR' }}
+          </span>
+        </label>
+        <input
+          id="sim-amount"
+          type="range"
+          class="form-range"
+          formControlName="investmentAmount"
+          min="100"
+          max="100000"
+          step="100"
+          [attr.aria-valuetext]="formatAriaAmount(form.controls.investmentAmount.value)"
+          [attr.aria-valuenow]="form.controls.investmentAmount.value"
+          aria-valuemin="100"
+          aria-valuemax="100000"
+        />
+        <div class="d-flex justify-content-between">
+          <small class="text-muted">100 €</small>
+          <small class="text-muted">100 000 €</small>
+        </div>
       </div>
 
+      <!-- Curseur horizon -->
       <div>
-        <label class="form-label">Horizon (jours)</label>
-        <input class="form-control" type="number" step="1" formControlName="horizonDays" />
+        <label class="form-label" for="sim-horizon">
+          Horizon
+          <span class="fw-bold ms-1" aria-live="polite" [attr.aria-label]="'Horizon : ' + form.controls.horizonDays.value + ' jours'">
+            {{ form.controls.horizonDays.value }} jours
+          </span>
+        </label>
+        <input
+          id="sim-horizon"
+          type="range"
+          class="form-range"
+          formControlName="horizonDays"
+          min="1"
+          max="365"
+          step="1"
+          [attr.aria-valuetext]="form.controls.horizonDays.value + ' jours'"
+          [attr.aria-valuenow]="form.controls.horizonDays.value"
+          aria-valuemin="1"
+          aria-valuemax="365"
+        />
+        <div class="d-flex justify-content-between">
+          <small class="text-muted">1 jour</small>
+          <small class="text-muted">365 jours</small>
+        </div>
       </div>
 
-      <button class="btn btn-outline-primary mt-2" [disabled]="loading" type="submit">
+      @if (submitWarning(); as warning) {
+        <div class="alert alert-warning py-2 mb-0" role="alert" aria-live="assertive">
+          <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>{{ warning }}
+        </div>
+      }
+
+      <button
+        class="btn btn-outline-primary mt-2"
+        [disabled]="loading"
+        type="submit"
+      >
         {{ loading ? 'Simulation en cours...' : 'Simuler' }}
       </button>
     </form>
 
-    @if (result; as simulationResult) {
-      <div class="finance-soft-panel mt-3">
-        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-          <div>
-            <div class="fw-semibold">Projection sur {{ simulationResult.Symbol }}</div>
-            <small class="text-muted d-block">
-              Horizon de {{ simulationResult.HorizonDays }} jours
-              @if (simulationResult.Phase) {
-                · Phase detectee: {{ phaseLabel }}
+    <!-- Résultats multi-patterns -->
+    @if (result; as r) {
+      <div
+        class="simulation-result mt-4"
+        aria-live="polite"
+        aria-atomic="false"
+        role="region"
+        aria-label="Résultats de simulation"
+      >
+        <!-- En-tête commun : rappel de ce qui a été simulé -->
+        <div class="border rounded p-3 mb-3 bg-body-secondary">
+          <div class="fw-semibold mb-1">Projection sur {{ r.Symbol }}</div>
+          <div class="row g-2 small">
+            <div class="col-6 col-sm-3">
+              <span class="text-muted d-block">Montant investi</span>
+              <strong>{{ r.InvestmentAmount | currency: 'EUR' : 'symbol' : '1.0-0' : 'fr-FR' }}</strong>
+            </div>
+            <div class="col-6 col-sm-3">
+              <span class="text-muted d-block">Horizon</span>
+              <strong>{{ r.HorizonDays }} jours</strong>
+            </div>
+            <div class="col-6 col-sm-3">
+              <span class="text-muted d-block">Cours actuel</span>
+              <strong>{{ r.CurrentPrice | currency: r.Currency : 'symbol' : '1.2-2' }}</strong>
+            </div>
+            <div class="col-6 col-sm-3">
+              <span class="text-muted d-block">Patterns simulés</span>
+              <strong>{{ r.PatternResults.length }}</strong>
+            </div>
+          </div>
+        </div>
+
+        @if (r.GlobalMessage) {
+          <p class="text-body-secondary small mb-3">{{ r.GlobalMessage }}</p>
+        }
+
+        <!-- Carte de résultat par pattern -->
+        @for (pr of r.PatternResults; track pr.Pattern) {
+          <div class="pattern-result-card mb-3 border rounded p-3" [class.pattern-result-card--inactive]="!pr.IsActionable">
+
+            <!-- Titre du pattern + badge conseil -->
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <div>
+                <span class="fw-semibold">{{ patternLabel(pr.Pattern) }}</span>
+                @if (catalogFor(pr.Pattern); as cat) {
+                  <button
+                    type="button"
+                    class="btn btn-link p-0 ms-1 text-muted border-0 align-baseline"
+                    style="font-size: 0.85em; line-height: 1;"
+                    data-bs-toggle="modal"
+                    data-bs-target="#patternInfoModal"
+                    (click)="openPatternInfo(cat)"
+                    [attr.aria-label]="'En savoir plus sur ' + cat.Label"
+                  >
+                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                  </button>
+                }
+                @if (pr.Phase) {
+                  <small class="text-muted ms-2">· Phase : {{ getPhaseLabel(pr) }}</small>
+                }
+              </div>
+              @if (pr.IsActionable) {
+                <span
+                  class="badge"
+                  [class]="getRecommendationClass(pr)"
+                  role="status"
+                  [attr.aria-label]="'Conseil : ' + getRecommendationLabel(pr)"
+                >
+                  {{ getRecommendationLabel(pr) }}
+                </span>
+              } @else {
+                <span class="badge bg-secondary" role="status">Non actionable</span>
               }
-            </small>
-          </div>
-          <span class="badge" [class]="recommendationClass">{{ recommendationLabel }}</span>
-        </div>
+            </div>
 
-        <div class="row g-3 mb-3">
-          <div class="col-6">
-            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
-              <small class="text-muted d-block">Rendement estime</small>
-              <strong [class]="performanceToneClass">
-                {{ simulationResult.EstimatedReturnAmount | currency: 'USD' }}
-              </strong>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
-              <small class="text-muted d-block">Rendement en %</small>
-              <strong [class]="performanceToneClass">
-                {{ simulationResult.EstimatedReturnPct | percent: '1.1-2' }}
-              </strong>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
-              <small class="text-muted d-block">Montant final estime</small>
-              <strong>{{ simulationResult.EstimatedFinalAmount | currency: 'USD' }}</strong>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
-              <small class="text-muted d-block">Probabilite du pattern</small>
-              <strong>{{ simulationResult.Probability | percent: '1.0-0' }}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="row g-3 mb-3">
-          <div class="col-12 col-md-4">
-            <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
-              <small class="text-muted d-block">Cours actuel</small>
-              <strong>{{ simulationResult.CurrentPrice | currency: 'USD' }}</strong>
-            </div>
-          </div>
-          @if (simulationResult.TargetPrice !== null) {
-            <div class="col-12 col-md-4">
-              <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
-                <small class="text-muted d-block">Cible technique</small>
-                <strong>{{ simulationResult.TargetPrice | currency: 'USD' }}</strong>
+            <!-- Pattern non identifié : on explique pourquoi + rappel pédagogique de la figure -->
+            @if (!pr.IsActionable) {
+              <p class="text-muted small mb-2">
+                <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                @if (pr.Assumption) {
+                  {{ pr.Assumption }}
+                } @else {
+                  Pattern non détecté sur cette valeur : la figure n'est pas encore formée.
+                }
+                <span class="d-block mt-1 text-muted">Aucune projection chiffrée n'est disponible tant que le pattern n'est pas confirmé.</span>
+              </p>
+              @if (catalogFor(pr.Pattern); as cat) {
+                <div class="small text-body-secondary">
+                  <div class="d-flex flex-wrap gap-1 mb-1">
+                    @if (cat.FamilyLabel) {
+                      <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ cat.FamilyLabel }}</span>
+                    }
+                    @if (cat.DirectionLabel) {
+                      <span class="badge bg-light text-dark border">Direction : {{ cat.DirectionLabel }}</span>
+                    }
+                    @if (cat.ReliabilityLabel) {
+                      <span class="badge bg-info-subtle text-info-emphasis">Fiabilité historique {{ cat.ReliabilityLabel }} &middot; {{ cat.Reliability | percent: '1.0-0' }}</span>
+                    <small class="text-muted d-block mt-1">Source : statistiques Bulkowski — fiabilité observée si le pattern se forme</small>
+                    }
+                  </div>
+                  @if (cat.AnalysisNarrative) {
+                    <p class="mb-0">{{ cat.AnalysisNarrative }}</p>
+                  }
+                </div>
+              }
+            } @else {
+              <!-- KPIs -->
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <div class="surface p-2 h-100">
+                    <small class="text-muted d-block">Rendement estimé</small>
+                    <strong [class]="getPerformanceToneClass(pr)">
+                      {{ pr.EstimatedReturnAmount | currency: 'EUR' : 'symbol' : '1.0-2' : 'fr-FR' }}
+                    </strong>
+                    <small class="text-muted d-block">{{ pr.EstimatedReturnPct | percent: '1.1-2' }}</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="surface p-2 h-100">
+                    <small class="text-muted d-block">Montant final estimé</small>
+                    <strong>{{ pr.EstimatedFinalAmount | currency: 'EUR' : 'symbol' : '1.0-2' : 'fr-FR' }}</strong>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="surface p-2 h-100">
+                    <small class="text-muted d-block">Probabilité pattern</small>
+                    <strong>{{ pr.Probability | percent: '1.0-0' }}</strong>
+                  </div>
+                </div>
+                @if (pr.RiskLevel) {
+                  <div class="col-6">
+                    <div class="surface p-2 h-100">
+                      <small class="text-muted d-block">Risque</small>
+                      <strong>{{ getRiskLevelLabel(pr) }}</strong>
+                    </div>
+                  </div>
+                }
               </div>
-            </div>
-          }
-          @if (simulationResult.InvalidationPrice !== null) {
-            <div class="col-12 col-md-4">
-              <div class="border finance-border-soft rounded-3 bg-white p-3 h-100">
-                <small class="text-muted d-block">Niveau d'invalidation</small>
-                <strong>{{ simulationResult.InvalidationPrice | currency: 'USD' }}</strong>
-              </div>
-            </div>
-          }
-        </div>
 
-        <div class="border-top pt-3">
-          <p class="mb-2">{{ actionableSummary }}</p>
-          <p class="mb-2 text-body-secondary">{{ simulationResult.RecommendationReason }}</p>
-          <small class="text-muted d-block mb-1">
-            Risque: {{ riskLevelLabel }}
-          </small>
-          <small class="text-muted d-block">
-            {{ simulationResult.Assumption || "Projection fournie a titre indicatif si le pattern se poursuit." }}
-          </small>
-        </div>
+              <!-- Cartes scénarios -->
+              @if (pr.Scenarios.length > 0) {
+                <div class="scenario-cards mb-2" role="list" aria-label="Scénarios du pattern">
+                  @for (scenario of pr.Scenarios; track scenario.Label) {
+                    <div
+                      class="scenario-card"
+                      [class]="getScenarioClass(scenario.Label)"
+                      role="listitem"
+                    >
+                      <div class="scenario-card__header">
+                        <i [class]="'bi ' + getScenarioIcon(scenario.Label)" aria-hidden="true"></i>
+                        <span class="fw-semibold">{{ scenario.Label }}</span>
+                        @if (scenario.Probability !== null) {
+                          <span class="scenario-card__prob text-muted">
+                            ({{ scenario.Probability | percent: '1.0-0' }})
+                          </span>
+                        }
+                      </div>
+                      <div class="scenario-card__body">
+                        <div>
+                          <small class="text-muted d-block">Rendement</small>
+                          <strong
+                            [class.text-success]="scenario.EstimatedReturnPct >= 0"
+                            [class.text-danger]="scenario.EstimatedReturnPct < 0"
+                          >
+                            {{ scenario.EstimatedReturnPct >= 0 ? '+' : '' }}{{ scenario.EstimatedReturnPct | percent: '1.1-2' }}
+                          </strong>
+                        </div>
+                        <div>
+                          <small class="text-muted d-block">Montant final</small>
+                          <strong>{{ scenario.EstimatedFinalAmount | currency: 'EUR' : 'symbol' : '1.0-2' : 'fr-FR' }}</strong>
+                        </div>
+                        @if (scenario.TargetPrice !== null) {
+                          <div>
+                            <small class="text-muted d-block">Prix cible</small>
+                            <strong>{{ scenario.TargetPrice | currency: r.Currency : 'symbol' : '1.2-2' }}</strong>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Conseil et justification -->
+              <div class="border-top pt-2">
+                <p class="mb-1 small">{{ getActionableSummary(pr) }}</p>
+                <p class="mb-1 small text-body-secondary">{{ pr.RecommendationReason }}</p>
+                @if (pr.Assumption) {
+                  <small class="text-muted d-block">{{ pr.Assumption }}</small>
+                }
+              </div>
+            }
+          </div>
+        }
       </div>
     }
+  </div>
+</div>
+
+<!-- Modale explication pattern -->
+<div class="modal fade" id="patternInfoModal" tabindex="-1" aria-labelledby="patternInfoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      @if (activePatternInfo(); as p) {
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0" id="patternInfoModalLabel">{{ p.Label }}</h5>
+            @if (p.FamilyLabel) {
+              <small class="text-muted">Famille : {{ p.FamilyLabel }}</small>
+            }
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body d-flex flex-column gap-3">
+          <p class="mb-0">{{ p.Description }}</p>
+          @if (p.AnalysisNarrative) {
+            <p class="mb-0 text-body-secondary">
+              <i class="bi bi-lightbulb me-1" aria-hidden="true"></i>{{ p.AnalysisNarrative }}
+            </p>
+          }
+          @if (p.DirectionLabel) {
+            <div>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="text-muted small">Direction attendue :</span>
+                <span class="badge"
+                  [class.bg-success]="p.Direction.toLowerCase() === 'bullish'"
+                  [class.bg-danger]="p.Direction.toLowerCase() === 'bearish'"
+                  [class.bg-secondary]="p.Direction.toLowerCase() !== 'bullish' && p.Direction.toLowerCase() !== 'bearish'"
+                >
+                  {{ p.DirectionLabel }}
+                </span>
+              </div>
+              @if (conceptByCode(p.Direction); as directionConcept) {
+                <p class="small text-body-secondary mb-0 mt-1">{{ directionConcept.Explanation }}</p>
+              }
+            </div>
+          }
+          @if (p.ReliabilityLabel) {
+            <div>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="text-muted small">Fiabilité historique :</span>
+                <span class="badge bg-info-subtle text-info-emphasis">
+                  {{ p.ReliabilityLabel }} &middot; {{ p.Reliability | percent: '1.0-0' }}
+                </span>
+              </div>
+              @if (conceptByCode('reliability'); as reliabilityConcept) {
+                <p class="small text-body-secondary mb-0 mt-1">{{ reliabilityConcept.Explanation }}</p>
+              }
+            </div>
+          }
+          <div class="border-top pt-3">
+            <p class="small text-muted mb-2">Pour approfondir :</p>
+            <div class="d-flex flex-column gap-1">
+              <a href="https://fr.wikipedia.org/wiki/Analyse_technique" target="_blank" rel="noopener noreferrer" class="small d-flex align-items-center gap-1">
+                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>Analyse technique — Wikipédia
+              </a>
+              <a href="https://www.tradingview.com/ideas/" target="_blank" rel="noopener noreferrer" class="small d-flex align-items-center gap-1">
+                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>Idées de trading — TradingView
+              </a>
+              <a href="https://www.investopedia.com/articles/technical-analysis/" target="_blank" rel="noopener noreferrer" class="small d-flex align-items-center gap-1">
+                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>Analyse technique — Investopedia
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fermer</button>
+        </div>
+      }
+    </div>
   </div>
 </div>

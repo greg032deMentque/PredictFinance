@@ -59,19 +59,19 @@ public sealed class NotificationsApiFeatureTests : IClassFixture<ApiIntegrationT
 
         var response = await client.PostAsJsonAsync("/api/Notifications/MarkAsRead", new MarkNotificationAsReadRequestViewModel
         {
-            NotificationId = "notif-analysis-1"
+            NotificationId = "notif-markread-1"
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var payload = await response.Content.ReadFromJsonAsync<NotificationItemViewModel>(JsonOptions);
         Assert.NotNull(payload);
-        Assert.Equal("notif-analysis-1", payload!.NotificationId);
+        Assert.Equal("notif-markread-1", payload!.NotificationId);
         Assert.Equal(NotificationStatusEnum.Read, payload.Status);
         Assert.NotNull(payload.ReadAtUtc);
 
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
-        var persistedNotification = await dbContext.UserNotifications.FindAsync("notif-analysis-1");
+        var persistedNotification = await dbContext.UserNotifications.FindAsync("notif-markread-1");
         Assert.NotNull(persistedNotification);
         Assert.Equal(NotificationStatusEnum.Read, persistedNotification!.Status);
         Assert.NotNull(persistedNotification.ReadAtUtc);
@@ -82,15 +82,9 @@ public sealed class NotificationsApiFeatureTests : IClassFixture<ApiIntegrationT
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
 
-        // The factory is a class fixture, so every test in this class shares one in-memory
-        // database, and MarkAsRead flips notif-analysis-1 to Read. Seeding only when the rows
-        // are absent would leave that mutation in place and make GetList depend on execution
-        // order. Rebuild the seeded state on every call instead.
-        var seeded = await dbContext.UserNotifications.ToListAsync();
-        if (seeded.Count > 0)
+        if (await dbContext.UserNotifications.AnyAsync(x => x.NotificationId == "notif-analysis-1"))
         {
-            dbContext.UserNotifications.RemoveRange(seeded);
-            await dbContext.SaveChangesAsync();
+            return;
         }
 
         await dbContext.UserNotifications.AddRangeAsync(
@@ -142,6 +136,18 @@ public sealed class NotificationsApiFeatureTests : IClassFixture<ApiIntegrationT
                 TargetScreen = NotificationTargetScreenEnum.AnalysisResult,
                 TargetEntityId = "analysis-other",
                 CreatedAtUtc = new DateTime(2026, 4, 12, 10, 0, 0, DateTimeKind.Utc)
+            },
+            new UserNotification
+            {
+                NotificationId = "notif-markread-1",
+                UserId = ApiIntegrationTestFactory.StandardUserId,
+                Category = NotificationCategoryEnum.Account,
+                Status = NotificationStatusEnum.Unread,
+                Title = "Notification dediee au marquage comme lue",
+                Summary = "Utilisee uniquement par le test de marquage comme lue.",
+                TargetScreen = NotificationTargetScreenEnum.Account,
+                TargetEntityId = null,
+                CreatedAtUtc = new DateTime(2026, 4, 12, 11, 0, 0, DateTimeKind.Utc)
             });
 
         await dbContext.SaveChangesAsync();

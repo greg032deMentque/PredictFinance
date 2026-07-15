@@ -31,8 +31,8 @@ public sealed class ClientFinanceWatchlistIntegrationTests : IClassFixture<ApiIn
         {
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll<ITickerService>();
-                services.AddSingleton<ITickerService, FixedTickerService>();
+                services.RemoveAll<IMarketPriceProvider>();
+                services.AddSingleton<IMarketPriceProvider, FixedMarketPriceProvider>();
             });
         });
 
@@ -98,46 +98,29 @@ public sealed class ClientFinanceWatchlistIntegrationTests : IClassFixture<ApiIn
         LastProfileSyncUtc = new DateTime(2026, 6, 10, 8, 0, 0, DateTimeKind.Utc)
     };
 
-    private sealed class FixedTickerService : ITickerService
+    private sealed class FixedMarketPriceProvider : IMarketPriceProvider
     {
-        public Task<IReadOnlyList<string>> GetExchangesAsync(CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<string>>(["XPAR"]);
-
-        public Task<IReadOnlyList<string>> GetSymbolsByExchangeAsync(string exchange, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<string>>([]);
-
-        public Task<IReadOnlyList<string>> GetAllSymbolsAsync(CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<string>>([]);
-
-        public Task<TickerTimeSeriesResponse> GetTimeSeriesAsync(string symbol, string interval, int outputSize, CancellationToken ct = default)
-            => Task.FromResult(new TickerTimeSeriesResponse());
-
-        public Task<IReadOnlyList<MarketAssetDescriptor>> SearchAssetsAsync(string query, CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<MarketAssetDescriptor>>([]);
-
         public Task<MarketQuoteData> GetQuoteAsync(string symbol, CancellationToken ct = default)
-            => Task.FromResult(new MarketQuoteData
-            {
-                Symbol = symbol,
-                AssetType = AssetTypeEnum.Stock,
-                LastPrice = 100m,
-                DayVariationPct = 0.5m,
-                AsOfUtc = new DateTime(2026, 6, 10, 8, 0, 0, DateTimeKind.Utc)
-            });
+            => Task.FromResult(BuildQuote(symbol));
 
-        public Task<MarketAssetProfileData> GetAssetProfileAsync(string symbol, CancellationToken ct = default)
-            => Task.FromResult(new MarketAssetProfileData
-            {
-                Symbol = symbol,
-                ProviderSymbol = symbol,
-                CompanyName = symbol,
-                AssetType = AssetTypeEnum.Stock,
-                Exchange = "XPAR",
-                Currency = "EUR",
-                Country = "FR",
-                LastPrice = 100m,
-                DayVariationPct = 0.5m,
-                AsOfUtc = new DateTime(2026, 6, 10, 8, 0, 0, DateTimeKind.Utc)
-            });
+        public Task<IReadOnlyDictionary<string, MarketQuoteData>> GetQuotesAsync(IEnumerable<string> symbols, CancellationToken ct = default)
+        {
+            var result = symbols
+                .Select(BuildQuote)
+                .ToDictionary(x => x.Symbol, x => x, StringComparer.OrdinalIgnoreCase);
+            return Task.FromResult<IReadOnlyDictionary<string, MarketQuoteData>>(result);
+        }
+
+        public Task<IReadOnlyList<TickerCandle>> GetChartAsync(string symbol, string interval, string range, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<TickerCandle>>([]);
+
+        private static MarketQuoteData BuildQuote(string symbol) => new()
+        {
+            Symbol = symbol,
+            AssetType = AssetTypeEnum.Stock,
+            LastPrice = 100m,
+            DayVariationPct = 0.5m,
+            AsOfUtc = new DateTime(2026, 6, 10, 8, 0, 0, DateTimeKind.Utc)
+        };
     }
 }

@@ -11,7 +11,7 @@ export interface ClientAnalysisDetail {
     InvalidationLevel: number | null;
     RiskHint: string | null;
     PedagogicalSummary: string;
-    Alternatives: Array<{ PatternId: string; DisplayName: string; ConfidenceLabel: string | null; ProgressStatusLabel: string | null }>;
+    Alternatives: { PatternId: string; DisplayName: string; ConfidenceLabel: string | null; ProgressStatusLabel: string | null }[];
   };
   SupportReading: {
     AvailabilityDisplayLabel: string;
@@ -32,23 +32,23 @@ export interface ClientAnalysisDetail {
   ModelMessage: string;
   ConfidenceBreakdown: {
     Level: string;
-    Criteria: Array<{
+    Criteria: {
       Code: string;
       Label: string;
       State: string;
       Source: string;
-    }>;
+    }[];
   };
   ActionPlan: {
     HoldingStatus: string;
     PolicyVersion: string;
-    Steps: Array<{
+    Steps: {
       Kind: string;
       Label: string;
       Source: string;
       Value: string | null;
       AlertTrigger: string | null;
-    }>;
+    }[];
   };
   ExPostEvaluation: {
     Status: string;
@@ -58,5 +58,7 @@ export interface ClientAnalysisDetail {
     TargetPrice: number | null;
     InvalidationPrice: number | null;
     PedagogicalNote: string | null;
+    DaysToOutcome: number | null;
+    OutcomeDate: string | null;
   };
 }

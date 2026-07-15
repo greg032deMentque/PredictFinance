@@ -37,24 +37,19 @@ namespace BackPredictFinance.API.Data
 
         private static async Task RunMigrationsAsync(FinanceDbContext context, ILogger<BaseService> logger)
         {
-            try
+            // Fail-fast : aucun fallback EnsureCreated(). Si le modele a des changements non captures
+            // dans une migration, MigrateAsync leve PendingModelChangesWarning et le demarrage echoue
+            // explicitement (au lieu de masquer un schema divergent). Resolution : ajouter une migration.
+            var pendingMigrations = (await context.Database.GetPendingMigrationsAsync()).Count();
+            if (pendingMigrations > 0)
             {
-                var pendingMigrations = (await context.Database.GetPendingMigrationsAsync()).Count();
-                if (pendingMigrations > 0)
-                {
-                    logger.LogInformation("Applying {Count} pending migrations...", pendingMigrations);
-                    await context.Database.MigrateAsync();
-                    logger.LogInformation("Migrations applied");
-                }
-                else
-                {
-                    logger.LogInformation("No migration needed");
-                }
+                logger.LogInformation("Applying {Count} pending migrations...", pendingMigrations);
+                await context.Database.MigrateAsync();
+                logger.LogInformation("Migrations applied");
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("pending changes", StringComparison.OrdinalIgnoreCase))
+            else
             {
-                logger.LogWarning("Pending model changes detected. Falling back to EnsureCreated().");
-                await context.Database.EnsureCreatedAsync();
+                logger.LogInformation("No migration needed");
             }
         }
 
@@ -99,11 +94,13 @@ namespace BackPredictFinance.API.Data
             {
                 await context.Database.ExecuteSqlRawAsync(script);
             }
+#pragma warning disable S2139 // Le contexte est déjà loggé (LogWarning avec message métier) avant le rethrow, qui préserve la stack trace d'origine — le remplacer par une exception enveloppée perdrait cette trace sans bénéfice.
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "RefreshTokens storage ensure failed; API auth refresh may not work.");
                 throw;
             }
+#pragma warning restore S2139
         }
 
         private static async Task EnsureAdminAccountAsync(
@@ -114,7 +111,7 @@ namespace BackPredictFinance.API.Data
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
-                throw new ArgumentNullException("email/password", "Missing admin credentials in configuration.");
+                throw new InvalidOperationException("Missing admin credentials in configuration.");
             }
 
             var existingUser = await userManager.FindByEmailAsync(email);
@@ -216,7 +213,7 @@ namespace BackPredictFinance.API.Data
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
-                throw new ArgumentNullException("email/password", "Missing simple user credentials in configuration.");
+                throw new InvalidOperationException("Missing simple user credentials in configuration.");
             }
 
             var userRole = UserRoleEnum.User.ToString();

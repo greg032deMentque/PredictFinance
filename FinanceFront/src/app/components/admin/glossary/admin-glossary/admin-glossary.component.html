@@ -80,20 +80,12 @@
     </div>
   }
 
-  <div class="input-group mb-4" style="max-width: 480px;">
-    <span class="input-group-text"><i class="bi bi-search"></i></span>
-    <input
-      type="text"
-      class="form-control"
+  <div class="mb-4" style="max-width: 480px;">
+    <app-search-bar
       placeholder="Rechercher un terme..."
-      [formControl]="searchControl"
-      autocomplete="off"
-    />
-    @if (searchControl.value) {
-      <button class="btn btn-outline-secondary" type="button" (click)="searchControl.setValue('')">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    }
+      [value]="searchControl.value"
+      (valueChange)="searchControl.setValue($event)">
+    </app-search-bar>
   </div>
 
   @if (loading()) {

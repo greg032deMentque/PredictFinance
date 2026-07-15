@@ -36,10 +36,11 @@
           (click)="startRename()">
           Renommer
         </button>
-        <button class="btn btn-sm btn-outline-danger" type="button"
-          data-bs-toggle="modal" data-bs-target="#deletePortfolioModal"
+        <button class="btn btn-sm btn-outline-warning" type="button"
+          data-bs-toggle="modal" data-bs-target="#archivePortfolioModal"
+          (click)="requestArchivePortfolio()"
           [disabled]="formLoading()">
-          Supprimer
+          Archiver
         </button>
       </div>
     </div>
@@ -71,7 +72,14 @@
     <div class="col-6 col-md-3">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body">
-          <div class="text-muted small mb-1">PnL</div>
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="text-muted small mb-1">PnL</div>
+            <button type="button" class="btn btn-link btn-sm p-0 text-muted lh-1"
+              data-bs-toggle="modal" data-bs-target="#portfolioPnlModal"
+              aria-label="Détail du calcul du P&L" title="Détail du calcul">
+              <i class="bi bi-info-circle"></i>
+            </button>
+          </div>
           <div class="h4 mb-0"
             [class.text-success]="totalPnl >= 0"
             [class.text-danger]="totalPnl < 0">
@@ -91,6 +99,257 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Section allocation (si données disponibles) -->
+  @if (portfolio().Allocation; as alloc) {
+
+    <!-- B — Score de concentration + alertes -->
+    <div class="row g-3">
+      <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex flex-column gap-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div class="fw-semibold">Concentration</div>
+              <span class="badge"
+                [class.bg-success]="alloc.DiversificationRating === 'Diversified'"
+                [class.bg-warning]="alloc.DiversificationRating === 'Moderate'"
+                [class.text-dark]="alloc.DiversificationRating === 'Moderate'"
+                [class.bg-danger]="alloc.DiversificationRating === 'Concentrated'">
+                {{ alloc.DiversificationRating === 'Diversified' ? 'Diversifié'
+                   : alloc.DiversificationRating === 'Moderate' ? 'Modéré'
+                   : 'Concentré' }}
+              </span>
+            </div>
+            <div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted small">Score</span>
+                <span class="small fw-semibold">{{ alloc.ConcentrationScore | number:'1.0-0' }} / 100</span>
+              </div>
+              <div class="progress" style="height:10px" role="progressbar">
+                <div class="progress-bar"
+                  [style.width.%]="alloc.ConcentrationScore"
+                  [class.bg-success]="alloc.ConcentrationScore < 30"
+                  [class.bg-warning]="alloc.ConcentrationScore >= 30 && alloc.ConcentrationScore <= 60"
+                  [class.bg-danger]="alloc.ConcentrationScore > 60">
+                </div>
+              </div>
+            </div>
+            @if (alloc.ConcentrationAlerts.length > 0) {
+              <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                @for (alert of alloc.ConcentrationAlerts; track $index) {
+                  <li class="d-flex align-items-start gap-2 text-warning-emphasis small">
+                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+                    <span>{{ alert.Message }}</span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- C — Performance -->
+      <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body d-flex flex-column gap-3">
+            <div class="fw-semibold">Performance</div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th></th>
+                    <th class="text-end">30 j</th>
+                    <th class="text-end">90 j</th>
+                    <th class="text-end">365 j</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="text-muted small">Portefeuille</td>
+                    <td class="text-end fw-semibold">
+                      @if (alloc.PortfolioReturn30d !== null) {
+                        <span [class.text-success]="alloc.PortfolioReturn30d >= 0" [class.text-danger]="alloc.PortfolioReturn30d < 0">
+                          {{ alloc.PortfolioReturn30d | number:'1.2-2' }}%
+                        </span>
+                      } @else {
+                        <span class="text-muted">N/D</span>
+                      }
+                    </td>
+                    <td class="text-end fw-semibold">
+                      @if (alloc.PortfolioReturn90d !== null) {
+                        <span [class.text-success]="alloc.PortfolioReturn90d >= 0" [class.text-danger]="alloc.PortfolioReturn90d < 0">
+                          {{ alloc.PortfolioReturn90d | number:'1.2-2' }}%
+                        </span>
+                      } @else {
+                        <span class="text-muted">N/D</span>
+                      }
+                    </td>
+                    <td class="text-end fw-semibold">
+                      @if (alloc.PortfolioReturn365d !== null) {
+                        <span [class.text-success]="alloc.PortfolioReturn365d >= 0" [class.text-danger]="alloc.PortfolioReturn365d < 0">
+                          {{ alloc.PortfolioReturn365d | number:'1.2-2' }}%
+                        </span>
+                      } @else {
+                        <span class="text-muted">N/D</span>
+                      }
+                    </td>
+                  </tr>
+                  @if (!alloc.BenchmarkUnavailable) {
+                    <tr>
+                      <td class="text-muted small">Benchmark</td>
+                      <td class="text-end">
+                        @if (alloc.BenchmarkReturn30d !== null) {
+                          {{ alloc.BenchmarkReturn30d | number:'1.2-2' }}%
+                        } @else {
+                          <span class="text-muted">N/D</span>
+                        }
+                      </td>
+                      <td class="text-end">
+                        @if (alloc.BenchmarkReturn90d !== null) {
+                          {{ alloc.BenchmarkReturn90d | number:'1.2-2' }}%
+                        } @else {
+                          <span class="text-muted">N/D</span>
+                        }
+                      </td>
+                      <td class="text-end">
+                        @if (alloc.BenchmarkReturn365d !== null) {
+                          {{ alloc.BenchmarkReturn365d | number:'1.2-2' }}%
+                        } @else {
+                          <span class="text-muted">N/D</span>
+                        }
+                      </td>
+                    </tr>
+                    <tr class="table-light">
+                      <td class="text-muted small">Alpha (30j)</td>
+                      <td class="text-end fw-semibold" colspan="3">
+                        @if (alloc.PortfolioReturn30d !== null && alloc.BenchmarkReturn30d !== null) {
+                          @let alpha = alloc.PortfolioReturn30d - alloc.BenchmarkReturn30d;
+                          <span [class.text-success]="alpha >= 0" [class.text-danger]="alpha < 0">
+                            {{ alpha >= 0 ? '+' : '' }}{{ alpha | number:'1.2-2' }}%
+                          </span>
+                        } @else {
+                          <span class="text-muted">N/D</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A — Onglets allocation secteur / pays / devise -->
+    @if (alloc.SectorAllocation.length > 0 || alloc.CountryAllocation.length > 0 || alloc.CurrencyAllocation.length > 0) {
+      <div class="card border-0 shadow-sm">
+        <div class="card-body d-flex flex-column gap-3">
+          <div class="fw-semibold">Répartition du portefeuille</div>
+          <ul class="nav nav-tabs" role="tablist">
+            @if (alloc.SectorAllocation.length > 0) {
+              <li class="nav-item" role="presentation">
+                <button class="nav-link"
+                  [class.active]="allocationTab() === 'sector'"
+                  type="button" role="tab"
+                  (click)="allocationTab.set('sector')">
+                  Secteur
+                </button>
+              </li>
+            }
+            @if (alloc.CountryAllocation.length > 0) {
+              <li class="nav-item" role="presentation">
+                <button class="nav-link"
+                  [class.active]="allocationTab() === 'country'"
+                  type="button" role="tab"
+                  (click)="allocationTab.set('country')">
+                  Pays
+                </button>
+              </li>
+            }
+            @if (alloc.CurrencyAllocation.length > 0) {
+              <li class="nav-item" role="presentation">
+                <button class="nav-link"
+                  [class.active]="allocationTab() === 'currency'"
+                  type="button" role="tab"
+                  (click)="allocationTab.set('currency')">
+                  Devise
+                </button>
+              </li>
+            }
+          </ul>
+          <div class="d-flex flex-column gap-2">
+            @for (slice of activeAllocationSlices(alloc); track slice.Label) {
+              <div>
+                <div class="d-flex justify-content-between mb-1">
+                  <span class="small">{{ translateSliceLabel(slice.Label) }}</span>
+                  <span class="small text-muted">
+                    {{ slice.WeightPct | number:'1.1-1' }}%
+                    · {{ slice.ValueEur | currency:'EUR':'symbol':'1.0-0':'fr-FR' }}
+                  </span>
+                </div>
+                <div class="progress" style="height:8px" role="progressbar" [attr.aria-valuenow]="slice.WeightPct" aria-valuemin="0" aria-valuemax="100">
+                  <div class="progress-bar bg-primary" [style.width.%]="slice.WeightPct"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Métriques de risque -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <div class="fw-semibold mb-3">Métriques de risque</div>
+      @if (riskMetricsLoading()) {
+        <div class="text-muted small">Calcul en cours…</div>
+      } @else if (riskMetrics(); as m) {
+        @if (m.DataPointsUsed >= 20) {
+          <div class="row g-3">
+            <div class="col-6 col-md-3">
+              <div class="text-muted small mb-1">Performance (TWR)</div>
+              <div class="h5 mb-0"
+                [class.text-success]="(m.Twr ?? 0) >= 0"
+                [class.text-danger]="(m.Twr ?? 0) < 0">
+                {{ (m.Twr ?? 0) >= 0 ? '+' : '' }}{{ (m.Twr! * 100) | number:'1.1-2' }} %
+              </div>
+              <div class="text-muted" style="font-size:0.7rem">Rendement cumulé hors flux</div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="text-muted small mb-1">Ratio de Sharpe</div>
+              <div class="h5 mb-0"
+                [class.text-success]="(m.SharpeRatio ?? 0) > 1"
+                [class.text-warning]="(m.SharpeRatio ?? 0) > 0 && (m.SharpeRatio ?? 0) <= 1"
+                [class.text-danger]="(m.SharpeRatio ?? 0) <= 0">
+                {{ m.SharpeRatio | number:'1.2-2' }}
+              </div>
+              <div class="text-muted" style="font-size:0.7rem">Rendement / risque annualisé</div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="text-muted small mb-1">Volatilité annualisée</div>
+              <div class="h5 mb-0">{{ ((m.AnnualizedVolatility ?? 0) * 100) | number:'1.1-2' }} %</div>
+              <div class="text-muted" style="font-size:0.7rem">Écart-type journalier × √252</div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="text-muted small mb-1">Max Drawdown</div>
+              <div class="h5 mb-0 text-danger">{{ ((m.MaxDrawdown ?? 0) * 100) | number:'1.1-2' }} %</div>
+              <div class="text-muted" style="font-size:0.7rem">Pire pic-à-creux observé</div>
+            </div>
+          </div>
+          <div class="text-muted mt-3" style="font-size:0.7rem">Calculé sur {{ m.DataPointsUsed }} séance(s) de prix · Les jours de transaction sont exclus du calcul · Aucun signal d'investissement.</div>
+          @if (m.PeriodStartUtc && m.PeriodEndUtc) {
+            <div class="text-muted mt-1" style="font-size:0.7rem">Période : du {{ m.PeriodStartUtc | date:'dd/MM/yyyy' }} au {{ m.PeriodEndUtc | date:'dd/MM/yyyy' }}</div>
+          }
+        } @else {
+          <div class="text-muted small">Données insuffisantes ({{ m.DataPointsUsed }} séance(s) disponible(s), minimum 20).</div>
+        }
+      } @else {
+        <div class="text-muted small">Aucune donnée disponible.</div>
+      }
     </div>
   </div>
 
@@ -141,9 +400,9 @@
                   <th>Valeur</th>
                   <th>Qté</th>
                   <th>Coût moy.</th>
+                  <th>Cours actuel</th>
                   <th>Encours</th>
                   <th>PnL</th>
-                  <th>Lecture marché</th>
                   <th>Reco</th>
                   <th></th>
                 </tr>
@@ -152,27 +411,51 @@
                 @for (position of portfolio().Positions; track position.UserAssetId) {
                   <tr>
                     <td>
-                      <div class="fw-semibold">{{ position.Instrument.Symbol }}</div>
+                      <a class="fw-semibold text-decoration-none text-body"
+                        [routerLink]="toCommands(userPaths.InstrumentDetail(position.Instrument.Symbol))">
+                        {{ position.Instrument.Symbol }}
+                      </a>
                       <div class="small text-muted">{{ position.Instrument.DisplayName }}</div>
                     </td>
-                    <td>{{ position.QuantityHeld | number:'1.0-4' }}</td>
-                    <td>{{ position.AverageCost | currency:'EUR':'symbol':'1.2-4':'fr-FR' }}</td>
+                    <td>{{ position.QuantityHeld | number:'1.0-4':'fr-FR' }}</td>
+                    <td>
+                      <div>{{ position.AverageCost | currency:'EUR':'symbol':'1.2-4':'fr-FR' }}</div>
+                      <div class="small text-muted">/ action</div>
+                    </td>
+                    <td>
+                      @if (position.Currency !== 'EUR') {
+                        <div class="fw-semibold">{{ position.CurrentPriceNative | number:'1.2-4':'fr-FR' }} {{ position.Currency }}</div>
+                        <div class="small text-muted">
+                          = {{ (position.CurrentPriceNative * position.ForexRateUsed) | currency:'EUR':'symbol':'1.2-2':'fr-FR' }}
+                        </div>
+                      } @else {
+                        <div class="fw-semibold">{{ position.CurrentPriceNative | currency:'EUR':'symbol':'1.2-4':'fr-FR' }}</div>
+                      }
+                    </td>
                     <td>{{ position.OutstandingAmount | currency:'EUR':'symbol':'1.0-2':'fr-FR' }}</td>
                     <td>
-                      <div [class.text-success]="positionPnl(position) >= 0" [class.text-danger]="positionPnl(position) < 0">
-                        {{ positionPnl(position) | currency:'EUR':'symbol':'1.0-2':'fr-FR' }}
-                      </div>
-                      <div class="small" [class.text-success]="positionPnlPct(position) >= 0" [class.text-danger]="positionPnlPct(position) < 0">
-                        {{ positionPnlPct(position) | number:'1.2-2' }}%
+                      <div class="d-flex align-items-center gap-1">
+                        <div>
+                          <div [class.text-success]="positionPnl(position) >= 0" [class.text-danger]="positionPnl(position) < 0">
+                            {{ positionPnl(position) | currency:'EUR':'symbol':'1.0-2':'fr-FR' }}
+                          </div>
+                          <div class="small" [class.text-success]="positionPnlPct(position) >= 0" [class.text-danger]="positionPnlPct(position) < 0">
+                            {{ positionPnlPct(position) | number:'1.2-2':'fr-FR' }} %
+                          </div>
+                        </div>
+                        <button class="btn btn-link btn-sm p-0 text-muted"
+                          type="button"
+                          title="Détail du calcul"
+                          data-bs-toggle="modal"
+                          data-bs-target="#pnlDetailModal"
+                          (click)="openPnlDetail(position)">
+                          <i class="bi bi-info-circle"></i>
+                        </button>
                       </div>
                     </td>
                     <td>
-                      <div class="fw-semibold small">{{ position.MarketReading.OutcomeDisplayLabel || 'n/a' }}</div>
-                      <div class="small text-muted">{{ position.MarketReading.PrimaryPatternDisplayName || '—' }}</div>
-                    </td>
-                    <td>
-                      <div class="small fw-semibold">{{ position.Recommendation.DisplayLabel || 'n/a' }}</div>
-                      <div class="small text-muted">{{ position.Recommendation.ExplanationSummary || '—' }}</div>
+                      <div class="small fw-semibold">{{ position.Recommendation.DisplayLabel || '—' }}</div>
+                      <div class="small text-muted">{{ position.MarketReading.OutcomeDisplayLabel || '—' }}</div>
                     </td>
                     <td class="text-end">
                       <div class="btn-group btn-group-sm">
@@ -212,7 +495,9 @@
       <app-finance-transaction-form
         [selectedSymbol]="selectedSymbol()"
         [submitting]="transactionLoading()"
-        [portfolios]="portfolioAsList"
+        [portfolios]="portfolioAsList()"
+        [hidePortfolioSelector]="true"
+        [trendingOptions]="trendingOptions()"
         (save)="onSaveTransaction($event)" />
     </div>
 
@@ -280,14 +565,14 @@
 
 <!-- Modales -->
 <app-confirm-modal
-  modalId="deletePortfolioModal"
-  title="Supprimer le portefeuille"
-  [message]="'Confirmes-tu la suppression du portefeuille « ' + portfolioToDeleteName + ' » ? Cette action est irréversible.'"
-  confirmLabel="Supprimer"
+  modalId="archivePortfolioModal"
+  title="Archiver le portefeuille"
+  [message]="'Confirmes-tu l\'archivage du portefeuille « ' + portfolioToArchiveName + ' » ? Il sera exclu des agrégats globaux mais restera consultable.'"
+  confirmLabel="Archiver"
   cancelLabel="Annuler"
-  confirmClass="btn-danger"
-  (confirmed)="confirmDeletePortfolio()"
-  (cancelled)="portfolioToDeleteId.set(null)" />
+  confirmClass="btn-warning"
+  (confirmed)="confirmArchivePortfolio()"
+  (cancelled)="portfolioToArchiveId.set(null)" />
 
 <app-confirm-modal
   modalId="deleteTransactionModal"
@@ -298,3 +583,7 @@
   confirmClass="btn-danger"
   (confirmed)="confirmDeleteTransaction()"
   (cancelled)="transactionToDeleteId.set(null)" />
+
+<app-position-pnl-modal [position]="selectedPositionForPnl()" />
+
+<app-portfolio-pnl-modal [portfolio]="portfolio()" />

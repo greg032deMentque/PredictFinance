@@ -78,6 +78,7 @@
   <app-finance-symbol-selector
     [selectedAsset]="selectedAsset"
     [options]="searchResults"
+    [trendingOptions]="trendingOptions()"
     [loading]="searchLoading"
     (searchChanged)="onSearchChanged($event)"
     (assetSelected)="onAssetSelected($event)"
@@ -95,7 +96,7 @@
   </div>
 
   <app-finance-watchlist
-    [watchlist]="watchlist"
+    [watchlist]="watchlist()"
     [quote]="selectedQuote"
     [quoteLoading]="quoteLoading"
     (requestQuote)="onRequestQuote($event)"
@@ -108,6 +109,7 @@
       <app-finance-transaction-form
         [selectedSymbol]="selectedSymbol"
         [submitting]="transactionLoading"
+        [trendingOptions]="trendingOptions()"
         (save)="onSaveTransaction($event)"
       ></app-finance-transaction-form>
     </div>

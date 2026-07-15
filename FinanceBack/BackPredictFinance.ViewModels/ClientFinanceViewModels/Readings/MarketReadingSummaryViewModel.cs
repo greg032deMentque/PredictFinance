@@ -3,7 +3,7 @@ using BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis;
 
 namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Readings
 {
-    public sealed class MarketReadingSummaryViewModel
+    public class MarketReadingSummaryViewModel
     {
         public TechnicalAnalysisOutcomeTypeEnum Outcome { get; set; } = TechnicalAnalysisOutcomeTypeEnum.NoCrediblePattern;
         public string OutcomeDisplayLabel { get; set; } = string.Empty;

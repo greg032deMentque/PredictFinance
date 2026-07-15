@@ -16,6 +16,16 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         /// </summary>
         Task<(decimal LastPrice, decimal DayVariationPct)> BuildQuoteAsync(string symbol, CancellationToken ct = default);
         /// <summary>
+        /// Construit les cotations de plusieurs symboles en un seul appel groupé.
+        /// Les symboles introuvables ou en erreur sont absents du dictionnaire retourné.
+        /// </summary>
+        Task<IReadOnlyDictionary<string, (decimal LastPrice, decimal DayVariationPct)>> BuildQuotesAsync(IEnumerable<string> symbols, CancellationToken ct = default);
+        /// <summary>
+        /// Retourne le taux de conversion d'une devise vers EUR (1 pour EUR, 1/EURUSD pour USD, etc.).
+        /// Lève une exception si le taux est indisponible pour une devise non-EUR.
+        /// </summary>
+        Task<decimal> GetForexRateToEurAsync(string currency, CancellationToken ct = default);
+        /// <summary>
         /// Persiste un point d'historique de prix pour un actif.
         /// </summary>
         Task SavePriceHistoryAsync(string assetId, decimal price, CancellationToken ct = default);
@@ -43,17 +53,45 @@ namespace BackPredictFinance.Services.ClientFinanceServices
     public sealed class ClientFinanceAssetSupportService : BaseService, IClientFinanceAssetSupportService
     {
         private readonly ITickerService _tickerService;
+        private readonly IMarketPriceProvider _priceProvider;
 
-        public ClientFinanceAssetSupportService(IServiceProvider serviceProvider, ITickerService tickerService)
+        public ClientFinanceAssetSupportService(IServiceProvider serviceProvider, ITickerService tickerService, IMarketPriceProvider priceProvider)
             : base(serviceProvider)
         {
             _tickerService = tickerService;
+            _priceProvider = priceProvider;
         }
 
         public async Task<(decimal LastPrice, decimal DayVariationPct)> BuildQuoteAsync(string symbol, CancellationToken ct = default)
         {
             var quote = await _tickerService.GetQuoteAsync(symbol, ct);
             return (quote.LastPrice, quote.DayVariationPct);
+        }
+
+        public async Task<IReadOnlyDictionary<string, (decimal LastPrice, decimal DayVariationPct)>> BuildQuotesAsync(IEnumerable<string> symbols, CancellationToken ct = default)
+        {
+            var quotes = await _priceProvider.GetQuotesAsync(symbols, ct);
+            return quotes.ToDictionary(
+                kvp => kvp.Key,
+                kvp => (kvp.Value.LastPrice, kvp.Value.DayVariationPct),
+                StringComparer.OrdinalIgnoreCase);
+        }
+
+        public async Task<decimal> GetForexRateToEurAsync(string currency, CancellationToken ct = default)
+        {
+            var normalized = (currency ?? string.Empty).Trim().ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(normalized) || normalized == "EUR")
+            {
+                return 1m;
+            }
+
+            var quote = await _priceProvider.GetQuoteAsync($"EUR{normalized}=X", ct);
+            if (quote.LastPrice <= 0m)
+            {
+                throw new InvalidOperationException($"Taux forex invalide pour la devise {normalized}: LastPrice={quote.LastPrice}");
+            }
+
+            return decimal.Round(1m / quote.LastPrice, 6);
         }
 
         public async Task SavePriceHistoryAsync(string assetId, decimal price, CancellationToken ct = default)

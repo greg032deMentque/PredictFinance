@@ -94,4 +94,113 @@ public sealed class PatternTechnicalsTests
 
         Assert.Equal(0.1m, unit);
     }
+
+    // ------- FindPivotHighs -------
+
+    [Fact]
+    public void FindPivotHighs_DetectsObviousPeak_AtCorrectIndex()
+    {
+        // Sequence : bas - montee - pic clair - descente - bas.
+        // Avec n=1, le pic au centre doit etre detecte.
+        var candles = BuildHighLowCandles(
+            highs: [10m, 20m, 30m, 20m, 10m],
+            lows:  [9m,  18m, 28m, 18m, 9m]);
+
+        var pivots = PatternTechnicals.FindPivotHighs(candles, n: 1);
+
+        Assert.Single(pivots);
+        Assert.Equal(2, pivots[0]);
+    }
+
+    [Fact]
+    public void FindPivotHighs_NoLookAhead_LastNCandlesNeverConfirmed()
+    {
+        // Pic evident en derniere position : ne doit PAS etre retourne (look-ahead).
+        var candles = BuildHighLowCandles(
+            highs: [10m, 10m, 10m, 10m, 99m],
+            lows:  [9m,  9m,  9m,  9m,  98m]);
+
+        var pivots = PatternTechnicals.FindPivotHighs(candles, n: 2);
+
+        Assert.Empty(pivots);
+    }
+
+    [Fact]
+    public void FindPivotHighs_EqualNeighbour_BothCandidatesCanBePivots()
+    {
+        // Plateau : deux bougies au meme High et un voisin strictement inferieur des deux cotes.
+        // Les deux indices au plateau sont des pivots valides (ArePricesEqual les traitera comme
+        // egal lors de la detection de figures double top/bottom).
+        var candles = BuildHighLowCandles(
+            highs: [10m, 20m, 20m, 10m, 10m],
+            lows:  [9m,  18m, 18m, 9m,  9m]);
+
+        var pivots = PatternTechnicals.FindPivotHighs(candles, n: 1);
+
+        // L'indice 2 est confirmé (i+n=3 < 5). L'indice 1 a son voisin gauche = 10 < 20 et
+        // voisin droit = 20 (non strictement superieur) donc est aussi un pivot.
+        Assert.Contains(2, pivots);
+    }
+
+    // ------- FindPivotLows -------
+
+    [Fact]
+    public void FindPivotLows_DetectsObviousTrough_AtCorrectIndex()
+    {
+        var candles = BuildHighLowCandles(
+            highs: [30m, 20m, 10m, 20m, 30m],
+            lows:  [28m, 18m, 8m,  18m, 28m]);
+
+        var pivots = PatternTechnicals.FindPivotLows(candles, n: 1);
+
+        Assert.Single(pivots);
+        Assert.Equal(2, pivots[0]);
+    }
+
+    [Fact]
+    public void FindPivotLows_NoLookAhead_LastNCandlesNeverConfirmed()
+    {
+        var candles = BuildHighLowCandles(
+            highs: [30m, 30m, 30m, 30m, 30m],
+            lows:  [20m, 20m, 20m, 20m, 1m]);
+
+        var pivots = PatternTechnicals.FindPivotLows(candles, n: 2);
+
+        Assert.Empty(pivots);
+    }
+
+    // ------- ArePricesEqual -------
+
+    [Fact]
+    public void ArePricesEqual_WithinTolerance_ReturnsTrue()
+    {
+        Assert.True(PatternTechnicals.ArePricesEqual(100m, 104m, tolerancePct: 0.06m));
+    }
+
+    [Fact]
+    public void ArePricesEqual_OutsideTolerance_ReturnsFalse()
+    {
+        Assert.False(PatternTechnicals.ArePricesEqual(100m, 110m, tolerancePct: 0.06m));
+    }
+
+    [Fact]
+    public void ArePricesEqual_ExactlyAtBoundary_ReturnsTrue()
+    {
+        // 106 / 100 - 1 = 6 % exactement => dans la tolerance (<= 6 %).
+        Assert.True(PatternTechnicals.ArePricesEqual(100m, 106m, tolerancePct: 0.06m));
+    }
+
+    // ------- Helper -------
+
+    private static List<TickerCandle> BuildHighLowCandles(decimal[] highs, decimal[] lows)
+    {
+        return highs.Zip(lows, (h, l) => new TickerCandle
+        {
+            High = h,
+            Low = l,
+            Open = (h + l) / 2m,
+            Close = (h + l) / 2m,
+            Volume = 1_000m
+        }).ToList();
+    }
 }

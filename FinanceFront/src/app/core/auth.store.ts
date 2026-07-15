@@ -40,7 +40,7 @@ export type AppArea = (typeof AppAreas)[keyof typeof AppAreas];
 
 
 
-type Session = {
+interface Session {
   token: string;
   refreshToken: string;
   tenantId: string;
@@ -49,9 +49,9 @@ type Session = {
   sites: string[];
   area: AppArea;
   roles: string[];
-};
+}
 
-type JwtPayload = {
+interface JwtPayload {
   tenant_id?: string;
   tenant_code?: string;
   default_site?: string;
@@ -59,7 +59,7 @@ type JwtPayload = {
   roles?: string[] | string;
   role?: string[] | string;
   'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'?: string[] | string;
-};
+}
 
 export function normalizeBool(v: unknown): boolean {
   if (v === true) return true;

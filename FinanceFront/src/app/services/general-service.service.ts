@@ -1,23 +1,15 @@
-﻿import { DestroyRef, EventEmitter, inject, Injectable, signal } from '@angular/core';
+﻿import { inject, Injectable, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AppRoutes } from '../Routes/app.routes.constants';
-import { environment } from '../../environments/environment';
-import { HttpClient } from '@angular/common/http';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, finalize, firstValueFrom, lastValueFrom, Observable, shareReplay, tap, throwError } from 'rxjs';
 
 
 @Injectable({
   providedIn: 'root'
 })
 export class GeneralService {
-  private readonly http = inject(HttpClient);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
   lastSyncError = signal<unknown | null>(null);
   lastSyncAt = signal<number | null>(null);
-
-
-  constructor(private router: Router) { }
 
 
   logout() {

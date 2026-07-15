@@ -1,0 +1,140 @@
+.pattern-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// Carte = vrai bouton focusable clavier (WCAG 2.1)
+.pattern-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-lg);
+  background: rgba(255, 255, 255, 0.97);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  position: relative;
+
+  // Focus visible clavier (WCAG 2.4.7)
+  &:focus-visible {
+    outline: 3px solid var(--pf-blue);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(47, 110, 167, 0.15);
+  }
+
+  &:hover {
+    border-color: var(--pf-navy-2);
+    background: var(--pf-surface-hover, #e6eef7);
+  }
+
+  &--selected {
+    border-color: var(--pf-navy);
+    background: var(--pf-soft-navy, #ebf1f7);
+    box-shadow: 0 0 0 2px rgba(15, 39, 66, 0.12);
+  }
+
+  &--credible {
+    border-left: 3px solid #127a5a;
+  }
+
+  &--rejected {
+    opacity: 0.75;
+    border-left: 3px solid #b13a3a;
+  }
+}
+
+.pattern-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.pattern-card__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.pattern-card__score-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--pf-navy);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pattern-card__score-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.score-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--pf-navy-2);
+  transition: width 0.3s ease;
+
+  &--credible {
+    background: #127a5a;
+  }
+
+  &--rejected {
+    background: #b13a3a;
+  }
+}
+
+.score-label {
+  font-size: 0.75rem;
+  color: var(--pf-text-soft);
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+.pattern-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--pf-text-soft);
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--pf-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.chip--sm {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+}
+
+.pattern-card__selected-indicator {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pf-navy);
+  font-size: 0.75rem;
+}

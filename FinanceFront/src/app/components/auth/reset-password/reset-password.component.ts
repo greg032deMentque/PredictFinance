@@ -1,16 +1,26 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, computed, inject } from '@angular/core';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AccountService } from '../../../services/account.service';
 import { ToastService } from '../../../services/toastr.service';
 import { AuthPaths, toCommands } from '../../../Routes/app.routes.constants';
+import { PasswordFieldComponent } from '../../shared/password-field/password-field.component';
+import { STRONG_PASSWORD_PATTERN } from '../password-policy';
+
+function passwordsMatchValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const password = control.get('password')?.value ?? '';
+    const confirmPassword = control.get('confirmPassword')?.value ?? '';
+    return password === confirmPassword ? null : { passwordMismatch: true };
+  };
+}
 
 @Component({
   selector: 'app-reset-password',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, PasswordFieldComponent],
   templateUrl: './reset-password.component.html',
   styleUrl: './reset-password.component.scss'
 })
@@ -25,11 +35,19 @@ export class ResetPasswordComponent {
   readonly toCommands = toCommands;
   submitting = false;
 
-  readonly form = this.fb.nonNullable.group({
-    email: [this.route.snapshot.queryParamMap.get('email') ?? '', [Validators.required, Validators.email]],
-    token: [this.route.snapshot.queryParamMap.get('token') ?? '', [Validators.required]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
-    confirmPassword: ['', [Validators.required, Validators.minLength(6)]]
+  readonly form = this.fb.nonNullable.group(
+    {
+      email: [this.route.snapshot.queryParamMap.get('email') ?? '', [Validators.required, Validators.email]],
+      token: [this.route.snapshot.queryParamMap.get('token') ?? '', [Validators.required]],
+      password: ['', [Validators.required, Validators.minLength(6), Validators.pattern(STRONG_PASSWORD_PATTERN)]],
+      confirmPassword: ['', [Validators.required, Validators.minLength(6)]]
+    },
+    { validators: passwordsMatchValidator() }
+  );
+
+  readonly passwordsMismatch = computed(() => {
+    const form = this.form;
+    return form.hasError('passwordMismatch') && (form.controls.confirmPassword.touched || form.controls.password.touched);
   });
 
   submit(): void {
@@ -39,10 +57,6 @@ export class ResetPasswordComponent {
     }
 
     const formValue = this.form.getRawValue();
-    if (formValue.password !== formValue.confirmPassword) {
-      this.toastService.error('La confirmation du mot de passe ne correspond pas.');
-      return;
-    }
 
     this.submitting = true;
 

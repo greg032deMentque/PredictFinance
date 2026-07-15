@@ -2,14 +2,13 @@
   <section class="hero">
     <div class="row g-4 align-items-center">
       <div class="col-lg-8">
-        <span class="chip bg-white text-dark mb-3"><i class="bi bi-speedometer2"></i> Overview</span>
-        <h1 class="display-6 fw-bold mb-3">Pilotage gouverné de la plateforme</h1>
-        <p class="mb-4 text-white-50 fs-5">La page s'aligne sur la spec admin : overview, registres, policy, audit et qualité.</p>
+        <span class="chip bg-white text-dark mb-3"><i class="bi bi-speedometer2"></i> Vue d'ensemble</span>
+        <h1 class="display-6 fw-bold mb-4">Pilotage gouverné de la plateforme</h1>
         <div class="admin-tabs">
-          <a class="admin-tab" [routerLink]="toCommands(adminPaths.UsersList)">Users</a>
-          <a class="admin-tab" [routerLink]="toCommands(adminPaths.InstrumentRegistry)">Instrument registry</a>
-          <a class="admin-tab" [routerLink]="toCommands(adminPaths.SnapshotAudit)">Snapshot audit</a>
-          <a class="admin-tab" [routerLink]="toCommands(adminPaths.DataQuality)">Data quality</a>
+          <a class="admin-tab" [routerLink]="toCommands(adminPaths.UsersList)">Utilisateurs</a>
+          <a class="admin-tab" [routerLink]="toCommands(adminPaths.InstrumentRegistry)">Registre instruments</a>
+          <a class="admin-tab" [routerLink]="toCommands(adminPaths.SnapshotAudit)">Audit snapshot</a>
+          <a class="admin-tab" [routerLink]="toCommands(adminPaths.DataQuality)">Qualité données</a>
         </div>
       </div>
       <div class="col-lg-4">
@@ -47,7 +46,7 @@
       <div class="page-card">
         <div class="section-title">Gouvernance</div>
         <div class="compact-list">
-          <div class="compact-row"><span>Parameters publiés</span><span class="code-chip">{{ overview.PublishedParameterEntries }}</span></div>
+          <div class="compact-row"><span>Paramètres publiés</span><span class="code-chip">{{ overview.PublishedParameterEntries }}</span></div>
           <div class="compact-row"><span>Dernière analyse complétée</span><span class="code-chip">{{ overview.LatestCompletedAnalysisUtc ? (overview.LatestCompletedAnalysisUtc | date:'dd/MM/yyyy HH:mm') : 'n/a' }}</span></div>
         </div>
       </div>

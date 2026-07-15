@@ -16,7 +16,7 @@ export class LegalService {
     return this.http.get<LegalCardAdminItem[]>(`${environment.apiUrl}admin/legal-cards`);
   }
 
-  getAdminById(id: number): Observable<LegalCardAdminItem> {
+  getAdminById(id: string): Observable<LegalCardAdminItem> {
     return this.http.get<LegalCardAdminItem>(`${environment.apiUrl}admin/legal-cards/${id}`);
   }
 
@@ -24,11 +24,11 @@ export class LegalService {
     return this.http.post<void>(`${environment.apiUrl}admin/legal-cards`, payload);
   }
 
-  updateAdmin(id: number, payload: LegalCardUpsertRequest): Observable<void> {
+  updateAdmin(id: string, payload: LegalCardUpsertRequest): Observable<void> {
     return this.http.put<void>(`${environment.apiUrl}admin/legal-cards/${id}`, payload);
   }
 
-  deleteAdmin(id: number): Observable<void> {
+  deleteAdmin(id: string): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}admin/legal-cards/${id}`);
   }
 }

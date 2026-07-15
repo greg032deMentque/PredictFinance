@@ -2,11 +2,44 @@
   display: block;
 }
 
-/* Hero moins massif sur l'accueil → la page respire davantage. */
-.hero .display-6 {
-  font-size: clamp(1.55rem, 2.4vw, 2.05rem);
+.db-action-bar {
+  padding: 0.5rem 0;
 }
 
-.hero .surface {
-  align-self: start;
+.db-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+
+  @media (min-width: 992px) {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+.db-block-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bs-secondary-color);
+  margin-bottom: 0.75rem;
+}
+
+.db-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  gap: 0.75rem;
+}
+
+.db-kpi-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.db-new-badge {
+  font-size: 0.6rem;
+  padding: 0.15em 0.45em;
 }

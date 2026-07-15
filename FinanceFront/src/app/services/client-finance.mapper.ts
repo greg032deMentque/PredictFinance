@@ -3,24 +3,43 @@ import {
   ClientAnalysisDetail,
   ClientAnalysisResult,
   ClientDashboardOverview,
-  ClientHistoryFeed,
   ClientHistoryPage,
   ClientInstrumentDetail,
-  ClientInstrumentHistory,
   ClientInstrumentHistoryPage,
   ClientLiveQuote,
   ClientPortfolio,
   ClientSimulationResult,
   ClientTransactionItem,
   ClientWatchlistItem,
-  MarketAssetOption
+  DiversificationRating,
+  MarketAssetOption,
+  PortfolioAllocation
 } from '../Models/client-finance-models/client-finance-models';
+import type { WatchlistFreshnessStatus } from '../Models/client-finance-models/client-watchlist-item.model';
+import type {
+  AnalysisDossier,
+  AnalysisPattern,
+  AnalysisRiskContext,
+  AnalysisWindow,
+  PriceCandle,
+  SrZone,
+  StructuralPoint
+} from '../Models/client-finance-models/client-analysis-dossier.model';
+import type { MultiSimulationDossier, SimulationDossier, SimulationScenario } from '../Models/client-finance-models/client-simulation-dossier.model';
 import type {
   ClientModelStatusCode,
   ClientPatternCode,
   ClientRecommendationActionCode,
   ClientRiskLevelCode
 } from '../Models/client-finance-models/client-domain-metadata';
+
+// Correspondance ordinale des enums C# (RecommendationActionEnum, RiskLevelEnum, ModelStatusEnum) telle que
+// sérialisée par le chemin "snapshot persisté" (PersistedAnalysisSnapshotPayloadReadModel), qui renvoie l'entier
+// brut au lieu du libellé texte du path HTTP normal. Toute nouvelle valeur d'enum doit être ajoutée ici en
+// miroir du back, sous peine de faire retomber silencieusement readEnumCode sur ''.
+const RECO_INT_MAP: Record<number, string> = { 0: 'Buy', 1: 'Sell', 2: 'Hold', 3: 'NonActionable' };
+const RISK_INT_MAP: Record<number, string> = { 0: 'Information', 1: 'Low', 2: 'Moderate', 3: 'High' };
+const MODEL_INT_MAP: Record<number, string> = { 0: 'NoGo', 1: 'Go' };
 
 /**
  * Traduit les payloads bruts de l'API ClientFinance vers les modèles applicatifs typés.
@@ -36,7 +55,6 @@ export class ClientFinanceMapper {
       OpenPositions: this.readNumber(payload, ['openPositions', 'OpenPositions']) ?? 0,
       AnalysesThisWeek: this.readNumber(payload, ['analysesThisWeek', 'AnalysesThisWeek']) ?? 0,
       WatchlistCount: this.readNumber(payload, ['watchlistCount', 'WatchlistCount']) ?? 0,
-      RecommendationWinRate: this.readNumber(payload, ['recommendationWinRate', 'RecommendationWinRate']) ?? 0,
       NextMarketOpenAt: this.readString(payload, ['nextMarketOpenAt', 'NextMarketOpenAt']) ?? '',
       TotalInvested: this.readNumber(payload, ['totalInvested', 'TotalInvested']) ?? 0,
       TotalOutstanding: this.readNumber(payload, ['totalOutstanding', 'TotalOutstanding']) ?? 0
@@ -54,12 +72,19 @@ export class ClientFinanceMapper {
       LastPrice: this.readNumber(payload, ['lastPrice', 'LastPrice']) ?? 0,
       DayVariationPct: this.readNumber(payload, ['dayVariationPct', 'DayVariationPct']) ?? 0,
       Isin: this.readString(payload, ['isin', 'Isin']),
-      IsPeaEligible: this.readBoolean(payload, ['isPeaEligible', 'IsPeaEligible']) ?? false
+      IsPeaEligible: this.readBoolean(payload, ['isPeaEligible', 'IsPeaEligible']) ?? false,
+      AssetType: this.readString(payload, ['assetType', 'AssetType']),
+      Sector: this.readString(payload, ['sector', 'Sector']),
+      Country: this.readString(payload, ['country', 'Country']),
+      Summary: this.readString(payload, ['summary', 'Summary'])
     });
   }
 
   mapWatchlistItem(source: unknown): ClientWatchlistItem {
     const payload = this.toRecord(source);
+    const marketReadingRaw = this.toRecord(payload['marketReading'] ?? payload['MarketReading']);
+    const recommendationRaw = this.toRecord(payload['recommendation'] ?? payload['Recommendation']);
+    const freshnessRaw = this.toRecord(payload['freshness'] ?? payload['Freshness']);
 
     return new ClientWatchlistItem({
       UserAssetId: this.readString(payload, ['userAssetId', 'UserAssetId']) ?? '',
@@ -71,7 +96,27 @@ export class ClientFinanceMapper {
       HeldQuantity: this.readNumber(payload, ['heldQuantity', 'HeldQuantity']) ?? 0,
       AverageBuyPrice: this.readNumber(payload, ['averageBuyPrice', 'AverageBuyPrice']) ?? 0,
       InvestedAmount: this.readNumber(payload, ['investedAmount', 'InvestedAmount']) ?? 0,
-      OutstandingAmount: this.readNumber(payload, ['outstandingAmount', 'OutstandingAmount']) ?? 0
+      OutstandingAmount: this.readNumber(payload, ['outstandingAmount', 'OutstandingAmount']) ?? 0,
+      LastAnalysisAtUtc: this.readString(payload, ['lastAnalysisAtUtc', 'LastAnalysisAtUtc']),
+      HasPersistedAnalysis: this.readBoolean(payload, ['hasPersistedAnalysis', 'HasPersistedAnalysis']) ?? false,
+      NextEarningsDateUtc: this.readString(payload, ['nextEarningsDateUtc', 'NextEarningsDateUtc']),
+      EarningsWithinHorizonWarning: this.readBoolean(payload, ['earningsWithinHorizonWarning', 'EarningsWithinHorizonWarning']) ?? false,
+      MarketReading: {
+        OutcomeDisplayLabel: this.readString(marketReadingRaw, ['outcomeDisplayLabel', 'OutcomeDisplayLabel']) ?? '',
+        PrimaryPatternDisplayName: this.readString(marketReadingRaw, ['primaryPatternDisplayName', 'PrimaryPatternDisplayName']),
+        ConfidenceLabel: this.readString(marketReadingRaw, ['confidenceLabel', 'ConfidenceLabel']),
+        RiskHint: this.readString(marketReadingRaw, ['riskHint', 'RiskHint'])
+      },
+      Recommendation: {
+        DisplayLabel: this.readString(recommendationRaw, ['displayLabel', 'DisplayLabel']) ?? '',
+        ExplanationSummary: this.readString(recommendationRaw, ['explanationSummary', 'ExplanationSummary']) ?? '',
+        WarningText: this.readString(recommendationRaw, ['warningText', 'WarningText'])
+      },
+      Freshness: {
+        Status: (this.readString(freshnessRaw, ['status', 'Status']) ?? 'Missing') as WatchlistFreshnessStatus,
+        DisplayLabel: this.readString(freshnessRaw, ['displayLabel', 'DisplayLabel']) ?? '',
+        CheckedAtUtc: this.readString(freshnessRaw, ['checkedAtUtc', 'CheckedAtUtc'])
+      }
     });
   }
 
@@ -113,19 +158,223 @@ export class ClientFinanceMapper {
       Pattern: this.readString(payload, ['pattern', 'Pattern']) as ClientPatternCode,
       Phase: this.readString(payload, ['phase', 'Phase']) ?? '',
       Probability: this.readNumber(payload, ['probability', 'Probability']) ?? 0,
-      RecommendationAction: this.readString(payload, ['recommendationAction', 'RecommendationAction']) as ClientRecommendationActionCode,
+      RecommendationAction: this.readEnumCode(payload, ['recommendationAction', 'RecommendationAction'], RECO_INT_MAP) as ClientRecommendationActionCode,
       RecommendationReason: this.readString(payload, ['recommendationReason', 'RecommendationReason']) ?? '',
-      RiskLevel: this.readString(payload, ['riskLevel', 'RiskLevel']) as ClientRiskLevelCode,
+      RiskLevel: this.readEnumCode(payload, ['riskLevel', 'RiskLevel'], RISK_INT_MAP) as ClientRiskLevelCode,
       RecommendationHorizonDays: this.readNumber(payload, ['recommendationHorizonDays', 'RecommendationHorizonDays']) ?? 0,
       PredictedAt: this.readString(payload, ['predictedAt', 'PredictedAt']) ?? '',
       IsActionable: this.readBoolean(payload, ['isActionable', 'IsActionable']) ?? false,
-      ModelStatus: this.readString(payload, ['modelStatus', 'ModelStatus']) as ClientModelStatusCode,
+      ModelStatus: this.readEnumCode(payload, ['modelStatus', 'ModelStatus'], MODEL_INT_MAP) as ClientModelStatusCode,
       ModelMessage: this.readString(payload, ['modelMessage', 'ModelMessage']) ?? '',
       CurrentPrice: this.readNumber(payload, ['currentPrice', 'CurrentPrice']) ?? 0,
       NecklinePrice: this.readNumber(payload, ['necklinePrice', 'NecklinePrice']),
       TargetPrice: this.readNumber(payload, ['targetPrice', 'TargetPrice']),
       InvalidationPrice: this.readNumber(payload, ['invalidationPrice', 'InvalidationPrice'])
     });
+  }
+
+  mapAnalysisDossier(source: Record<string, unknown>): AnalysisDossier {
+    const windowRaw = this.toRecord(source['analysisWindow'] ?? source['AnalysisWindow'] ?? null);
+    const hasWindow = Object.keys(windowRaw).length > 0;
+    const analysisWindow: AnalysisWindow | null = hasWindow
+      ? {
+          Interval: this.readString(windowRaw, ['interval', 'Interval']) ?? '',
+          StartDate: this.readString(windowRaw, ['startDate', 'StartDate']) ?? '',
+          EndDate: this.readString(windowRaw, ['endDate', 'EndDate']) ?? '',
+          RequiredCandles: this.readNumber(windowRaw, ['requiredCandles', 'RequiredCandles']) ?? 0,
+          ActualCandles: this.readNumber(windowRaw, ['actualCandles', 'ActualCandles']) ?? 0
+        }
+      : null;
+
+    const priceSeries: PriceCandle[] = this.readArray(source, ['priceSeries', 'PriceSeries']).map(
+      (item) => this.mapCandle(this.toRecord(item))
+    );
+
+    const mainPatternRaw = source['mainPattern'] ?? source['MainPattern'];
+    const mainPattern: AnalysisPattern | null =
+      mainPatternRaw && typeof mainPatternRaw === 'object'
+        ? this.mapAnalysisPattern(this.toRecord(mainPatternRaw))
+        : null;
+
+    const alternativePatterns: AnalysisPattern[] = this.readArray(
+      source,
+      ['alternativePatterns', 'AlternativePatterns']
+    ).map((item) => this.mapAnalysisPattern(this.toRecord(item)));
+
+    const srZones: SrZone[] = this.readArray(source, ['srZones', 'SrZones']).map((item) =>
+      this.mapSrZone(this.toRecord(item))
+    );
+
+    const riskContextRaw = this.toRecord(source['riskContext'] ?? source['RiskContext'] ?? null);
+    const riskContext: AnalysisRiskContext | null = Object.keys(riskContextRaw).length > 0
+      ? {
+          EarningsWithinHorizonWarning: this.readBoolean(riskContextRaw, ['earningsWithinHorizonWarning', 'EarningsWithinHorizonWarning']) ?? false,
+          NextEarningsDateUtc: this.readString(riskContextRaw, ['nextEarningsDateUtc', 'NextEarningsDateUtc'])
+        }
+      : null;
+
+    return {
+      Id: this.readString(source, ['id', 'Id']) ?? '',
+      Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      CompanyName: this.readString(source, ['companyName', 'CompanyName']) ?? '',
+      Outcome: (this.readString(source, ['outcome', 'Outcome']) ?? 'NoCrediblePattern') as AnalysisDossier['Outcome'],
+      OutcomeMessage: this.readString(source, ['outcomeMessage', 'OutcomeMessage']) ?? '',
+      GlobalSummary: this.readString(source, ['globalSummary', 'GlobalSummary']) ?? '',
+      PredictedAt: this.readString(source, ['predictedAt', 'PredictedAt']) ?? '',
+      ModelStatus: this.readEnumCode(source, ['modelStatus', 'ModelStatus'], MODEL_INT_MAP),
+      ModelMessage: this.readString(source, ['modelMessage', 'ModelMessage']) ?? '',
+      AnalysisWindow: analysisWindow,
+      PriceSeries: priceSeries,
+      MainPattern: mainPattern,
+      AlternativePatterns: alternativePatterns,
+      SrZones: srZones,
+      RiskContext: riskContext
+    };
+  }
+
+  private mapSrZone(source: Record<string, unknown>): SrZone {
+    return {
+      PriceLow: this.readNumber(source, ['priceLow', 'PriceLow']) ?? 0,
+      PriceHigh: this.readNumber(source, ['priceHigh', 'PriceHigh']) ?? 0,
+      PriceMid: this.readNumber(source, ['priceMid', 'PriceMid']) ?? 0,
+      TouchCount: this.readNumber(source, ['touchCount', 'TouchCount']) ?? 0,
+      ZoneType: (this.readString(source, ['zoneType', 'ZoneType']) ?? 'both') as SrZone['ZoneType'],
+      Strength: this.readNumber(source, ['strength', 'Strength']) ?? 0
+    };
+  }
+
+  private mapAnalysisPattern(source: Record<string, unknown>): AnalysisPattern {
+    const structuralPoints: StructuralPoint[] = this.readArray(
+      source,
+      ['structuralPoints', 'StructuralPoints']
+    ).map((item) => {
+      const p = this.toRecord(item);
+      return {
+        PointType: this.readString(p, ['pointType', 'PointType']) ?? '',
+        Timestamp: this.readString(p, ['timestamp', 'Timestamp']) ?? '',
+        Price: this.readNumber(p, ['price', 'Price']) ?? 0
+      };
+    });
+
+    return {
+      PatternId: this.readString(source, ['patternId', 'PatternId']) ?? '',
+      DisplayName: this.readString(source, ['displayName', 'DisplayName']) ?? '',
+      PedagogicalDescription: this.readString(source, ['pedagogicalDescription', 'PedagogicalDescription']) ?? '',
+      PhaseCode: this.readString(source, ['phaseCode', 'PhaseCode']) ?? '',
+      PhaseLabel: this.readString(source, ['phaseLabel', 'PhaseLabel']) ?? '',
+      Status: this.readString(source, ['status', 'Status']) ?? '',
+      IsCompatible: this.readBoolean(source, ['isCompatible', 'IsCompatible']) ?? false,
+      ConfidenceScore: this.readNumber(source, ['confidenceScore', 'ConfidenceScore']) ?? 0,
+      ConfidenceLabel: this.readString(source, ['confidenceLabel', 'ConfidenceLabel']) ?? '',
+      ProbabilityScore: this.readNumber(source, ['probabilityScore', 'ProbabilityScore']),
+      ProbabilityLabel: this.readString(source, ['probabilityLabel', 'ProbabilityLabel']),
+      IsCredible: this.readBoolean(source, ['isCredible', 'IsCredible']) ?? false,
+      ScoreReasons: this.readStringArray(source, ['scoreReasons', 'ScoreReasons']),
+      CurrentPrice: this.readNumber(source, ['currentPrice', 'CurrentPrice']) ?? 0,
+      NecklinePrice: this.readNumber(source, ['necklinePrice', 'NecklinePrice']),
+      ValidationState: this.readString(source, ['validationState', 'ValidationState']) ?? '',
+      ValidationLevel: this.readNumber(source, ['validationLevel', 'ValidationLevel']),
+      ValidationDate: this.readString(source, ['validationDate', 'ValidationDate']),
+      InvalidationState: this.readString(source, ['invalidationState', 'InvalidationState']) ?? '',
+      InvalidationLevel: this.readNumber(source, ['invalidationLevel', 'InvalidationLevel']),
+      InvalidationDate: this.readString(source, ['invalidationDate', 'InvalidationDate']),
+      HasRiskPlan: this.readBoolean(source, ['hasRiskPlan', 'HasRiskPlan']) ?? false,
+      SuggestedStopLoss: this.readNumber(source, ['suggestedStopLoss', 'SuggestedStopLoss']),
+      SuggestedTakeProfit: this.readNumber(source, ['suggestedTakeProfit', 'SuggestedTakeProfit']),
+      RiskRewardRatio: this.readNumber(source, ['riskRewardRatio', 'RiskRewardRatio']),
+      PositioningNote: this.readString(source, ['positioningNote', 'PositioningNote']),
+      StructuralPoints: structuralPoints,
+      WhyListed: this.readString(source, ['whyListed', 'WhyListed']) ?? '',
+      PedagogicalSummary: this.readString(source, ['pedagogicalSummary', 'PedagogicalSummary']) ?? '',
+      AmbiguityNote: this.readString(source, ['ambiguityNote', 'AmbiguityNote']),
+      LimitationsNote: this.readString(source, ['limitationsNote', 'LimitationsNote']),
+      IsActionable: this.readBoolean(source, ['isActionable', 'IsActionable']) ?? false,
+      RecommendationAction: this.readEnumCode(source, ['recommendationAction', 'RecommendationAction'], RECO_INT_MAP),
+      RecommendationReason: this.readString(source, ['recommendationReason', 'RecommendationReason']) ?? '',
+      RiskLevel: this.readEnumCode(source, ['riskLevel', 'RiskLevel'], RISK_INT_MAP),
+      RecommendationHorizonDays: this.readNumber(source, ['recommendationHorizonDays', 'RecommendationHorizonDays']) ?? 0
+    };
+  }
+
+  private mapCandle(source: Record<string, unknown>): PriceCandle {
+    return {
+      Timestamp: this.readString(source, ['timestamp', 'Timestamp']) ?? '',
+      Open: this.readNumber(source, ['open', 'Open']) ?? 0,
+      High: this.readNumber(source, ['high', 'High']) ?? 0,
+      Low: this.readNumber(source, ['low', 'Low']) ?? 0,
+      Close: this.readNumber(source, ['close', 'Close']) ?? 0,
+      Volume: this.readNumber(source, ['volume', 'Volume']) ?? 0
+    };
+  }
+
+  mapSimulationDossier(source: Record<string, unknown>): SimulationDossier {
+    const scenarios: SimulationScenario[] = this.readArray(source, ['scenarios', 'Scenarios']).map((item) => {
+      const s = this.toRecord(item);
+      return {
+        Label: (this.readString(s, ['label', 'Label']) ?? 'Neutre') as SimulationScenario['Label'],
+        TargetPrice: this.readNumber(s, ['targetPrice', 'TargetPrice']),
+        EstimatedReturnPct: this.readNumber(s, ['estimatedReturnPct', 'EstimatedReturnPct']) ?? 0,
+        EstimatedReturnAmount: this.readNumber(s, ['estimatedReturnAmount', 'EstimatedReturnAmount']) ?? 0,
+        EstimatedFinalAmount: this.readNumber(s, ['estimatedFinalAmount', 'EstimatedFinalAmount']) ?? 0,
+        Probability: this.readNumber(s, ['probability', 'Probability'])
+      };
+    });
+
+    const priceSeries: PriceCandle[] = this.readArray(source, ['priceSeries', 'PriceSeries']).map(
+      (item) => this.mapCandle(this.toRecord(item))
+    );
+
+    const structuralPoints: StructuralPoint[] = this.readArray(
+      source,
+      ['structuralPoints', 'StructuralPoints']
+    ).map((item) => {
+      const p = this.toRecord(item);
+      return {
+        PointType: this.readString(p, ['pointType', 'PointType']) ?? '',
+        Timestamp: this.readString(p, ['timestamp', 'Timestamp']) ?? '',
+        Price: this.readNumber(p, ['price', 'Price']) ?? 0
+      };
+    });
+
+    return {
+      Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      Pattern: this.readString(source, ['pattern', 'Pattern']) ?? '',
+      Phase: this.readString(source, ['phase', 'Phase']) ?? '',
+      InvestmentAmount: this.readNumber(source, ['investmentAmount', 'InvestmentAmount']) ?? 0,
+      HorizonDays: this.readNumber(source, ['horizonDays', 'HorizonDays']) ?? 0,
+      EstimatedReturnAmount: this.readNumber(source, ['estimatedReturnAmount', 'EstimatedReturnAmount']) ?? 0,
+      EstimatedReturnPct: this.readNumber(source, ['estimatedReturnPct', 'EstimatedReturnPct']) ?? 0,
+      EstimatedFinalAmount: this.readNumber(source, ['estimatedFinalAmount', 'EstimatedFinalAmount']) ?? 0,
+      Assumption: this.readString(source, ['assumption', 'Assumption']) ?? '',
+      CurrentPrice: this.readNumber(source, ['currentPrice', 'CurrentPrice']) ?? 0,
+      Probability: this.readNumber(source, ['probability', 'Probability']) ?? 0,
+      RecommendationAction: this.readEnumCode(source, ['recommendationAction', 'RecommendationAction'], RECO_INT_MAP),
+      RecommendationReason: this.readString(source, ['recommendationReason', 'RecommendationReason']) ?? '',
+      RiskLevel: this.readEnumCode(source, ['riskLevel', 'RiskLevel'], RISK_INT_MAP),
+      IsActionable: this.readBoolean(source, ['isActionable', 'IsActionable']) ?? false,
+      TargetPrice: this.readNumber(source, ['targetPrice', 'TargetPrice']),
+      InvalidationPrice: this.readNumber(source, ['invalidationPrice', 'InvalidationPrice']),
+      Scenarios: scenarios,
+      PriceSeries: priceSeries,
+      StructuralPoints: structuralPoints
+    };
+  }
+
+  mapMultiSimulationDossier(source: Record<string, unknown>): MultiSimulationDossier {
+    const patternResults: SimulationDossier[] = this.readArray(
+      source,
+      ['patternResults', 'PatternResults']
+    ).map((item) => this.mapSimulationDossier(this.toRecord(item)));
+
+    return {
+      Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '',
+      InvestmentAmount: this.readNumber(source, ['investmentAmount', 'InvestmentAmount']) ?? 0,
+      HorizonDays: this.readNumber(source, ['horizonDays', 'HorizonDays']) ?? 0,
+      CurrentPrice: this.readNumber(source, ['currentPrice', 'CurrentPrice']) ?? 0,
+      Currency: this.readString(source, ['currency', 'Currency']) ?? 'EUR',
+      GlobalMessage: this.readString(source, ['globalMessage', 'GlobalMessage']) ?? '',
+      PatternResults: patternResults
+    };
   }
 
   mapSimulation(source: Record<string, unknown>): ClientSimulationResult {
@@ -141,9 +390,9 @@ export class ClientFinanceMapper {
       Assumption: this.readString(source, ['assumption', 'Assumption']) ?? '',
       CurrentPrice: this.readNumber(source, ['currentPrice', 'CurrentPrice']) ?? 0,
       Probability: this.readNumber(source, ['probability', 'Probability']) ?? 0,
-      RecommendationAction: this.readString(source, ['recommendationAction', 'RecommendationAction']) as ClientRecommendationActionCode,
+      RecommendationAction: this.readEnumCode(source, ['recommendationAction', 'RecommendationAction'], RECO_INT_MAP) as ClientRecommendationActionCode,
       RecommendationReason: this.readString(source, ['recommendationReason', 'RecommendationReason']) ?? '',
-      RiskLevel: this.readString(source, ['riskLevel', 'RiskLevel']) as ClientRiskLevelCode,
+      RiskLevel: this.readEnumCode(source, ['riskLevel', 'RiskLevel'], RISK_INT_MAP) as ClientRiskLevelCode,
       TargetPrice: this.readNumber(source, ['targetPrice', 'TargetPrice']),
       InvalidationPrice: this.readNumber(source, ['invalidationPrice', 'InvalidationPrice']),
       IsActionable: this.readBoolean(source, ['isActionable', 'IsActionable']) ?? false
@@ -175,22 +424,68 @@ export class ClientFinanceMapper {
           PeaDisplayLabel: this.readString(supportReading, ['peaDisplayLabel', 'PeaDisplayLabel']) ?? ''
         },
         Recommendation: this.mapRecommendationSummary(recommendation),
+        CurrentPriceNative: this.readNumber(payload, ['currentPriceNative', 'CurrentPriceNative']) ?? 0,
+        Currency: this.readString(payload, ['currency', 'Currency']) ?? 'EUR',
+        ForexRateUsed: this.readNumber(payload, ['forexRateUsed', 'ForexRateUsed']) ?? 1,
         RiskHint: this.readString(payload, ['riskHint', 'RiskHint']),
         HistoryEntryUrl: this.readString(payload, ['historyEntryUrl', 'HistoryEntryUrl']),
         SimulationUrl: this.readString(payload, ['simulationUrl', 'SimulationUrl'])
       };
     });
+    const allocationRaw = source['allocation'] ?? source['Allocation'];
+    const allocation: PortfolioAllocation | null = allocationRaw && typeof allocationRaw === 'object'
+      ? this.mapPortfolioAllocation(this.toRecord(allocationRaw))
+      : null;
+
     return {
       Positions: positions,
       TotalInvestedAmount: this.readNumber(source, ['totalInvestedAmount', 'TotalInvestedAmount']) ?? 0,
       TotalOutstandingAmount: this.readNumber(source, ['totalOutstandingAmount', 'TotalOutstandingAmount']) ?? 0,
-      OpenPositionCount: this.readNumber(source, ['openPositionCount', 'OpenPositionCount']) ?? positions.length
+      // Le back peut renvoyer un compte agrégé différent du nombre de positions transmises (ex. pagination
+      // partielle) ; on ne retombe sur positions.length que si le champ est absent, jamais pour le corriger.
+      OpenPositionCount: this.readNumber(source, ['openPositionCount', 'OpenPositionCount']) ?? positions.length,
+      Allocation: allocation
     };
   }
 
-  mapHistoryFeed(source: Record<string, unknown>): ClientHistoryFeed {
-    const items = this.readArray(source, ['items', 'Items']).map((item) => this.mapHistoryItem(this.toRecord(item)));
-    return { Items: items, ReturnedCount: this.readNumber(source, ['returnedCount', 'ReturnedCount']) ?? items.length };
+  private mapPortfolioAllocation(source: Record<string, unknown>): PortfolioAllocation {
+    const mapSlices = (keys: string[]) =>
+      this.readArray(source, keys).map((item) => {
+        const s = this.toRecord(item);
+        return {
+          Label: this.readString(s, ['label', 'Label']) ?? '',
+          WeightPct: this.readNumber(s, ['weightPct', 'WeightPct']) ?? 0,
+          ValueEur: this.readNumber(s, ['valueEur', 'ValueEur']) ?? 0
+        };
+      });
+
+    // Whitelist stricte : toute valeur back non reconnue (nouvelle catégorie, typo, valeur legacy) retombe
+    // sur 'Moderate' plutôt que de propager une chaîne arbitraire dans un type union fermé côté front.
+    const ratingRaw = this.readString(source, ['diversificationRating', 'DiversificationRating']) ?? 'Moderate';
+    const rating = (['Concentrated', 'Moderate', 'Diversified'].includes(ratingRaw)
+      ? ratingRaw
+      : 'Moderate') as DiversificationRating;
+
+    const alerts = this.readArray(source, ['concentrationAlerts', 'ConcentrationAlerts']).map((item) => {
+      const a = this.toRecord(item);
+      return { Message: this.readString(a, ['message', 'Message']) ?? '' };
+    });
+
+    return {
+      SectorAllocation: mapSlices(['sectorAllocation', 'SectorAllocation']),
+      CountryAllocation: mapSlices(['countryAllocation', 'CountryAllocation']),
+      CurrencyAllocation: mapSlices(['currencyAllocation', 'CurrencyAllocation']),
+      ConcentrationScore: this.readNumber(source, ['concentrationScore', 'ConcentrationScore']) ?? 0,
+      DiversificationRating: rating,
+      ConcentrationAlerts: alerts,
+      PortfolioReturn30d: this.readNumber(source, ['portfolioReturn30d', 'PortfolioReturn30d']),
+      PortfolioReturn90d: this.readNumber(source, ['portfolioReturn90d', 'PortfolioReturn90d']),
+      PortfolioReturn365d: this.readNumber(source, ['portfolioReturn365d', 'PortfolioReturn365d']),
+      BenchmarkReturn30d: this.readNumber(source, ['benchmarkReturn30d', 'BenchmarkReturn30d']),
+      BenchmarkReturn90d: this.readNumber(source, ['benchmarkReturn90d', 'BenchmarkReturn90d']),
+      BenchmarkReturn365d: this.readNumber(source, ['benchmarkReturn365d', 'BenchmarkReturn365d']),
+      BenchmarkUnavailable: this.readBoolean(source, ['benchmarkUnavailable', 'BenchmarkUnavailable']) ?? true
+    };
   }
 
   mapHistoryPage(source: Record<string, unknown>): ClientHistoryPage {
@@ -205,24 +500,7 @@ export class ClientFinanceMapper {
 
   mapInstrumentHistoryPage(source: Record<string, unknown>): ClientInstrumentHistoryPage {
     const instrument = this.toRecord(source['instrument'] ?? source['Instrument']);
-    const items = this.readArray(source, ['items', 'Items']).map((item) => {
-      const payload = this.toRecord(item);
-      return {
-        AnalysisId: this.readString(payload, ['analysisId', 'AnalysisId']) ?? '',
-        SnapshotId: this.readString(payload, ['snapshotId', 'SnapshotId']) ?? '',
-        TimestampUtc: this.readString(payload, ['timestampUtc', 'TimestampUtc']) ?? '',
-        OutcomeDisplayLabel: this.readString(payload, ['outcomeDisplayLabel', 'OutcomeDisplayLabel']) ?? '',
-        PrimaryPatternLabel: this.readString(payload, ['primaryPatternLabel', 'PrimaryPatternLabel']),
-        RecommendationSummary: this.readString(payload, ['recommendationSummary', 'RecommendationSummary']) ?? '',
-        SupportAvailabilitySummary: this.readString(payload, ['supportAvailabilitySummary', 'SupportAvailabilitySummary']) ?? '',
-        PeaSummary: this.readString(payload, ['peaSummary', 'PeaSummary']) ?? '',
-        AnalysisEngineVersion: this.readString(payload, ['analysisEngineVersion', 'AnalysisEngineVersion']) ?? '',
-        RecommendationPolicyVersion: this.readString(payload, ['recommendationPolicyVersion', 'RecommendationPolicyVersion']),
-        ExplanationPolicyVersion: this.readString(payload, ['explanationPolicyVersion', 'ExplanationPolicyVersion']),
-        DetailUrl: this.readString(payload, ['detailUrl', 'DetailUrl']) ?? '',
-        ComparisonUrl: this.readString(payload, ['comparisonUrl', 'ComparisonUrl']) ?? ''
-      };
-    });
+    const items = this.readArray(source, ['items', 'Items']).map((item) => this.mapInstrumentHistoryItem(this.toRecord(item)));
     return {
       Instrument: this.mapInstrumentIdentity(instrument),
       Symbol: this.readString(source, ['symbol', 'Symbol']) ?? this.readString(instrument, ['symbol', 'Symbol']) ?? '',
@@ -233,27 +511,22 @@ export class ClientFinanceMapper {
     };
   }
 
-  mapInstrumentHistory(source: Record<string, unknown>): ClientInstrumentHistory {
-    const instrument = this.toRecord(source['instrument'] ?? source['Instrument']);
-    const items = this.readArray(source, ['items', 'Items']).map((item) => {
-      const payload = this.toRecord(item);
-      return {
-        AnalysisId: this.readString(payload, ['analysisId', 'AnalysisId']) ?? '',
-        SnapshotId: this.readString(payload, ['snapshotId', 'SnapshotId']) ?? '',
-        TimestampUtc: this.readString(payload, ['timestampUtc', 'TimestampUtc']) ?? '',
-        OutcomeDisplayLabel: this.readString(payload, ['outcomeDisplayLabel', 'OutcomeDisplayLabel']) ?? '',
-        PrimaryPatternLabel: this.readString(payload, ['primaryPatternLabel', 'PrimaryPatternLabel']),
-        RecommendationSummary: this.readString(payload, ['recommendationSummary', 'RecommendationSummary']) ?? '',
-        SupportAvailabilitySummary: this.readString(payload, ['supportAvailabilitySummary', 'SupportAvailabilitySummary']) ?? '',
-        PeaSummary: this.readString(payload, ['peaSummary', 'PeaSummary']) ?? '',
-        AnalysisEngineVersion: this.readString(payload, ['analysisEngineVersion', 'AnalysisEngineVersion']) ?? '',
-        RecommendationPolicyVersion: this.readString(payload, ['recommendationPolicyVersion', 'RecommendationPolicyVersion']),
-        ExplanationPolicyVersion: this.readString(payload, ['explanationPolicyVersion', 'ExplanationPolicyVersion']),
-        DetailUrl: this.readString(payload, ['detailUrl', 'DetailUrl']) ?? '',
-        ComparisonUrl: this.readString(payload, ['comparisonUrl', 'ComparisonUrl']) ?? ''
-      };
-    });
-    return { Instrument: this.mapInstrumentIdentity(instrument), Symbol: this.readString(source, ['symbol', 'Symbol']) ?? this.readString(instrument, ['symbol', 'Symbol']) ?? '', Items: items, ReturnedCount: this.readNumber(source, ['returnedCount', 'ReturnedCount']) ?? items.length };
+  private mapInstrumentHistoryItem(payload: Record<string, unknown>) {
+    return {
+      AnalysisId: this.readString(payload, ['analysisId', 'AnalysisId']) ?? '',
+      SnapshotId: this.readString(payload, ['snapshotId', 'SnapshotId']) ?? '',
+      TimestampUtc: this.readString(payload, ['timestampUtc', 'TimestampUtc']) ?? '',
+      OutcomeDisplayLabel: this.readString(payload, ['outcomeDisplayLabel', 'OutcomeDisplayLabel']) ?? '',
+      PrimaryPatternLabel: this.readString(payload, ['primaryPatternLabel', 'PrimaryPatternLabel']),
+      RecommendationSummary: this.readString(payload, ['recommendationSummary', 'RecommendationSummary']) ?? '',
+      SupportAvailabilitySummary: this.readString(payload, ['supportAvailabilitySummary', 'SupportAvailabilitySummary']) ?? '',
+      PeaSummary: this.readString(payload, ['peaSummary', 'PeaSummary']) ?? '',
+      AnalysisEngineVersion: this.readString(payload, ['analysisEngineVersion', 'AnalysisEngineVersion']) ?? '',
+      RecommendationPolicyVersion: this.readString(payload, ['recommendationPolicyVersion', 'RecommendationPolicyVersion']),
+      ExplanationPolicyVersion: this.readString(payload, ['explanationPolicyVersion', 'ExplanationPolicyVersion']),
+      DetailUrl: this.readString(payload, ['detailUrl', 'DetailUrl']) ?? '',
+      ComparisonUrl: this.readString(payload, ['comparisonUrl', 'ComparisonUrl']) ?? ''
+    };
   }
 
   mapAnalysisDetail(source: Record<string, unknown>): ClientAnalysisDetail {
@@ -297,7 +570,9 @@ export class ClientFinanceMapper {
         PriceAtReview: this.readNumber(exPostRaw, ['priceAtReview', 'PriceAtReview']),
         TargetPrice: this.readNumber(exPostRaw, ['targetPrice', 'TargetPrice']),
         InvalidationPrice: this.readNumber(exPostRaw, ['invalidationPrice', 'InvalidationPrice']),
-        PedagogicalNote: this.readString(exPostRaw, ['pedagogicalNote', 'PedagogicalNote'])
+        PedagogicalNote: this.readString(exPostRaw, ['pedagogicalNote', 'PedagogicalNote']),
+        DaysToOutcome: this.readNumber(exPostRaw, ['daysToOutcome', 'DaysToOutcome']),
+        OutcomeDate: this.readString(exPostRaw, ['outcomeDate', 'OutcomeDate'])
       }
     };
   }
@@ -381,6 +656,11 @@ export class ClientFinanceMapper {
     return { InstrumentId: this.readString(source, ['instrumentId', 'InstrumentId']) ?? '', Symbol: this.readString(source, ['symbol', 'Symbol']) ?? '', DisplayName: this.readString(source, ['displayName', 'DisplayName']) ?? '', AssetType: this.readString(source, ['assetType', 'AssetType']) ?? '', Exchange: this.readString(source, ['exchange', 'Exchange']) ?? '', Currency: this.readString(source, ['currency', 'Currency']) ?? '', CountryCode: this.readString(source, ['countryCode', 'CountryCode']) };
   }
 
+  // Les helpers readString/readNumber/readBoolean/readArray acceptent toujours une liste de clés
+  // [camelCase, PascalCase] : le JSON serializer .NET renvoie du camelCase par défaut sur les endpoints HTTP
+  // classiques, mais les payloads rejoués depuis un snapshot persisté (JSON stocké tel quel en base) gardent
+  // le PascalCase d'origine du ViewModel. Chercher les deux évite une divergence de mapping entre ces deux
+  // chemins sans dupliquer les méthodes de mapping.
   private readArray(source: Record<string, unknown>, keys: string[]): unknown[] {
     for (const key of keys) {
       const value = source[key];
@@ -415,7 +695,7 @@ export class ClientFinanceMapper {
     return null;
   }
 
-  private readString(source: Record<string, unknown>, keys: string[]): string | null {
+  readString(source: Record<string, unknown>, keys: string[]): string | null {
     for (const key of keys) {
       const value = source[key];
       if (typeof value === 'string' && value.trim().length > 0) {
@@ -450,5 +730,23 @@ export class ClientFinanceMapper {
     }
 
     return {};
+  }
+
+  /** Lit un champ enum qui peut arriver en chaîne (HTTP normal) OU en entier (snapshot path). */
+  private readEnumCode<T extends string>(
+    source: Record<string, unknown>,
+    keys: string[],
+    intMap: Record<number, T>
+  ): T | '' {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value.trim() as T;
+      }
+      if (typeof value === 'number' && Object.prototype.hasOwnProperty.call(intMap, value)) {
+        return intMap[value];
+      }
+    }
+    return '';
   }
 }

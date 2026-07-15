@@ -12,10 +12,13 @@ export function getPortfolioTypeLabel(type: PortfolioType | string): string {
   return PORTFOLIO_TYPE_LABELS[type as PortfolioType] ?? type;
 }
 
+export type PortfolioStatus = 'Active' | 'Archived';
+
 export class UserPortfolioViewModel {
   Id = '';
   Name = '';
   PortfolioType: PortfolioType = 'Autre';
+  Status: PortfolioStatus = 'Active';
 
   constructor(init?: Partial<UserPortfolioViewModel>) {
     Object.assign(this, init);

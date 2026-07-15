@@ -10,6 +10,7 @@ l'utilisateur le demande :
 - Lister les changements prevus fichier par fichier
 - Classifier selon AGENTS.md : PROVEN / DECIDED / PROPOSED / DEROGATION / REMAINING TO ARBITRATE
 - Indiquer si des tests back sont necessaires (voir regle tests)
+- Challenger le plan de maniere rigoureuse avant de le presenter : cas limites, effets de bord, consequences sur le reste du code. Le plan doit avoir le meme niveau de detail qu'un plan produit en Plan Mode. Verifier l'alignement avec l'architecture definie dans les agents `dotnet-api-architect`/`angular-architect` (`C:\Users\gregd\.claude\agents`).
 - S'arreter. Attendre la confirmation explicite de l'utilisateur avant toute generation.
 
 **Phase 2 — Execution** (prefixer de `[PHASE 2 — EXECUTION]`, uniquement apres "ok", "go", "continue")

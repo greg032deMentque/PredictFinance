@@ -19,14 +19,14 @@ export class GlossaryTermDirective implements OnInit {
   private tooltipId = `glossary-tip-${Math.random().toString(36).slice(2, 9)}`;
 
   ngOnInit(): void {
-    this.glossaryService.getGlossary().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((terms) => {
+    this.glossaryService.getGlossary().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       const term = this.glossaryService.lookup(this.appGlossaryTerm);
       if (!term) {
         return;
       }
 
       this.applyHostStyles();
-      this.createTooltip(term.definition);
+      this.createTooltip(term.Definition);
       this.bindEvents();
     });
   }

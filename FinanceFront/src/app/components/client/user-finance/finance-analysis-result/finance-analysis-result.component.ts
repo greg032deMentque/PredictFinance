@@ -1,66 +1,137 @@
-import { CommonModule, DatePipe, PercentPipe } from '@angular/common';
-import { Component, DestroyRef, Input, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { GlossaryTermDirective } from '../../../../core/directives/glossary-term.directive';
-import {
-  ClientAnalysisResult,
-  getModelStatusLabel,
-  getPhaseLabel,
-  getRecommendationBadgeClass,
-  getRecommendationLabel,
-  getRiskLevelLabel
-} from '../../../../Models/client-finance-models/client-finance-models';
-import { PatternCatalogStore } from '../../../../services/pattern-catalog.store';
+import { CommonModule, CurrencyPipe, DatePipe, PercentPipe } from '@angular/common';
+import { Component, Input, OnChanges, SimpleChanges, signal, computed } from '@angular/core';
+import type { AnalysisDossier, AnalysisPattern } from '../../../../Models/client-finance-models/client-analysis-dossier.model';
+import { AnalysisPriceChartComponent } from '../analysis-price-chart/analysis-price-chart.component';
+import { PatternListComponent } from '../pattern-list/pattern-list.component';
+import { PatternExplanationPanelComponent } from '../pattern-explanation-panel/pattern-explanation-panel.component';
 
 @Component({
   selector: 'app-finance-analysis-result',
   standalone: true,
-  imports: [CommonModule, PercentPipe, DatePipe, GlossaryTermDirective],
+  imports: [
+    CommonModule,
+    CurrencyPipe,
+    PercentPipe,
+    DatePipe,
+    AnalysisPriceChartComponent,
+    PatternListComponent,
+    PatternExplanationPanelComponent
+  ],
   templateUrl: './finance-analysis-result.component.html',
   styleUrl: './finance-analysis-result.component.scss'
 })
-export class FinanceAnalysisResultComponent {
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly patternCatalogStore = inject(PatternCatalogStore);
-
+export class FinanceAnalysisResultComponent implements OnChanges {
   @Input() loading = false;
-  @Input() result: ClientAnalysisResult | null = null;
+  @Input() result: AnalysisDossier | null = null;
 
-  constructor() {
-    this.patternCatalogStore
-      .ensureLoaded()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe();
+  readonly selectedPattern = signal<AnalysisPattern | null>(null);
+  readonly alternativesExpanded = signal(false);
+
+  readonly allPatterns = computed<AnalysisPattern[]>(() => {
+    if (!this.result) return [];
+    const main = this.result.MainPattern ? [this.result.MainPattern] : [];
+    return [...main, ...this.result.AlternativePatterns];
+  });
+
+  readonly chartPattern = computed<AnalysisPattern | null>(() => {
+    return this.selectedPattern() ?? this.result?.MainPattern ?? null;
+  });
+
+  readonly chartPriceSeries = computed(() => {
+    return this.result?.PriceSeries ?? [];
+  });
+
+  readonly hasFullDossier = computed(() => {
+    const outcome = this.result?.Outcome;
+    return outcome === 'CrediblePatternFound' || outcome === 'MultipleCompatiblePatterns';
+  });
+
+  readonly showGraphOnly = computed(() => {
+    const outcome = this.result?.Outcome;
+    return outcome === 'NoCrediblePattern' || outcome === 'InsufficientData';
+  });
+
+  readonly isUnsupported = computed(() => {
+    const outcome = this.result?.Outcome;
+    return outcome === 'UnsupportedInstrument' || outcome === 'UnsupportedContext';
+  });
+
+  readonly alternativeCount = computed(() => this.result?.AlternativePatterns.length ?? 0);
+
+  /** True si un warning earnings est actif sur une recommandation actionnable (BUY/SELL/HOLD). */
+  readonly hasEarningsRisk = computed(() => {
+    const isEarningsWarning = this.result?.RiskContext?.EarningsWithinHorizonWarning === true;
+    const recommendationAction = this.result?.MainPattern?.RecommendationAction;
+    return isEarningsWarning && !!recommendationAction && recommendationAction !== 'NonActionable';
+  });
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['result']) {
+      // Sélectionner le pattern principal par défaut à chaque nouveau résultat
+      this.selectedPattern.set(this.result?.MainPattern ?? null);
+      this.alternativesExpanded.set(false);
+    }
   }
 
-  get recommendationLabel(): string {
-    return getRecommendationLabel(this.result?.RecommendationAction ?? '');
+  onPatternSelected(pattern: AnalysisPattern): void {
+    this.selectedPattern.set(pattern);
   }
 
-  get recommendationClass(): string {
-    return getRecommendationBadgeClass(this.result?.RecommendationAction ?? '');
+  toggleAlternatives(): void {
+    this.alternativesExpanded.update((v) => !v);
   }
 
-  get riskLevelLabel(): string {
-    return getRiskLevelLabel(this.result?.RiskLevel ?? '');
+  getOutcomeIcon(): string {
+    switch (this.result?.Outcome) {
+      case 'CrediblePatternFound': return 'bi-check-circle-fill text-success';
+      case 'MultipleCompatiblePatterns': return 'bi-layers-fill text-primary';
+      case 'NoCrediblePattern': return 'bi-dash-circle text-warning';
+      case 'InsufficientData': return 'bi-database-x text-warning';
+      case 'UnsupportedInstrument': return 'bi-slash-circle text-secondary';
+      case 'UnsupportedContext': return 'bi-slash-circle text-secondary';
+      default: return 'bi-circle text-muted';
+    }
   }
 
-  get patternLabel(): string {
-    return this.patternCatalogStore.labelFor(this.result?.Pattern ?? '');
+  getOutcomeLabel(): string {
+    switch (this.result?.Outcome) {
+      case 'CrediblePatternFound': return 'Figure crédible identifiée';
+      case 'MultipleCompatiblePatterns': return 'Plusieurs figures compatibles';
+      case 'NoCrediblePattern': return 'Aucune figure crédible';
+      case 'InsufficientData': return 'Données insuffisantes';
+      case 'UnsupportedInstrument': return 'Instrument non supporté';
+      case 'UnsupportedContext': return 'Contexte non supporté';
+      default: return 'Résultat inconnu';
+    }
   }
 
-  get phaseLabel(): string {
-    return getPhaseLabel(this.result?.Phase ?? '');
+  getRecommendationBadgeClass(action: string): string {
+    switch (action) {
+      case 'Buy': return 'chip chip-success';
+      case 'Sell': return 'chip chip-danger';
+      case 'Hold': return 'chip chip-navy';
+      case 'NonActionable': return 'chip chip-dark';
+      default: return 'chip chip-navy';
+    }
   }
 
-  get modelStatusLabel(): string {
-    return getModelStatusLabel(this.result?.ModelStatus ?? '');
+  getRecommendationLabel(action: string): string {
+    switch (action) {
+      case 'Buy': return 'Acheter';
+      case 'Sell': return 'Vendre';
+      case 'Hold': return 'Attendre';
+      case 'NonActionable': return 'Inactif';
+      default: return 'Attendre';
+    }
   }
 
-  get formattedReason(): string {
-    const rawReason = this.result?.RecommendationReason?.trim() ?? '';
-    return rawReason.length > 0
-      ? rawReason
-      : "Aucune justification metier supplementaire n'est disponible.";
+  getRecommendationIcon(action: string): string {
+    switch (action) {
+      case 'Buy': return 'bi-arrow-up-circle-fill';
+      case 'Sell': return 'bi-arrow-down-circle-fill';
+      case 'Hold': return 'bi-pause-circle-fill';
+      case 'NonActionable': return 'bi-dash-circle-fill';
+      default: return 'bi-circle';
+    }
   }
 }

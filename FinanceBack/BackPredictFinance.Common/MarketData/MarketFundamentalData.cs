@@ -24,5 +24,14 @@ namespace BackPredictFinance.Common.MarketData
         public decimal? DebtToEquity { get; set; }
         public decimal? TrailingPe { get; set; }
         public decimal? DividendYield { get; set; }
+        public decimal? MarketCap { get; set; }
+        public decimal? RevenueGrowth { get; set; }
+        public decimal? EarningsGrowth { get; set; }
+        public decimal? PegRatio { get; set; }
+        public decimal? PriceToBook { get; set; }
+        public string? RecommendationKey { get; set; }
+        public decimal? RecommendationMean { get; set; }
+        public decimal? TargetMeanPrice { get; set; }
+        public DateTime? EarningsDate { get; set; }
     }
 }

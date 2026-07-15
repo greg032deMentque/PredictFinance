@@ -18,7 +18,6 @@ namespace BackPredictFinance.ViewModels.UserViewModels
         public bool LockoutEnabled { get; set; }
         public int AccessFailedCount { get; set; }
 
-        public string? Password { get; set; }
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
 
@@ -26,8 +25,6 @@ namespace BackPredictFinance.ViewModels.UserViewModels
         public DateTime? UpdatedAt { get; set; }
         public DateTime? LastConnection { get; set; }
 
-        public string RefreshToken { get; set; } = string.Empty;
-        public DateTime? RefreshTokenExpiryTime { get; set; }
         public List<UserRoleViewModel>? Roles { get; set; } = new();
         public string FullName => $"{FirstName} {LastName}";
 

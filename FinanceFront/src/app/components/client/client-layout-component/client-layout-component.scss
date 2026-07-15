@@ -2,3 +2,122 @@
   display: block;
   min-height: 100%;
 }
+
+// ── Sidebar collapsed width ───────────────────────────────────────────────
+$sidebar-w-collapsed: 64px;
+
+.app-shell.sidebar-collapsed {
+  grid-template-columns: #{$sidebar-w-collapsed} minmax(0, 1fr);
+}
+
+// ── Sidebar : style card conservé, hauteur augmentée ─────────────────────
+.sidebar {
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: width 0.22s ease;
+  // Hauteur : remplit la fenêtre sous le header avec ~1rem de marge en bas
+  min-height: calc(100vh - var(--pf-topbar-h) - 3rem);
+}
+
+.sidebar--collapsed {
+  width: #{$sidebar-w-collapsed};
+  padding: 0.75rem 0.5rem;
+}
+
+// ── Bouton toggle ─────────────────────────────────────────────────────────
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.75rem;
+  padding: 0.45rem;
+  font-size: 0.9rem;
+  transition: background 0.18s ease, color 0.18s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+}
+
+// ── Titres de sections ────────────────────────────────────────────────────
+.sidebar-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 0 0.5rem;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+}
+
+// ── Liens nav ─────────────────────────────────────────────────────────────
+.sidebar .nav-link {
+  position: relative;
+  color: rgba(255, 255, 255, 0.78);
+  border-radius: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+
+  .bi {
+    flex-shrink: 0;
+    font-size: 1rem;
+  }
+
+  &.active {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20%;
+      bottom: 20%;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: var(--pf-gold-bright, #d8a53a);
+    }
+  }
+
+  &:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: translateX(2px);
+  }
+}
+
+// ── Mode réduit : icône centrée ───────────────────────────────────────────
+.sidebar--collapsed .nav-link {
+  justify-content: center;
+  padding: 0.6rem;
+  gap: 0;
+  border-radius: 0.75rem;
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────
+@media (max-width: 1199.98px) {
+  .app-shell.sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar--collapsed {
+    width: 100%;
+  }
+}

@@ -3,9 +3,11 @@
   max-width: none;
   min-height: 100%;
   padding-inline: 18px;
-  /* Pas d'overflow:hidden ni de hauteur figée : le scroll se fait au niveau
-     du document (header sticky, sidebar sticky, footer dans le flux). */
-  overflow-x: clip;
+  /* Pas d'overflow ni de hauteur figée ici : le scroll se fait au niveau du
+     document (header sticky, sidebar sticky, footer dans le flux).
+     IMPORTANT : ne PAS poser overflow-x: clip/hidden sur cet ancêtre — cela
+     casse le position: sticky de la sidebar (gotcha Chromium). Le confinement
+     horizontal du contenu large est porté par .main-col. */
 }
 
 .app-private {
@@ -135,6 +137,9 @@
 
 .main-col {
   min-width: 0;
+  /* Confine le débordement horizontal du contenu de page sans toucher la sidebar
+     (sibling dans la grille), pour préserver son position: sticky. */
+  overflow-x: clip;
 }
 
 .auth-only {

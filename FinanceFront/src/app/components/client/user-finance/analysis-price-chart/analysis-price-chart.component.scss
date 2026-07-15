@@ -1,0 +1,75 @@
+.chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chart-canvas-container {
+  position: relative;
+  height: 320px;
+  width: 100%;
+}
+
+canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+// Légende accessible : style de trait + couleur (pas couleur seule — WCAG 1.4.1)
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--pf-text-soft);
+  padding: 0 0.25rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-label {
+  white-space: nowrap;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+// Styles de trait différenciés (WCAG 1.4.1 — jamais couleur seule)
+.legend-line--solid {
+  /* trait plein */
+}
+
+.legend-line--dashed {
+  background: none !important;
+  border-top: 3px dashed currentColor;
+  height: 0;
+}
+
+.legend-line--dotted {
+  background: none !important;
+  border-top: 3px dotted currentColor;
+  height: 0;
+}
+
+// Couleurs par niveau
+.legend-line--price { background-color: #0f2742; color: #0f2742; }
+.legend-line--target { background-color: #127a5a; color: #127a5a; }
+.legend-line--validation { color: #2f6ea7; }
+.legend-line--invalidation { color: #b13a3a; }
+.legend-line--stop { color: #a8741a; }
+
+.legend-triangle {
+  color: #a8741a;
+  font-size: 0.75rem;
+  line-height: 1;
+}

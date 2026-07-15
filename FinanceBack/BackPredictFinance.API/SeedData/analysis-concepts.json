@@ -1,0 +1,82 @@
+[
+  {
+    "Code": "bearish",
+    "Label": "Baissier",
+    "Explanation": "Orientation favorable à une baisse du cours : la figure anticipe un recul."
+  },
+  {
+    "Code": "bullish",
+    "Label": "Haussier",
+    "Explanation": "Orientation favorable à une hausse du cours : la figure anticipe une progression."
+  },
+  {
+    "Code": "continuation",
+    "Label": "Continuation",
+    "Explanation": "Figure qui suggère une simple pause avant la reprise de la tendance déjà en place (hausse ou baisse)."
+  },
+  {
+    "Code": "double_zone",
+    "Label": "Zone « Double »",
+    "Explanation": "Niveau qui agit tantôt comme support, tantôt comme résistance selon la position du cours. Sa rupture est souvent surveillée de près."
+  },
+  {
+    "Code": "resistance",
+    "Label": "Résistance",
+    "Explanation": "Niveau de prix situé au-dessus du cours où les ventes ont tendance à l'emporter, freinant la hausse. Une cassure franche peut ouvrir la voie à une poursuite du mouvement."
+  },
+  {
+    "Code": "reversal",
+    "Label": "Retournement",
+    "Explanation": "Figure qui suggère un changement de direction de la tendance en cours."
+  },
+  {
+    "Code": "strength",
+    "Label": "Force",
+    "Explanation": "Estimation de la solidité d'un niveau, fondée notamment sur le nombre de touches et leur netteté. Plus la force est élevée, plus le niveau est jugé fiable."
+  },
+  {
+    "Code": "support",
+    "Label": "Support",
+    "Explanation": "Niveau de prix situé sous le cours où les achats ont tendance à l'emporter, freinant la baisse. Plus il a été touché sans céder, plus il est jugé solide."
+  },
+  {
+    "Code": "touches",
+    "Label": "Touches",
+    "Explanation": "Nombre de fois où le cours est venu tester un niveau sans le franchir. Un niveau souvent touché est considéré comme plus significatif."
+  },
+  {
+    "Code": "reliability",
+    "Label": "Fiabilité historique",
+    "Explanation": "Taux de réussite observé sur un large échantillon passé pour ce type de figure (source Bulkowski). Plus il est élevé, plus la figure tend à se concrétiser une fois confirmée — ce n'est jamais une garantie."
+  },
+  {
+    "Code": "trendfollowing",
+    "Label": "Suit la tendance",
+    "Explanation": "La figure ne donne pas de direction propre : elle anticipe la poursuite du mouvement (hausse ou baisse) déjà en place avant son apparition."
+  },
+  {
+    "Code": "indicator_rsi",
+    "Label": "RSI (14 séances)",
+    "Explanation": "Mesure la vitesse et l'amplitude des variations de prix sur 14 séances (lissage Wilder). Sous 30 : survente (signal haussier potentiel). Au-dessus de 70 : surachat (signal baissier potentiel). Ne constitue pas un signal de vente ou d'achat immédiat."
+  },
+  {
+    "Code": "indicator_macd",
+    "Label": "MACD (12/26/9)",
+    "Explanation": "Écart entre deux moyennes mobiles exponentielles (12 et 26 séances), lissé par une troisième (9 séances, ligne signal). Haussier si la ligne MACD franchit la ligne signal à la hausse. L'histogramme mesure l'écart entre les deux."
+  },
+  {
+    "Code": "indicator_bollinger",
+    "Label": "Bandes de Bollinger (20)",
+    "Explanation": "Enveloppe de volatilité autour de la moyenne mobile 20 séances (± 2 écarts-types). Un cours en dehors des bandes indique une volatilité anormale : sous la bande basse, survente possible ; au-dessus de la bande haute, surachat possible."
+  },
+  {
+    "Code": "indicator_moving_averages",
+    "Label": "Moyennes mobiles simples (20/50/200)",
+    "Explanation": "Moyenne des cours de clôture sur N séances. Un cours au-dessus de la MM signale une tendance favorable à court (20), moyen (50) ou long terme (200). Le croisement de deux MM peut indiquer un changement de dynamique."
+  },
+  {
+    "Code": "indicator_obv",
+    "Label": "Volume cumulé (OBV)",
+    "Explanation": "Accumule le volume en l'ajoutant (si hausse) ou en le soustrayant (si baisse) chaque séance. Une OBV croissante confirme une tendance haussière ; une divergence avec le cours peut signaler un retournement."
+  }
+]

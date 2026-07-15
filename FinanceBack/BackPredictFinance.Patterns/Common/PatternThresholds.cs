@@ -83,5 +83,67 @@ namespace BackPredictFinance.Patterns.Common
         /// tick).
         /// </summary>
         public const decimal AtrFloorPriceFraction = 0.001m;
+
+        // --- Retournements (fractales / pivots) ---
+
+        /// <summary>
+        /// Demi-fenetre N pour la detection de pivots par fractale N-barres.
+        /// Un pivot haut en i verifie : close[i] >= close[j] pour tout j dans [i-N, i+N], j != i.
+        /// Confirmation exige N bougies apres i (anti look-ahead).
+        /// </summary>
+        public const int PivotHalfWindow = 3;
+
+        /// <summary>
+        /// Tolerance d'egalite entre deux prix pour les figures double top/bottom (Bulkowski).
+        /// Un ecart <= 6 % est considere comme egal (deux sommets a hauteur identique).
+        /// </summary>
+        public const decimal DoublePriceTolerance = 0.06m;
+
+        /// <summary>
+        /// Ecart minimal entre les deux sommets/creux d'un double top/bottom, exprime en multiples
+        /// d'ATR. Evite de detecter deux pivots consecutifs sur la meme consolidation.
+        /// </summary>
+        public const decimal DoubleMinSeparationAtrMultiple = 3.0m;
+
+        /// <summary>
+        /// Rebond intermédiaire minimal entre les deux creux (double bottom) ou deux sommets
+        /// (double top), rapporté à la hauteur de la figure. Bulkowski : >= 10 %.
+        /// </summary>
+        public const decimal DoubleMinIntermediateReboundPct = 0.10m;
+
+        /// <summary>
+        /// Ratio de symetrie des epaules d'une figure tete-epaules (Bulkowski : 0.8 a 1.2).
+        /// Rapport largeur epaule gauche / largeur epaule droite doit etre dans [1/ratio, ratio].
+        /// </summary>
+        public const decimal HsShoulderSymmetryRatio = 1.2m;
+
+        /// <summary>
+        /// Profondeur minimale de la tete (H&S) par rapport aux epaules, exprimee en fraction
+        /// de la hauteur totale de la figure. La tete doit etre nettement plus profonde/haute.
+        /// </summary>
+        public const decimal HsMinHeadDepthRatio = 0.10m;
+
+        // --- Support / Resistance overlay ---
+
+        /// <summary>
+        /// Nombre minimal de pivots dans un bin ATR pour retenir la zone comme support/resistance.
+        /// </summary>
+        public const int SrMinTouches = 2;
+
+        /// <summary>
+        /// Nombre maximal de zones retournees par le detecteur support/resistance.
+        /// Seules les zones avec le plus de touches sont conservees.
+        /// </summary>
+        public const int SrMaxZones = 8;
+
+        /// <summary>
+        /// Fallback de taille de bin quand l'ATR est nul : fraction du prix median.
+        /// </summary>
+        public const decimal SrAtrFallbackPriceFraction = 0.005m;
+
+        /// <summary>
+        /// Nombre de touches a partir duquel la force d'une zone atteint son maximum (1.0).
+        /// </summary>
+        public const decimal SrStrengthMaxTouches = 5m;
     }
 }

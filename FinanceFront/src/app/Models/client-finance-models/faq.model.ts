@@ -1,23 +1,23 @@
 export interface FaqItem {
-  category: string;
-  question: string;
-  answer: string;
-  displayOrder: number;
+  Category: string;
+  Question: string;
+  Answer: string;
+  DisplayOrder: number;
 }
 
 export interface FaqAdminItem {
-  id: number;
-  category: string;
-  question: string;
-  answer: string;
-  displayOrder: number;
-  isPublished: boolean;
+  Id: string;
+  Category: string;
+  Question: string;
+  Answer: string;
+  DisplayOrder: number;
+  IsPublished: boolean;
 }
 
 export interface FaqUpsertRequest {
-  category: string;
-  question: string;
-  answer: string;
-  displayOrder: number;
-  isPublished: boolean;
+  Category: string;
+  Question: string;
+  Answer: string;
+  DisplayOrder: number;
+  IsPublished: boolean;
 }

@@ -19,6 +19,8 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Watchlist
         public string Market { get; set; } = string.Empty;
         public string Currency { get; set; } = "USD";
         public decimal LastPrice { get; set; }
+        public decimal LastPriceEur { get; set; }
+        public decimal ForexRateUsed { get; set; } = 1m;
         public decimal DayVariationPct { get; set; }
         public decimal HeldQuantity { get; set; }
         public decimal AverageBuyPrice { get; set; }
@@ -28,7 +30,10 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Watchlist
         public MarketReadingSummaryViewModel MarketReading { get; set; } = new();
         public SupportReadingSummaryViewModel SupportReading { get; set; } = new();
         public RecommendationSummaryViewModel Recommendation { get; set; } = new();
+        public bool HasPersistedAnalysis { get; set; }
         public DateTime? LastAnalysisAtUtc { get; set; }
         public FreshnessViewModel Freshness { get; set; } = new();
+        public DateTime? NextEarningsDateUtc { get; set; }
+        public bool EarningsWithinHorizonWarning { get; set; }
     }
 }

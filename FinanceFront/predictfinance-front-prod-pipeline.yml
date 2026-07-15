@@ -1,3 +1,8 @@
+trigger:
+  branches:
+    include:
+      - master
+
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -21,6 +26,13 @@ steps:
     workingDir: 'FinanceFront'
 
 - task: Npm@1
+  displayName: 'npm audit (blocking on high/critical)'
+  inputs:
+    command: 'custom'
+    workingDir: 'FinanceFront'
+    customCommand: 'audit --audit-level=high'
+
+- task: Npm@1
   displayName: 'npm run lint'
   inputs:
     command: 'custom'
@@ -28,11 +40,11 @@ steps:
     customCommand: 'run lint'
 
 - task: Npm@1
-  displayName: 'npm run build:prod'
+  displayName: 'npm run build (production)'
   inputs:
     command: 'custom'
     workingDir: 'FinanceFront'
-    customCommand: 'run build:prod'
+    customCommand: 'run build -- --configuration $(buildConfiguration)'
 
 - task: CopyFiles@2
   displayName: 'Copy dist to artifact staging'

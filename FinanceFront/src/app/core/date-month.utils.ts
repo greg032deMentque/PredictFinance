@@ -9,7 +9,7 @@ import { AbstractControl, ValidationErrors, ValidatorFn } from "@angular/forms";
 /** Parse "dd/MM/yyyy" -> Date (null si invalide) */
 export function parseDateFr(s?: string | null): Date | null {
     if (!s) return null;
-    const m = s.trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    const m = s.trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
     if (!m) return null;
     const day = Number(m[1]), month = Number(m[2]), year = Number(m[3]);
     const d = new Date(year, month - 1, day);
@@ -40,7 +40,7 @@ export function toInputMonth(value?: string | Date | null): string | null {
   if (!value) return null;
 
   if (typeof value === "string") {
-    if (MONTH_INPUT_PATTERN.test(value)) return value; // dÃ©jÃ  YYYY-MM
+    if (MONTH_INPUT_PATTERN.test(value)) return value; // deja au format YYYY-MM
     const d =
       parseDateInput(value) ??
       parseDateFr(value) ??

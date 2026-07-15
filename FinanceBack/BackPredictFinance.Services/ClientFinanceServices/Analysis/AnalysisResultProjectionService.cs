@@ -1,35 +1,24 @@
 using System.Text.Json;
 using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.MarketData;
 using static BackPredictFinance.Common.AnalysisV1.ConfidenceThresholds;
 using BackPredictFinance.Services;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis;
+using BackPredictFinance.Patterns.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
-    /// <summary>
-    /// Projette les résultats d'analyse backend vers les modèles utilisés par ClientFinance.
-    /// </summary>
     public interface IAnalysisResultProjectionService
     {
-        /// <summary>
-        /// Projette le résultat immédiat d'une exécution d'analyse.
-        /// </summary>
         AnalysisResultViewModel MapRunResult(AnalysisResponseViewModel response);
-        /// <summary>
-        /// Retourne les analyses récentes projetées pour un utilisateur.
-        /// </summary>
+        AnalysisDossierViewModel MapDossier(AnalysisResponseViewModel response);
         Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(string userId, int take, CancellationToken ct = default);
     }
 
-    /// <summary>
-    /// Implémente la projection des résultats et snapshots d'analyse.
-    /// </summary>
     public sealed class AnalysisResultProjectionService : BaseService, IAnalysisResultProjectionService
     {
-        private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-
         public AnalysisResultProjectionService(IServiceProvider serviceProvider)
             : base(serviceProvider)
         {
@@ -49,6 +38,65 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 response.GeneratedAtUtc,
                 response.ModelStatus,
                 string.IsNullOrWhiteSpace(response.ModelMessage) ? string.Join(" ", response.Warnings) : response.ModelMessage);
+        }
+
+        public AnalysisDossierViewModel MapDossier(AnalysisResponseViewModel response)
+        {
+            ArgumentNullException.ThrowIfNull(response);
+
+            var mainPatternVm = response.MainPattern is not null
+                ? MapPatternToViewModel(response.MainPattern, response.Recommendation, response.RiskContext)
+                : null;
+
+            var alternativeVms = response.AlternativePatterns
+                .Select(p => MapPatternToViewModel(p, response.Recommendation, response.RiskContext))
+                .ToList();
+
+            var analysisWindow = ResolveAnalysisWindow(response.MainPattern, response.AlternativePatterns);
+
+            var priceSeries = response.Candles
+                .Select(c => new CandleViewModel
+                {
+                    Timestamp = c.Date,
+                    Open = c.Open,
+                    High = c.High,
+                    Low = c.Low,
+                    Close = c.Close,
+                    Volume = c.Volume
+                })
+                .ToList();
+
+            var srZones = SupportResistanceDetector.Detect(response.Candles)
+                .Select(z => new SupportResistanceZoneViewModel
+                {
+                    PriceLow = z.PriceLow,
+                    PriceHigh = z.PriceHigh,
+                    PriceMid = z.PriceMid,
+                    TouchCount = z.TouchCount,
+                    ZoneType = z.ZoneType,
+                    Strength = z.Strength
+                })
+                .ToList();
+
+            return new AnalysisDossierViewModel
+            {
+                Id = response.AnalysisId,
+                Symbol = response.Instrument.Symbol,
+                CompanyName = response.Instrument.DisplayName,
+                Outcome = response.Outcome.ToString(),
+                OutcomeMessage = BuildOutcomeMessage(response),
+                GlobalSummary = response.PedagogicalSummary,
+                PredictedAt = response.GeneratedAtUtc,
+                ModelStatus = response.ModelStatus.ToString(),
+                ModelMessage = response.ModelMessage,
+                AnalysisWindow = analysisWindow,
+                PriceSeries = priceSeries,
+                MainPattern = mainPatternVm,
+                AlternativePatterns = alternativeVms,
+                SrZones = srZones,
+                RiskContext = response.RiskContext,
+                TechnicalContext = response.TechnicalContext
+            };
         }
 
         public async Task<List<AnalysisResultViewModel>> GetRecentAnalysesAsync(string userId, int take, CancellationToken ct = default)
@@ -78,13 +126,23 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 
             try
             {
-                var snapshot = JsonSerializer.Deserialize<StoredAnalysisSnapshot>(analysisRun.RawPayload, SerializerOptions);
+                // Piège connu : ces options DOIVENT être celles utilisées à l'écriture
+                // (AnalysisSnapshotPersistenceService, AnalysisSnapshotJsonOptions.Shared, avec
+                // JsonStringEnumConverter). Un ancien historique a été écrit avant l'unification des
+                // options de sérialisation, quand la persistance sérialisait les enums en chaînes
+                // (Outcome, ModelStatus...) sans que la projection ne le sache : la désérialisation
+                // levait alors une JsonException, silencieusement absorbée ci-dessous (le snapshot est
+                // simplement ignoré). Si RawPayload recommence à diverger entre écriture et lecture,
+                // ce comportement resurgit sans erreur visible côté appelant.
+                var snapshot = JsonSerializer.Deserialize<StoredAnalysisSnapshot>(analysisRun.RawPayload, AnalysisSnapshotJsonOptions.Shared);
                 if (!CanProjectSnapshot(snapshot))
                 {
                     return null;
                 }
 
-                var primaryPattern = snapshot.PatternRows
+                // Reprend l'ordre figé à la persistance (DisplayRank) : priorité au candidat marqué
+                // primaire à l'affichage, sinon le premier du classement enregistré.
+                var primaryPattern = snapshot!.PatternRows
                     .OrderByDescending(pattern => pattern.IsPrimaryDisplayCandidate)
                     .ThenBy(pattern => pattern.DisplayRank)
                     .Select(pattern => pattern.PatternAssessmentPayload)
@@ -103,6 +161,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             }
             catch (JsonException)
             {
+                // Snapshot illisible avec les options courantes (ex. historique pré-unification des
+                // JsonSerializerOptions, ou payload corrompu) : on l'exclut silencieusement de la liste
+                // plutôt que de faire échouer tout l'historique de l'utilisateur pour une seule ligne.
                 return null;
             }
             catch (InvalidOperationException)
@@ -186,6 +247,99 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             };
         }
 
+        private static AnalysisPatternViewModel MapPatternToViewModel(PatternAssessmentContract pattern, AnalysisRecommendation? recommendation, AnalysisRiskContext? riskContext = null)
+        {
+            var recommendationAction = MapRecommendationKind(recommendation?.Kind);
+            var isActionable = recommendationAction is RecommendationActionEnum.Buy or RecommendationActionEnum.Sell;
+            var riskLevel = InferRiskLevel(pattern.Scoring.ConfidenceScore, isActionable);
+
+            return new AnalysisPatternViewModel
+            {
+                PatternId = pattern.PatternId,
+                DisplayName = pattern.DisplayName,
+                PedagogicalDescription = pattern.PedagogicalDescription,
+                PhaseCode = pattern.Detection.CurrentPhaseCode,
+                PhaseLabel = pattern.Detection.CurrentPhaseLabel,
+                Status = pattern.Detection.Status.ToString(),
+                IsCompatible = pattern.Detection.IsCompatible,
+                ConfidenceScore = pattern.Scoring.ConfidenceScore,
+                ConfidenceLabel = pattern.Scoring.ConfidenceLabel,
+                ProbabilityScore = pattern.Scoring.ProbabilityScore,
+                ProbabilityLabel = pattern.Scoring.ProbabilityLabel,
+                IsCredible = pattern.Scoring.IsCredible,
+                ScoreReasons = pattern.Scoring.ScoreReasons.ToList(),
+                CurrentPrice = pattern.Detection.CurrentPrice,
+                NecklinePrice = null,
+                ValidationState = pattern.Validation.State,
+                ValidationLevel = pattern.Validation.ValidatedAtPrice,
+                ValidationDate = pattern.Validation.ValidatedAtDate,
+                InvalidationState = pattern.Invalidation.State,
+                InvalidationLevel = pattern.Invalidation.InvalidationLevel,
+                InvalidationDate = pattern.Invalidation.BreachedAtDate,
+                HasRiskPlan = pattern.RiskHints.HasRiskPlan,
+                SuggestedStopLoss = pattern.RiskHints.SuggestedStopLoss,
+                SuggestedTakeProfit = pattern.RiskHints.SuggestedTakeProfit,
+                RiskRewardRatio = pattern.RiskHints.RiskRewardRatio,
+                PositioningNote = pattern.RiskHints.PositioningNote,
+                StructuralPoints = pattern.Detection.StructuralPoints
+                    .Select(sp => new StructuralPointViewModel
+                    {
+                        PointType = sp.PointType,
+                        Timestamp = sp.Timestamp,
+                        Price = sp.Price
+                    })
+                    .ToList(),
+                WhyListed = pattern.Explanation.WhyListed,
+                PedagogicalSummary = pattern.Explanation.PedagogicalSummary,
+                AmbiguityNote = pattern.Explanation.AmbiguityNote,
+                LimitationsNote = pattern.Explanation.LimitationsNote,
+                IsActionable = isActionable,
+                RecommendationAction = recommendationAction.ToString(),
+                RecommendationReason = recommendation?.Rationale ?? string.Empty,
+                RiskLevel = riskLevel.ToString(),
+                RecommendationHorizonDays = recommendation?.ReviewHorizonDays ?? 0,
+                AtrStopLossPrice = pattern.RiskHints.AtrStopLossPrice,
+                AtrTarget1Price = pattern.RiskHints.AtrTarget1Price,
+                AtrTarget2Price = pattern.RiskHints.AtrTarget2Price,
+                AtrRiskRewardRatio = pattern.RiskHints.AtrRiskRewardRatio,
+                PositionSizePercent = pattern.RiskHints.PositionSizePercent,
+                VolumeRatio = riskContext?.VolumeRatio ?? 1m,
+                VolumeConfirmation = riskContext?.VolumeConfirmation ?? VolumeConfirmation.Neutral
+            };
+        }
+
+        private static AnalysisWindowViewModel? ResolveAnalysisWindow(
+            PatternAssessmentContract? mainPattern,
+            IEnumerable<PatternAssessmentContract> alternativePatterns)
+        {
+            var source = mainPattern ?? alternativePatterns.FirstOrDefault();
+            if (source is null)
+            {
+                return null;
+            }
+
+            return new AnalysisWindowViewModel
+            {
+                Interval = source.AnalysisWindow.Interval,
+                StartDate = source.AnalysisWindow.StartDate,
+                EndDate = source.AnalysisWindow.EndDate,
+                RequiredCandles = source.AnalysisWindow.RequiredCandles,
+                ActualCandles = source.AnalysisWindow.ActualCandles
+            };
+        }
+
+        private static string BuildOutcomeMessage(AnalysisResponseViewModel response)
+        {
+            return response.Outcome switch
+            {
+                AnalysisOutcome.NoCrediblePattern => response.NoCrediblePatternReason ?? "Aucun pattern compatible identifié.",
+                AnalysisOutcome.InsufficientData => response.NoCrediblePatternReason ?? "Données insuffisantes pour l'analyse.",
+                AnalysisOutcome.UnsupportedInstrument => response.NoCrediblePatternReason ?? "Instrument non supporté.",
+                AnalysisOutcome.UnsupportedContext => response.NoCrediblePatternReason ?? "Contexte non supporté.",
+                _ => string.IsNullOrWhiteSpace(response.ModelMessage) ? response.PedagogicalSummary : response.ModelMessage
+            };
+        }
+
         private static RecommendationActionEnum MapRecommendationKind(RecommendationKind? kind)
         {
             return kind switch
@@ -198,6 +352,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             };
         }
 
+        // Le niveau de risque affiché n'a de sens que pour une recommandation actionnable
+        // (achat/vente) : un pattern purement informatif (hold/wait) est toujours classé
+        // "Information" quelle que soit sa confiance, pour ne pas laisser croire à un risque
+        // de position sur un signal qui n'engage à rien.
         private static RiskLevelEnum InferRiskLevel(decimal confidence, bool actionable)
         {
             if (!actionable)

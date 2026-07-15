@@ -3,7 +3,7 @@
   <div>
     <p class="text-uppercase text-secondary fw-semibold small mb-2">Éducation financière</p>
     <h1 class="h3 mb-1">Articles pédagogiques</h1>
-    <p class="text-secondary mb-0">Comprendre les enveloppes et produits d'investissement disponibles dans FinInsight.</p>
+    <p class="text-secondary mb-0">Découvrez les enveloppes d'investissement (PEA, PER, assurance vie) et les bases de l'analyse technique.</p>
   </div>
 
   @if (loading()) {
@@ -36,12 +36,24 @@
   }
 
   @if (!loading() && !error()) {
-    @if (groups().length === 0) {
+    <div class="mb-4">
+      <input
+        type="search"
+        class="form-control"
+        placeholder="Rechercher un article…"
+        [formControl]="search"
+        aria-label="Rechercher un article pédagogique"
+      />
+      @if (searchValue() && filteredGroups().length === 0) {
+        <small class="text-muted d-block mt-2">Aucun résultat pour « {{ searchValue() }} »</small>
+      }
+    </div>
+    @if (filteredGroups().length === 0 && !searchValue()) {
       <div class="alert alert-info" role="alert">
         <i class="bi bi-info-circle me-2"></i>Aucun article disponible pour le moment.
       </div>
     } @else {
-      @for (group of groups(); track group.productType) {
+      @for (group of filteredGroups(); track group.productType) {
         <div>
           <h2 class="h5 fw-semibold mb-3 d-flex align-items-center gap-2">
             <i class="bi bi-bookmark-fill text-primary"></i>{{ group.label }}

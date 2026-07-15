@@ -33,7 +33,7 @@ export class PortfolioPageComponent implements OnInit {
   portfoliosLoading = signal(false);
   formLoading = signal(false);
   createError = signal<string | null>(null);
-  portfolioToDeleteId = signal<string | null>(null);
+  portfolioToArchiveId = signal<string | null>(null);
   renamingPortfolioId = signal<string | null>(null);
   renameNameError = signal<string | null>(null);
 
@@ -123,28 +123,28 @@ export class PortfolioPageComponent implements OnInit {
       });
   }
 
-  requestDeletePortfolio(portfolioId: string): void {
-    this.portfolioToDeleteId.set(portfolioId);
+  requestArchivePortfolio(portfolioId: string): void {
+    this.portfolioToArchiveId.set(portfolioId);
   }
 
-  confirmDeletePortfolio(): void {
-    const id = this.portfolioToDeleteId();
+  confirmArchivePortfolio(): void {
+    const id = this.portfolioToArchiveId();
     if (!id || this.formLoading()) return;
     this.formLoading.set(true);
-    this.portfolioService.deletePortfolio(id)
+    this.portfolioService.archivePortfolio(id)
       .pipe(finalize(() => this.formLoading.set(false)), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.portfolios.set(this.portfolios().filter(p => p.Id !== id));
-          this.portfolioToDeleteId.set(null);
-          this.toastService.success('Portefeuille supprimé.');
+          this.portfolioToArchiveId.set(null);
+          this.toastService.success('Portefeuille archivé.');
         },
-        error: () => this.portfolioToDeleteId.set(null)
+        error: () => this.portfolioToArchiveId.set(null)
       });
   }
 
-  get portfolioToDeleteName(): string {
-    const id = this.portfolioToDeleteId();
+  get portfolioToArchiveName(): string {
+    const id = this.portfolioToArchiveId();
     return id ? (this.portfolios().find(p => p.Id === id)?.Name ?? '') : '';
   }
 }

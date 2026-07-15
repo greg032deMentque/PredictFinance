@@ -42,26 +42,24 @@
       </div>
     }
 
-    @case ('no-pattern') {
-      <div class="card border-0 shadow-sm">
-        <div class="card-body text-center py-5">
-          <p class="text-muted mb-1">Aucun pattern crédible identifié pour <strong>{{ selectedAsset?.Symbol }}</strong>.</p>
-          <p class="small text-body-secondary mb-0">
-            Les données disponibles ne permettent pas de dégager une figure chartiste claire à ce stade.
-            Revenez après la prochaine analyse ou essayez une autre valeur.
-          </p>
-        </div>
-      </div>
-    }
-
     @case ('ready') {
       <div class="row g-3">
         <div class="col-12 col-lg-4">
           <div class="card border-0 shadow-sm h-100">
             <div class="card-body d-flex flex-column gap-3">
-              <h2 class="h6 text-uppercase text-muted mb-0">Patterns candidats</h2>
+              <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <h2 class="h6 text-uppercase text-muted mb-0">Patterns</h2>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#patternsGuideModal"
+                >
+                  <i class="bi bi-mortarboard me-1" aria-hidden="true"></i>Comprendre les patterns
+                </button>
+              </div>
               <app-pattern-candidates-board
-                [candidates]="candidates"
+                [rows]="patternRows"
                 [selectedPatternId]="selectedPatternId"
                 (selectPattern)="onPatternSelected($event)"
               />
@@ -70,6 +68,55 @@
         </div>
 
         <div class="col-12 col-lg-8">
+          @if (srZones.length) {
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-body d-flex flex-column gap-2">
+                <h3 class="h6 text-uppercase text-muted mb-0">Niveaux clés (support / résistance)</h3>
+                <table class="table table-sm mb-0">
+                  <thead>
+                    <tr>
+                      <th>Niveau</th>
+                      <th>Type</th>
+                      <th>Touches</th>
+                      <th>Force</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (zone of srZones; track zone.PriceMid) {
+                      <tr>
+                        <td>
+                          <div class="fw-semibold">{{ zone.PriceMid | number:'1.2-2' }}</div>
+                          <div class="small text-body-secondary">{{ zone.PriceLow | number:'1.2-2' }} – {{ zone.PriceHigh | number:'1.2-2' }}</div>
+                        </td>
+                        <td>
+                          @if (zone.ZoneType === 'resistance') {
+                            <span class="badge bg-danger-subtle text-danger-emphasis">Résistance</span>
+                          } @else if (zone.ZoneType === 'support') {
+                            <span class="badge bg-success-subtle text-success-emphasis">Support</span>
+                          } @else {
+                            <span class="badge bg-warning-subtle text-warning-emphasis">Double</span>
+                          }
+                        </td>
+                        <td>{{ zone.TouchCount }}</td>
+                        <td>{{ zone.Strength | percent:'1.0-0' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+                @if (srConcepts.length > 0) {
+                  <div class="border-top pt-3 mt-1">
+                    <div class="small text-uppercase text-body-secondary fw-semibold mb-2">Comprendre ces niveaux</div>
+                    <dl class="row mb-0 small">
+                      @for (concept of srConcepts; track concept.Code) {
+                        <dt class="col-sm-3 text-body-secondary fw-semibold">{{ concept.Label }}</dt>
+                        <dd class="col-sm-9 mb-2">{{ concept.Explanation }}</dd>
+                      }
+                    </dl>
+                  </div>
+                }
+              </div>
+            </div>
+          }
           @if (detailLoading) {
             <div class="card border-0 shadow-sm">
               <div class="card-body text-muted">Chargement du détail…</div>
@@ -151,5 +198,132 @@
       </div>
     }
   }
+
+  <!-- Catalogue inline des patterns -->
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-body">
+      <div class="accordion" id="patternCatalogAccordion">
+        <div class="accordion-item border-0">
+          <h2 class="accordion-header">
+            <button
+              class="accordion-button collapsed fw-semibold"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#patternCatalogBody"
+              aria-expanded="false"
+              aria-controls="patternCatalogBody"
+            >
+              <i class="bi bi-book me-2" aria-hidden="true"></i>
+              Catalogue des patterns ({{ catalog().length }})
+            </button>
+          </h2>
+          <div id="patternCatalogBody" class="accordion-collapse collapse">
+            <div class="accordion-body pt-2">
+              <div class="row g-3">
+                @for (cat of catalog(); track cat.Id) {
+                  <div class="col-12 col-md-6 col-lg-4">
+                    <div class="border rounded p-3 h-100">
+                      <div class="fw-semibold mb-1">{{ cat.Label }}</div>
+                      @if (cat.FamilyLabel || cat.DirectionLabel) {
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                          @if (cat.FamilyLabel) {
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ cat.FamilyLabel }}</span>
+                          }
+                          @if (cat.DirectionLabel) {
+                            <span class="badge bg-light text-dark border">{{ cat.DirectionLabel }}</span>
+                          }
+                          @if (cat.ReliabilityLabel) {
+                            <span class="badge bg-info-subtle text-info-emphasis">{{ cat.ReliabilityLabel }} · {{ cat.Reliability | percent: '1.0-0' }}</span>
+                          }
+                        </div>
+                      }
+                      @for (stat of statsFor(cat.Id); track stat.HasEarningsInWindow) {
+                        <div class="small mb-1">
+                          @if (stat.InsufficientData) {
+                            <span class="text-body-secondary">Données insuffisantes pour un taux observé fiable (n={{ stat.SampleSize }})</span>
+                          } @else {
+                            <span class="text-body-secondary">
+                              {{ stat.HasEarningsInWindow ? 'Avec publication de résultats dans la fenêtre' : 'Hors publication de résultats' }} :
+                              {{ stat.WinRate | percent:'1.0-0' }} observé
+                              (intervalle {{ stat.WinRateLow | percent:'1.0-0' }} – {{ stat.WinRateHigh | percent:'1.0-0' }}, n={{ stat.SampleSize }})
+                            </span>
+                          }
+                        </div>
+                      }
+                      @if (cat.Description) {
+                        <p class="small text-body-secondary mb-0">{{ cat.Description }}</p>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+              @if (hasObservedStatistics) {
+                <p class="small text-body-secondary fst-italic mt-3 mb-0">
+                  Ces taux sont observés sur votre historique personnel et peuvent être affectés par un biais de sélection.
+                </p>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guide pédagogique : tous les patterns du catalogue -->
+  <div class="modal fade" id="patternsGuideModal" tabindex="-1" aria-labelledby="patternsGuideModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title mb-0" id="patternsGuideModalLabel">Comprendre les patterns chartistes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body d-flex flex-column gap-3">
+          @for (item of catalog(); track item.Id) {
+            <div class="border rounded-2 p-3">
+              <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-1">
+                <span class="fw-semibold">{{ item.Label }}</span>
+                <div class="d-flex gap-1 flex-wrap">
+                  @if (item.FamilyLabel) {
+                    <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ item.FamilyLabel }}</span>
+                  }
+                  @if (item.DirectionLabel) {
+                    <span class="badge bg-light text-dark border">{{ item.DirectionLabel }}</span>
+                  }
+                  @if (item.ReliabilityLabel) {
+                    <span class="badge bg-info-subtle text-info-emphasis">Fiabilité {{ item.ReliabilityLabel }} &middot; {{ item.Reliability | percent: '1.0-0' }}</span>
+                  }
+                </div>
+              </div>
+              <p class="small mb-1">{{ item.Description }}</p>
+              @if (item.AnalysisNarrative) {
+                <p class="small text-body-secondary mb-0"><i class="bi bi-lightbulb me-1" aria-hidden="true"></i>{{ item.AnalysisNarrative }}</p>
+              }
+              @for (stat of statsFor(item.Id); track stat.HasEarningsInWindow) {
+                <div class="small mt-2">
+                  @if (stat.InsufficientData) {
+                    <span class="text-body-secondary">Données insuffisantes pour un taux observé fiable (n={{ stat.SampleSize }})</span>
+                  } @else {
+                    <span class="text-body-secondary">
+                      {{ stat.HasEarningsInWindow ? 'Avec publication de résultats dans la fenêtre' : 'Hors publication de résultats' }} :
+                      {{ stat.WinRate | percent:'1.0-0' }} observé
+                      (intervalle {{ stat.WinRateLow | percent:'1.0-0' }} – {{ stat.WinRateHigh | percent:'1.0-0' }}, n={{ stat.SampleSize }})
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+          }
+          @if (hasObservedStatistics) {
+            <p class="small text-body-secondary fst-italic mb-0">
+              Ces taux sont observés sur votre historique personnel et peuvent être affectés par un biais de sélection.
+            </p>
+          }
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Fermer</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </section>

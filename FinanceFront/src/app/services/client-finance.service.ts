@@ -3,22 +3,21 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
+  AnalysisConcept,
   ClientAnalysisDetail,
   ClientAnalysisLaunchRequest,
   ClientAnalysisResult,
   ClientDashboardOverview,
-  ClientHistoryFeed,
   ClientHistoryPage,
   ClientInstrumentDetail,
-  ClientInstrumentHistory,
   ClientInstrumentHistoryPage,
   ClientLiveQuote,
   ClientPatternDetail,
   ClientPatternEvaluateRequest,
   ClientPatternEvaluateResult,
   ClientPortfolio,
+  ClientMultiSimulationRequest,
   ClientSimulationRequest,
-  ClientSimulationResult,
   ClientTransactionCreateRequest,
   ClientTransactionItem,
   ClientWatchlistItem,
@@ -30,8 +29,11 @@ import {
   OnboardingGuidance,
   ParameterDetail,
   PatternCatalogItem,
+  PatternStatisticsResult,
   SnapshotComparison
 } from '../Models/client-finance-models/client-finance-models';
+import type { AnalysisDossier } from '../Models/client-finance-models/client-analysis-dossier.model';
+import type { MultiSimulationDossier, SimulationDossier } from '../Models/client-finance-models/client-simulation-dossier.model';
 import { ClientFinanceMapper } from './client-finance.mapper';
 
 @Injectable({ providedIn: 'root' })
@@ -116,6 +118,14 @@ export class ClientFinanceService {
     return this.http.get<PatternCatalogItem[]>(`${environment.apiUrl}ClientFinance/patterns/catalog`);
   }
 
+  getPatternStatistics(): Observable<PatternStatisticsResult> {
+    return this.http.get<PatternStatisticsResult>(`${environment.apiUrl}ClientFinance/patterns/statistics`);
+  }
+
+  getAnalysisConcepts(): Observable<AnalysisConcept[]> {
+    return this.http.get<AnalysisConcept[]>(`${environment.apiUrl}ClientFinance/analysis-concepts`);
+  }
+
   sendContactMessage(subject: string, message: string): Observable<void> {
     return this.http.post<void>(`${environment.apiUrl}ClientFinance/contact`, {
       Subject: subject,
@@ -167,13 +177,13 @@ export class ClientFinanceService {
     return this.http.delete<void>(`${environment.apiUrl}ClientFinance/transactions/${encodeURIComponent(transactionId)}`);
   }
 
-  runAnalysis(request: ClientAnalysisLaunchRequest): Observable<ClientAnalysisResult> {
+  runAnalysis(request: ClientAnalysisLaunchRequest): Observable<AnalysisDossier> {
     return this.http
       .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/analysis/run`, {
         Symbol: request.Symbol,
         RequestedPatternIds: request.RequestedPatternIds
       })
-      .pipe(map((payload) => this.mapper.mapAnalysis(payload)));
+      .pipe(map((payload) => this.mapper.mapAnalysisDossier(payload)));
   }
 
   getRecentAnalyses(limit = 8): Observable<ClientAnalysisResult[]> {
@@ -205,7 +215,7 @@ export class ClientFinanceService {
     });
   }
 
-  runSimulation(request: ClientSimulationRequest): Observable<ClientSimulationResult> {
+  runSimulation(request: ClientSimulationRequest): Observable<SimulationDossier> {
     return this.http
       .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/simulation/run`, {
         Symbol: request.Symbol,
@@ -213,7 +223,18 @@ export class ClientFinanceService {
         InvestmentAmount: request.InvestmentAmount,
         HorizonDays: request.HorizonDays
       })
-      .pipe(map((payload) => this.mapper.mapSimulation(payload)));
+      .pipe(map((payload) => this.mapper.mapSimulationDossier(payload)));
+  }
+
+  runMultiSimulation(request: ClientMultiSimulationRequest): Observable<MultiSimulationDossier> {
+    return this.http
+      .post<Record<string, unknown>>(`${environment.apiUrl}ClientFinance/simulation/run-multi`, {
+        Symbol: request.Symbol,
+        Patterns: request.Patterns,
+        InvestmentAmount: request.InvestmentAmount,
+        HorizonDays: request.HorizonDays
+      })
+      .pipe(map((payload) => this.mapper.mapMultiSimulationDossier(payload)));
   }
 
   evaluatePatterns(request: ClientPatternEvaluateRequest): Observable<ClientPatternEvaluateResult> {

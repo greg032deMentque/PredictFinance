@@ -37,7 +37,7 @@ public sealed class AdminWordingVersionVersionDetailApiFeatureTests : IClassFixt
         var response = await client.GetAsync("/api/admin/wording-versions/REC_WORDING_V1");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var payload = await response.Content.ReadFromJsonAsync<AdminWordingVersionVersionDetailViewModel>(JsonOptions);
+        var payload = await response.Content.ReadFromJsonAsync<AdminWordingVersionScenariosViewModel>(JsonOptions);
         Assert.NotNull(payload);
         Assert.Equal("REC_WORDING_V1", payload!.WordingVersionId);
         Assert.Equal("PredictFinance V1 recommendation wording", payload.DisplayName);

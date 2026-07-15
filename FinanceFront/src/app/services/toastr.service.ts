@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@angular/core';
+﻿import { inject, Injectable } from '@angular/core';
 import { ToastrService } from 'ngx-toastr';
 
 @Injectable({
@@ -6,7 +6,7 @@ import { ToastrService } from 'ngx-toastr';
 })
 export class ToastService {
 
-  constructor(private toastr: ToastrService,) { }
+  private readonly toastr = inject(ToastrService);
 
   public error(message: string) {
     if(message != null){

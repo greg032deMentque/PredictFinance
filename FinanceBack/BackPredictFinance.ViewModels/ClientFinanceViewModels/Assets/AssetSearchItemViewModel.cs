@@ -10,6 +10,9 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Assets
         public decimal LastPrice { get; set; }
         public decimal DayVariationPct { get; set; }
         public string? Isin { get; set; }
+        public string? Sector { get; set; }
+        public string? Country { get; set; }
+        public string? Summary { get; set; }
         public bool IsPeaEligible { get; set; }
     }
 }

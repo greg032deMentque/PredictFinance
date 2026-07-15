@@ -103,16 +103,16 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of items(); track item.id) {
+          @for (item of items(); track item.Id) {
             <tr>
               <td>
-                <div class="fw-semibold">{{ item.question }}</div>
-                <div class="small muted text-truncate" style="max-width: 400px;">{{ item.answer }}</div>
+                <div class="fw-semibold">{{ item.Question }}</div>
+                <div class="small muted text-truncate" style="max-width: 400px;">{{ item.Answer }}</div>
               </td>
-              <td><span class="code-chip">{{ item.category }}</span></td>
-              <td>{{ item.displayOrder }}</td>
+              <td><span class="code-chip">{{ item.Category }}</span></td>
+              <td>{{ item.DisplayOrder }}</td>
               <td>
-                @if (item.isPublished) {
+                @if (item.IsPublished) {
                   <span class="badge bg-success-subtle text-success-emphasis">Publié</span>
                 } @else {
                   <span class="badge bg-secondary-subtle text-secondary-emphasis">Brouillon</span>
@@ -126,7 +126,7 @@
                   <button
                     type="button"
                     class="btn btn-sm btn-outline-danger rounded-pill"
-                    [disabled]="deletingId() === item.id"
+                    [disabled]="deletingId() === item.Id"
                     (click)="delete(item)"
                   >
                     <i class="bi bi-trash me-1"></i>Supprimer

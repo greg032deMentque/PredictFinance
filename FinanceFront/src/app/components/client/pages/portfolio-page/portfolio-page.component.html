@@ -80,11 +80,11 @@
                         (click)="startRename(p)">
                         Renommer
                       </button>
-                      <button class="btn btn-outline-danger" type="button"
-                        data-bs-toggle="modal" data-bs-target="#deletePortfolioModal"
+                      <button class="btn btn-outline-warning" type="button"
+                        data-bs-toggle="modal" data-bs-target="#archivePortfolioModal"
                         [disabled]="formLoading()"
-                        (click)="requestDeletePortfolio(p.Id)">
-                        Supprimer
+                        (click)="requestArchivePortfolio(p.Id)">
+                        Archiver
                       </button>
                     </div>
                   </td>
@@ -102,16 +102,16 @@
       }
       <form [formGroup]="createForm" (ngSubmit)="submitCreatePortfolio()" class="row g-2 align-items-end">
         <div class="col-12 col-md-5">
-          <label class="form-label small">Nom <span class="text-danger">*</span></label>
-          <input class="form-control form-control-sm" formControlName="name" placeholder="ex. PEA Boursorama"
+          <label for="createPortfolioName" class="form-label small">Nom <span class="text-danger">*</span></label>
+          <input id="createPortfolioName" class="form-control form-control-sm" formControlName="name" placeholder="ex. PEA Boursorama"
             [class.is-invalid]="createForm.controls.name.invalid && createForm.controls.name.touched" />
           @if (createForm.controls.name.invalid && createForm.controls.name.touched) {
             <div class="invalid-feedback">Le nom est obligatoire.</div>
           }
         </div>
         <div class="col-12 col-md-4">
-          <label class="form-label small">Type <span class="text-danger">*</span></label>
-          <select class="form-select form-select-sm" formControlName="portfolioType">
+          <label for="createPortfolioType" class="form-label small">Type <span class="text-danger">*</span></label>
+          <select id="createPortfolioType" class="form-select form-select-sm" formControlName="portfolioType">
             @for (type of portfolioTypes; track type) {
               <option [value]="type">{{ getPortfolioTypeLabel(type) }}</option>
             }
@@ -128,13 +128,13 @@
 
 </section>
 
-<!-- Modale confirmation suppression portefeuille -->
+<!-- Modale confirmation archivage portefeuille -->
 <app-confirm-modal
-  modalId="deletePortfolioModal"
-  title="Supprimer le portefeuille"
-  [message]="'Confirmes-tu la suppression du portefeuille « ' + portfolioToDeleteName + ' » ? Cette action est irréversible.'"
-  confirmLabel="Supprimer"
+  modalId="archivePortfolioModal"
+  title="Archiver le portefeuille"
+  [message]="'Confirmes-tu l\'archivage du portefeuille « ' + portfolioToArchiveName + ' » ? Il sera exclu des agrégats globaux mais restera consultable.'"
+  confirmLabel="Archiver"
   cancelLabel="Annuler"
-  confirmClass="btn-danger"
-  (confirmed)="confirmDeletePortfolio()"
-  (cancelled)="portfolioToDeleteId.set(null)" />
+  confirmClass="btn-warning"
+  (confirmed)="confirmArchivePortfolio()"
+  (cancelled)="portfolioToArchiveId.set(null)" />

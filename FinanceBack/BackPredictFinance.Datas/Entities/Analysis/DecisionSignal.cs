@@ -15,5 +15,6 @@ namespace BackPredictFinance.Datas.Entities
         public decimal Confidence { get; set; }
         public int HorizonDays { get; set; }
         public string Reason { get; set; } = string.Empty;
+        public DateTime? EarningsDateUtc { get; set; }
     }
 }

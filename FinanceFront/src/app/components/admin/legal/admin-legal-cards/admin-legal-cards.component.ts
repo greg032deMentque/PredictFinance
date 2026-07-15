@@ -26,10 +26,10 @@ export class AdminLegalCardsComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly submitting = signal(false);
-  readonly deletingId = signal<number | null>(null);
+  readonly deletingId = signal<string | null>(null);
   readonly formMode = signal<FormMode>('none');
 
-  private editId = 0;
+  private editId = '';
 
   readonly itemForm = this.fb.nonNullable.group({
     key: ['', [Validators.required, Validators.maxLength(100)]],
@@ -70,20 +70,20 @@ export class AdminLegalCardsComponent implements OnInit {
   openAdd(): void {
     this.itemForm.reset({ key: '', icon: 'bi-file-text', title: '', description: '', effectiveDate: '', targetRoute: '', displayOrder: 0, isPublished: false });
     this.formMode.set('add');
-    this.editId = 0;
+    this.editId = '';
   }
 
   openEdit(item: LegalCardAdminItem): void {
-    this.editId = item.id;
+    this.editId = item.Id;
     this.itemForm.patchValue({
-      key: item.key,
-      icon: item.icon,
-      title: item.title,
-      description: item.description,
-      effectiveDate: item.effectiveDate ?? '',
-      targetRoute: item.targetRoute ?? '',
-      displayOrder: item.displayOrder,
-      isPublished: item.isPublished
+      key: item.Key,
+      icon: item.Icon,
+      title: item.Title,
+      description: item.Description,
+      effectiveDate: item.EffectiveDate ?? '',
+      targetRoute: item.TargetRoute ?? '',
+      displayOrder: item.DisplayOrder,
+      isPublished: item.IsPublished
     });
     this.formMode.set('edit');
   }
@@ -91,7 +91,7 @@ export class AdminLegalCardsComponent implements OnInit {
   closePanel(): void {
     this.formMode.set('none');
     this.itemForm.reset();
-    this.editId = 0;
+    this.editId = '';
   }
 
   submit(): void {
@@ -102,14 +102,14 @@ export class AdminLegalCardsComponent implements OnInit {
 
     const v = this.itemForm.getRawValue();
     const payload: LegalCardUpsertRequest = {
-      key: v.key.trim(),
-      icon: v.icon.trim(),
-      title: v.title.trim(),
-      description: v.description.trim(),
-      effectiveDate: v.effectiveDate.trim() || null,
-      targetRoute: v.targetRoute.trim() || null,
-      displayOrder: v.displayOrder,
-      isPublished: v.isPublished
+      Key: v.key.trim(),
+      Icon: v.icon.trim(),
+      Title: v.title.trim(),
+      Description: v.description.trim(),
+      EffectiveDate: v.effectiveDate.trim() || null,
+      TargetRoute: v.targetRoute.trim() || null,
+      DisplayOrder: v.displayOrder,
+      IsPublished: v.isPublished
     };
 
     this.submitting.set(true);
@@ -136,11 +136,11 @@ export class AdminLegalCardsComponent implements OnInit {
 
   delete(item: LegalCardAdminItem): void {
     if (this.deletingId() !== null) return;
-    if (!confirm(`Supprimer « ${item.title} » ?`)) return;
+    if (!confirm(`Supprimer « ${item.Title} » ?`)) return;
 
-    this.deletingId.set(item.id);
+    this.deletingId.set(item.Id);
     this.legalService
-      .deleteAdmin(item.id)
+      .deleteAdmin(item.Id)
       .pipe(
         finalize(() => this.deletingId.set(null)),
         takeUntilDestroyed(this.destroyRef)

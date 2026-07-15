@@ -23,6 +23,8 @@ export class FinanceTransactionFormComponent implements OnChanges {
   @Input() submitting = false;
   @Input() selectedSymbol = '';
   @Input() portfolios: UserPortfolioViewModel[] = [];
+  @Input() hidePortfolioSelector = false;
+  @Input() trendingOptions: MarketAssetOption[] = [];
 
   @Output() save = new EventEmitter<ClientTransactionCreateRequest>();
 
@@ -68,6 +70,20 @@ export class FinanceTransactionFormComponent implements OnChanges {
   }
 
   clearSymbol(): void {
+    this.internalAsset.set(null);
+    this.searchResults.set([]);
+  }
+
+  resetForm(): void {
+    const portfolioId = this.form.controls.portfolioId.value;
+    this.form.reset({
+      portfolioId,
+      transactionType: 'Buy',
+      quantity: 0,
+      unitPrice: 0,
+      fees: 0,
+      timestampUtc: new Date().toISOString().slice(0, 16)
+    });
     this.internalAsset.set(null);
     this.searchResults.set([]);
   }

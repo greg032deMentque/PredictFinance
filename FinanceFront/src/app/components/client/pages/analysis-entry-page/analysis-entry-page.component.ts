@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ClientAnalysisLaunchRequest, MarketAssetOption } from '../../../../Models/client-finance-models/client-finance-models';
@@ -14,6 +15,7 @@ export class AnalysisEntryPageComponent {
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   readonly userPaths = UserPaths;
   readonly toCommands = toCommands;
   searchResults: MarketAssetOption[] = [];
@@ -26,7 +28,7 @@ export class AnalysisEntryPageComponent {
   }
   onSearchChanged(query: string): void {
     this.searchLoading = true;
-    this.clientFinanceService.searchAssets(query).pipe(finalize(() => (this.searchLoading = false))).subscribe({ next: (results) => (this.searchResults = results), error: () => { this.searchResults = []; this.toastService.error('Recherche impossible.'); } });
+    this.clientFinanceService.searchAssets(query).pipe(finalize(() => (this.searchLoading = false)), takeUntilDestroyed(this.destroyRef)).subscribe({ next: (results) => (this.searchResults = results), error: () => { this.searchResults = []; this.toastService.error('Recherche impossible.'); } });
   }
   onAssetSelected(asset: MarketAssetOption): void { this.selectedAsset = asset; }
   launchAnalysis(): void {

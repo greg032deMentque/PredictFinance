@@ -28,12 +28,12 @@ export class HelpCenterPageComponent implements OnInit {
   protected readonly faqSections = computed<FaqSection[]>(() => {
     const map = new Map<string, FaqItem[]>();
     for (const item of this.items()) {
-      const existing = map.get(item.category) ?? [];
-      map.set(item.category, [...existing, item]);
+      const existing = map.get(item.Category) ?? [];
+      map.set(item.Category, [...existing, item]);
     }
     return Array.from(map.entries()).map(([category, faqItems]) => ({
       category,
-      items: faqItems.sort((a, b) => a.displayOrder - b.displayOrder)
+      items: faqItems.sort((a, b) => a.DisplayOrder - b.DisplayOrder)
     }));
   });
 

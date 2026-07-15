@@ -33,7 +33,8 @@ export const ADMIN_ROUTES: Routes = [
       { path: AppRoutes.Glossary, loadComponent: () => import('../components/admin/glossary/admin-glossary/admin-glossary.component').then(m => m.AdminGlossaryComponent) },
       { path: AppRoutes.Faq, loadComponent: () => import('../components/admin/faq/admin-faq/admin-faq.component').then(m => m.AdminFaqComponent) },
       { path: AppRoutes.LegalCards, loadComponent: () => import('../components/admin/legal/admin-legal-cards/admin-legal-cards.component').then(m => m.AdminLegalCardsComponent) },
-      { path: AppRoutes.LearnTopics, loadComponent: () => import('../components/admin/learn/admin-learn-topics/admin-learn-topics.component').then(m => m.AdminLearnTopicsComponent) }
+      { path: AppRoutes.LearnTopics, loadComponent: () => import('../components/admin/learn/admin-learn-topics/admin-learn-topics.component').then(m => m.AdminLearnTopicsComponent) },
+      { path: AppRoutes.AnalysisContent, loadComponent: () => import('../components/admin/analysis-content/admin-analysis-content/admin-analysis-content.component').then(m => m.AdminAnalysisContentComponent) }
     ]
   }
 ];

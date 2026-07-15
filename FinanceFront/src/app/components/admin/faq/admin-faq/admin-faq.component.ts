@@ -26,10 +26,10 @@ export class AdminFaqComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly submitting = signal(false);
-  readonly deletingId = signal<number | null>(null);
+  readonly deletingId = signal<string | null>(null);
   readonly formMode = signal<FormMode>('none');
 
-  private editId = 0;
+  private editId = '';
 
   readonly itemForm = this.fb.nonNullable.group({
     category: ['', [Validators.required, Validators.maxLength(200)]],
@@ -67,17 +67,17 @@ export class AdminFaqComponent implements OnInit {
   openAdd(): void {
     this.itemForm.reset({ category: '', question: '', answer: '', displayOrder: 0, isPublished: false });
     this.formMode.set('add');
-    this.editId = 0;
+    this.editId = '';
   }
 
   openEdit(item: FaqAdminItem): void {
-    this.editId = item.id;
+    this.editId = item.Id;
     this.itemForm.patchValue({
-      category: item.category,
-      question: item.question,
-      answer: item.answer,
-      displayOrder: item.displayOrder,
-      isPublished: item.isPublished
+      category: item.Category,
+      question: item.Question,
+      answer: item.Answer,
+      displayOrder: item.DisplayOrder,
+      isPublished: item.IsPublished
     });
     this.formMode.set('edit');
   }
@@ -85,7 +85,7 @@ export class AdminFaqComponent implements OnInit {
   closePanel(): void {
     this.formMode.set('none');
     this.itemForm.reset();
-    this.editId = 0;
+    this.editId = '';
   }
 
   submit(): void {
@@ -96,11 +96,11 @@ export class AdminFaqComponent implements OnInit {
 
     const v = this.itemForm.getRawValue();
     const payload: FaqUpsertRequest = {
-      category: v.category.trim(),
-      question: v.question.trim(),
-      answer: v.answer.trim(),
-      displayOrder: v.displayOrder,
-      isPublished: v.isPublished
+      Category: v.category.trim(),
+      Question: v.question.trim(),
+      Answer: v.answer.trim(),
+      DisplayOrder: v.displayOrder,
+      IsPublished: v.isPublished
     };
 
     this.submitting.set(true);
@@ -127,11 +127,11 @@ export class AdminFaqComponent implements OnInit {
 
   delete(item: FaqAdminItem): void {
     if (this.deletingId() !== null) return;
-    if (!confirm(`Supprimer « ${item.question} » ?`)) return;
+    if (!confirm(`Supprimer « ${item.Question} » ?`)) return;
 
-    this.deletingId.set(item.id);
+    this.deletingId.set(item.Id);
     this.faqService
-      .deleteAdmin(item.id)
+      .deleteAdmin(item.Id)
       .pipe(
         finalize(() => this.deletingId.set(null)),
         takeUntilDestroyed(this.destroyRef)

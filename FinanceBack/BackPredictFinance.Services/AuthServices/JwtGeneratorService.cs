@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using System.IO;
 using System.Security;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -84,13 +83,6 @@ namespace BackPredictFinance.Services.AuthServices
                 Issuer = _userJwt.Issuer,
                 Audience = _userJwt.Audience,
                 SigningCredentials = creds,
-                /*
-                AdditionalHeaderClaims = new Dictionary<string, object>
-                {
-                    ["typ"] = "at+jwt",
-                    ["kid"] = _userJwt.KeyId
-                }
-                */
             };
 
             var handler = new JwtSecurityTokenHandler();

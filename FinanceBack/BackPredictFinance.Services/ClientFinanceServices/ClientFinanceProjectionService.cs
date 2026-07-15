@@ -125,8 +125,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
     /// </summary>
     public sealed class ClientFinanceProjectionService : BaseService, IClientFinanceProjectionService
     {
-        private static readonly JsonSerializerOptions SnapshotSerializerOptions = new(JsonSerializerDefaults.Web);
-
         public ClientFinanceProjectionService(IServiceProvider serviceProvider)
             : base(serviceProvider)
         {
@@ -143,6 +141,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .ToListAsync(ct);
 
             var response = new Dictionary<string, PersistedAnalysisSnapshotPayloadReadModel>(StringComparer.Ordinal);
+            var latestRunIdByAssetId = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var analysisRun in analysisRuns)
             {
                 if (response.ContainsKey(analysisRun.AssetId))
@@ -157,9 +156,38 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 }
 
                 response[analysisRun.AssetId] = snapshot;
+                latestRunIdByAssetId[analysisRun.AssetId] = analysisRun.Id;
             }
 
+            await ApplyEarningsDatesAsync(response, latestRunIdByAssetId, ct);
+
             return response;
+        }
+
+        private async Task ApplyEarningsDatesAsync(
+            Dictionary<string, PersistedAnalysisSnapshotPayloadReadModel> response,
+            Dictionary<string, string> latestRunIdByAssetId,
+            CancellationToken ct)
+        {
+            if (latestRunIdByAssetId.Count == 0)
+            {
+                return;
+            }
+
+            var runIds = latestRunIdByAssetId.Values.ToList();
+            var earningsDateByRunId = await _financeDbContext.DecisionSignals
+                .AsNoTracking()
+                .Where(x => runIds.Contains(x.AnalysisRunId))
+                .Select(x => new { x.AnalysisRunId, x.EarningsDateUtc })
+                .ToDictionaryAsync(x => x.AnalysisRunId, x => x.EarningsDateUtc, ct);
+
+            foreach (var (assetId, runId) in latestRunIdByAssetId)
+            {
+                if (earningsDateByRunId.TryGetValue(runId, out var earningsDateUtc))
+                {
+                    response[assetId].EarningsDateUtc = earningsDateUtc;
+                }
+            }
         }
 
         public async Task<PeaEligibilityStatusEnum> GetLatestPeaEligibilityStatusAsync(string assetId, CancellationToken ct = default)
@@ -192,7 +220,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             try
             {
-                return JsonSerializer.Deserialize<PersistedAnalysisSnapshotPayloadReadModel>(rawPayload, SnapshotSerializerOptions);
+                return JsonSerializer.Deserialize<PersistedAnalysisSnapshotPayloadReadModel>(rawPayload, AnalysisSnapshotJsonOptions.Shared);
             }
             catch (JsonException)
             {
@@ -287,10 +315,22 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 return BuildDefaultRecommendation(holdsInstrument);
             }
 
+            var currentHoldingStatus = holdsInstrument ? HoldingStatusEnum.Held : HoldingStatusEnum.NotHeld;
+            if (recommendation.HoldingContext != currentHoldingStatus)
+            {
+                return new RecommendationSummaryViewModel
+                {
+                    Kind = RecommendationKind.Wait,
+                    HoldingStatus = currentHoldingStatus,
+                    DisplayLabel = "Attendre",
+                    ExplanationSummary = "La derniere recommandation persistee a ete calculee avec un contexte portefeuille different. Une nouvelle analyse est necessaire pour gouverner la recommandation actuelle."
+                };
+            }
+
             return new RecommendationSummaryViewModel
             {
                 Kind = recommendation.Kind,
-                HoldingStatus = holdsInstrument ? HoldingStatusEnum.Held : HoldingStatusEnum.NotHeld,
+                HoldingStatus = currentHoldingStatus,
                 DisplayLabel = BuildRecommendationDisplayLabel(recommendation.Kind, strength),
                 ExplanationSummary = string.IsNullOrWhiteSpace(recommendation.Rationale) ? "Aucune justification" : recommendation.Rationale.Trim(),
                 WarningText = recommendation.WarningText

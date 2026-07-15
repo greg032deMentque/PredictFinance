@@ -2,14 +2,15 @@ import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, finalize, switchMap } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { GlossaryTerm } from '../../../../Models/client-finance-models/glossary-product-term.model';
 import { GlossaryTermsService } from '../../../../services/glossary-terms.service';
+import { SearchBarComponent } from '../../../shared/search-bar/search-bar.component';
 
 @Component({
   selector: 'app-glossary-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SearchBarComponent],
   templateUrl: './glossary-page.component.html',
   styleUrl: './glossary-page.component.scss'
 })

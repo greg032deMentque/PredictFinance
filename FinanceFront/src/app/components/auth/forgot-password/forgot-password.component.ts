@@ -2,16 +2,17 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AccountService } from '../../../services/account.service';
 import { ToastService } from '../../../services/toastr.service';
 import { AuthPaths, toCommands } from '../../../Routes/app.routes.constants';
+import { BackButtonComponent } from '../../shared/back-button/back-button.component';
 
 @Component({
   selector: 'app-forgot-password',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, BackButtonComponent],
   templateUrl: './forgot-password.component.html',
   styleUrl: './forgot-password.component.scss'
 })
@@ -21,6 +22,7 @@ export class ForgotPasswordComponent {
   private readonly accountService = inject(AccountService);
   private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   readonly authPaths = AuthPaths;
   readonly toCommands = toCommands;
@@ -30,6 +32,10 @@ export class ForgotPasswordComponent {
   readonly form = this.fb.nonNullable.group({
     email: [this.route.snapshot.queryParamMap.get('email') ?? '', [Validators.required, Validators.email]]
   });
+
+  goBack(): void {
+    this.router.navigate(this.toCommands(this.authPaths.Login));
+  }
 
   submit(): void {
     if (this.form.invalid || this.submitting) {

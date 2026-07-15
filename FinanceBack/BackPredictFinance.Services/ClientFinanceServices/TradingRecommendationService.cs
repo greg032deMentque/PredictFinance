@@ -13,7 +13,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         /// <summary>
         /// Évalue une phase technique et ses niveaux associés pour produire une recommandation.
         /// </summary>
-        TradingRecommendationResult EvaluateAnalysis(string phase, decimal probability, decimal? targetPrice, decimal? invalidationPrice);
+        TradingRecommendationResult EvaluateAnalysis(string phase, decimal confidenceScore, decimal? targetPrice, decimal? invalidationPrice);
     }
 
     /// <summary>
@@ -23,12 +23,16 @@ namespace BackPredictFinance.Services.ClientFinanceServices
     {
         private static readonly HashSet<string> BullishConfirmedPhases =
         [
-            "bullish_breakout_confirmed"
+            "bullish_breakout_confirmed",
+            "double_bottom_breakout_confirmed",
+            "inverse_hs_breakout_confirmed"
         ];
 
         private static readonly HashSet<string> BearishConfirmedPhases =
         [
-            "bearish_breakout_confirmed"
+            "bearish_breakout_confirmed",
+            "double_top_breakout_confirmed",
+            "hs_breakdown_confirmed"
         ];
 
         private static readonly HashSet<string> InvalidatedPhases =
@@ -40,33 +44,33 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             "legacy_pattern_not_enabled"
         ];
 
-        public TradingRecommendationResult EvaluateAnalysis(string phase, decimal probability, decimal? targetPrice, decimal? invalidationPrice)
+        public TradingRecommendationResult EvaluateAnalysis(string phase, decimal confidenceScore, decimal? targetPrice, decimal? invalidationPrice)
         {
             var normalizedPhase = NormalizePhase(phase);
-            var boundedProbability = Clamp01(probability);
+            var boundedConfidence = Clamp01(confidenceScore);
 
-            if (BullishConfirmedPhases.Contains(normalizedPhase) && boundedProbability >= 0.60m)
+            if (BullishConfirmedPhases.Contains(normalizedPhase) && boundedConfidence >= 0.60m)
             {
                 return new TradingRecommendationResult
                 {
                     Action = RecommendationActionEnum.Buy,
                     IsActionable = true,
-                    Confidence = boundedProbability,
+                    Confidence = boundedConfidence,
                     HorizonDays = 20,
-                    RiskLevel = InferRiskLevel(boundedProbability, true),
+                    RiskLevel = InferRiskLevel(boundedConfidence, true),
                     Reason = BuildDirectionalReason("haussier", normalizedPhase, RecommendationActionEnum.Buy, targetPrice, invalidationPrice)
                 };
             }
 
-            if (BearishConfirmedPhases.Contains(normalizedPhase) && boundedProbability >= 0.60m)
+            if (BearishConfirmedPhases.Contains(normalizedPhase) && boundedConfidence >= 0.60m)
             {
                 return new TradingRecommendationResult
                 {
                     Action = RecommendationActionEnum.Sell,
                     IsActionable = true,
-                    Confidence = boundedProbability,
+                    Confidence = boundedConfidence,
                     HorizonDays = 20,
-                    RiskLevel = InferRiskLevel(boundedProbability, true),
+                    RiskLevel = InferRiskLevel(boundedConfidence, true),
                     Reason = BuildDirectionalReason("baissier", normalizedPhase, RecommendationActionEnum.Sell, targetPrice, invalidationPrice)
                 };
             }
@@ -77,7 +81,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 {
                     Action = RecommendationActionEnum.Hold,
                     IsActionable = false,
-                    Confidence = boundedProbability,
+                    Confidence = boundedConfidence,
                     HorizonDays = 10,
                     RiskLevel = RiskLevelEnum.Information,
                     Reason = "Le scenario de continuation n'est pas exploitable dans sa forme actuelle. Aucune posture directionnelle n'est retenue."
@@ -88,10 +92,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             {
                 Action = RecommendationActionEnum.Hold,
                 IsActionable = false,
-                Confidence = boundedProbability,
+                Confidence = boundedConfidence,
                 HorizonDays = 10,
                 RiskLevel = RiskLevelEnum.Information,
-                Reason = BuildHoldReason(normalizedPhase, boundedProbability)
+                Reason = BuildHoldReason(normalizedPhase, boundedConfidence)
             };
         }
 
@@ -102,10 +106,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return $"Pattern de continuation {bias} confirme ({phase}). La posture metier retenue est {action}.{targetPart}{invalidationPart}".Trim();
         }
 
-        private static string BuildHoldReason(string phase, decimal probability)
+        private static string BuildHoldReason(string phase, decimal confidence)
         {
             var safePhase = string.IsNullOrWhiteSpace(phase) ? "phase_inconnue" : phase;
-            return $"Le pattern est encore en observation ({safePhase}) avec une probabilite de {probability:P0}. La posture metier retenue est Hold.";
+            return $"Le pattern est encore en observation ({safePhase}) avec une confiance de {confidence:P0}. La posture metier retenue est Hold.";
         }
 
         private static RiskLevelEnum InferRiskLevel(decimal confidence, bool actionable)

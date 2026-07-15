@@ -2,6 +2,7 @@ using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services.ClientFinanceServices.Analysis;
 using BackPredictFinance.Services.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -178,24 +179,24 @@ namespace BackPredictFinance.Services.BackgroundJobs
                 .OrderBy(snapshot => snapshot.TimestampUtc)
                 .ToListAsync(ct);
 
-            foreach (var candle in candles)
+            var hit = SignalDirectionalScanEvaluator.ScanForFirstHit(
+                candles,
+                patternAssessment.Direction,
+                patternAssessment.TargetPrice,
+                patternAssessment.InvalidationPrice);
+
+            if (hit.Kind == SignalDirectionalHitKind.InvalidationHit)
             {
-                var targetHit = patternAssessment.TargetPrice.HasValue && candle.High >= patternAssessment.TargetPrice.Value;
-                var invalidationHit = patternAssessment.InvalidationPrice.HasValue && candle.Low <= patternAssessment.InvalidationPrice.Value;
+                signalOutcome.Outcome = SignalOutcomeEnum.InvalidationHit;
+                signalOutcome.FirstHitAtUtc = hit.Candle!.TimestampUtc;
+                return signalOutcome;
+            }
 
-                if (invalidationHit)
-                {
-                    signalOutcome.Outcome = SignalOutcomeEnum.InvalidationHit;
-                    signalOutcome.FirstHitAtUtc = candle.TimestampUtc;
-                    return signalOutcome;
-                }
-
-                if (targetHit)
-                {
-                    signalOutcome.Outcome = SignalOutcomeEnum.TargetHit;
-                    signalOutcome.FirstHitAtUtc = candle.TimestampUtc;
-                    return signalOutcome;
-                }
+            if (hit.Kind == SignalDirectionalHitKind.TargetHit)
+            {
+                signalOutcome.Outcome = SignalOutcomeEnum.TargetHit;
+                signalOutcome.FirstHitAtUtc = hit.Candle!.TimestampUtc;
+                return signalOutcome;
             }
 
             if (windowIsOpen)

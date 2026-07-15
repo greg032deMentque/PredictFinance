@@ -33,7 +33,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Alerts
             var symbol = _assetSupportService.NormalizeSymbol(request.Symbol);
             if (string.IsNullOrWhiteSpace(symbol))
             {
-                throw new ArgumentException("Le symbole est obligatoire.", nameof(request.Symbol));
+                throw new ArgumentException("Le symbole est obligatoire.", nameof(request));
             }
 
             var userId = _assetSupportService.GetRequiredCurrentUserId();

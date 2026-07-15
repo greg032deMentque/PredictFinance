@@ -33,8 +33,8 @@ export class GlossaryService {
   private buildLookupMap(terms: GlossaryTerm[]): void {
     this.lookupMap = new Map<string, GlossaryTerm>();
     for (const term of terms) {
-      this.lookupMap.set(this.normalize(term.parameterId), term);
-      this.lookupMap.set(this.normalize(term.label), term);
+      this.lookupMap.set(this.normalize(term.ParameterId), term);
+      this.lookupMap.set(this.normalize(term.Label), term);
     }
   }
 

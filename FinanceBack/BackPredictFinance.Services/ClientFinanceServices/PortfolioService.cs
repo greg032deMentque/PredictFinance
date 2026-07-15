@@ -12,7 +12,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         Task<List<UserPortfolioViewModel>> GetPortfoliosAsync(CancellationToken ct = default);
         Task<UserPortfolioViewModel> CreatePortfolioAsync(PortfolioCreateRequestViewModel request, CancellationToken ct = default);
         Task<UserPortfolioViewModel> RenamePortfolioAsync(string portfolioId, PortfolioRenameRequestViewModel request, CancellationToken ct = default);
-        Task DeletePortfolioAsync(string portfolioId, CancellationToken ct = default);
+        Task ArchivePortfolioAsync(string portfolioId, CancellationToken ct = default);
+        Task RestorePortfolioAsync(string portfolioId, CancellationToken ct = default);
         Task<Portfolio> GetRequiredPortfolioForUserAsync(string portfolioId, string userId, CancellationToken ct = default);
     }
 
@@ -27,7 +28,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var portfolios = await _financeDbContext.Portfolios
                 .AsNoTracking()
-                .Where(p => p.UserId == _currentUserId && !p.IsDeleted)
+                .Where(p => p.UserId == _currentUserId && !p.IsDeleted && p.Status == PortfolioStatusEnum.Active)
                 .OrderBy(p => p.Name)
                 .ToListAsync(ct);
 
@@ -103,7 +104,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             return _mapper.Map<UserPortfolioViewModel>(portfolio);
         }
 
-        public async Task DeletePortfolioAsync(string portfolioId, CancellationToken ct = default)
+        public async Task ArchivePortfolioAsync(string portfolioId, CancellationToken ct = default)
         {
             var portfolio = await _financeDbContext.Portfolios
                 .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == _currentUserId && !p.IsDeleted, ct);
@@ -113,7 +114,21 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 return;
             }
 
-            portfolio.IsDeleted = true;
+            portfolio.Status = PortfolioStatusEnum.Archived;
+            await _financeDbContext.SaveChangesAsync(ct);
+        }
+
+        public async Task RestorePortfolioAsync(string portfolioId, CancellationToken ct = default)
+        {
+            var portfolio = await _financeDbContext.Portfolios
+                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == _currentUserId && !p.IsDeleted, ct);
+
+            if (portfolio is null)
+            {
+                return;
+            }
+
+            portfolio.Status = PortfolioStatusEnum.Active;
             await _financeDbContext.SaveChangesAsync(ct);
         }
 

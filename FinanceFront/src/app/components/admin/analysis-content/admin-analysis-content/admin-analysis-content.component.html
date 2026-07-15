@@ -1,0 +1,255 @@
+<section class="page-shell">
+  <div class="page-heading mb-4">
+    <div class="page-subtitle">
+      <span class="chip chip-dark mb-2"><i class="bi bi-diagram-3"></i> Analyse</span>
+      <h1 class="h2 fw-bold mb-2">Contenus d'analyse</h1>
+      <p class="muted mb-0">Définitions des patterns chartistes et explications des concepts d'analyse technique.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="activeTab() === 'patterns' ? loadPatterns() : loadConcepts()">Rafraîchir</button>
+      @if (activeTab() === 'concepts') {
+        <button type="button" class="btn btn-primary rounded-pill" (click)="openAddConcept()">
+          <i class="bi bi-plus-lg me-1"></i>Ajouter un concept
+        </button>
+      }
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab() === 'patterns'" (click)="setTab('patterns')">
+        <i class="bi bi-bar-chart-steps me-1"></i>Patterns ({{ patterns().length }})
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab() === 'concepts'" (click)="setTab('concepts')">
+        <i class="bi bi-bookmarks me-1"></i>Concepts d'analyse ({{ concepts().length }})
+      </button>
+    </li>
+  </ul>
+
+  @if (activeTab() === 'patterns') {
+    @if (patternFormOpen()) {
+      <div class="page-card mb-4">
+        <h2 class="h5 mb-3">Modifier — {{ editPatternId }}</h2>
+        <form [formGroup]="patternForm" (ngSubmit)="submitPattern()" novalidate>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" for="p-displayName">Libellé <span class="text-danger">*</span></label>
+              <input id="p-displayName" type="text" class="form-control" formControlName="displayName"
+                [class.is-invalid]="patternForm.controls.displayName.invalid && patternForm.controls.displayName.touched" />
+              @if (patternForm.controls.displayName.invalid && patternForm.controls.displayName.touched) {
+                <div class="invalid-feedback">Requis.</div>
+              }
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" for="p-family">Famille (code) <span class="text-danger">*</span></label>
+              <input id="p-family" type="text" class="form-control" formControlName="family"
+                [class.is-invalid]="patternForm.controls.family.invalid && patternForm.controls.family.touched" />
+              @if (patternForm.controls.family.invalid && patternForm.controls.family.touched) {
+                <div class="invalid-feedback">Requis.</div>
+              }
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" for="p-familyLabel">Famille (libellé FR) <span class="text-danger">*</span></label>
+              <input id="p-familyLabel" type="text" class="form-control" formControlName="familyLabel"
+                [class.is-invalid]="patternForm.controls.familyLabel.invalid && patternForm.controls.familyLabel.touched" />
+              @if (patternForm.controls.familyLabel.invalid && patternForm.controls.familyLabel.touched) {
+                <div class="invalid-feedback">Requis.</div>
+              }
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" for="p-direction">Direction (code) <span class="text-danger">*</span></label>
+              <input id="p-direction" type="text" class="form-control" formControlName="direction"
+                [class.is-invalid]="patternForm.controls.direction.invalid && patternForm.controls.direction.touched" />
+              @if (patternForm.controls.direction.invalid && patternForm.controls.direction.touched) {
+                <div class="invalid-feedback">Requis.</div>
+              }
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" for="p-directionLabel">Direction (libellé FR) <span class="text-danger">*</span></label>
+              <input id="p-directionLabel" type="text" class="form-control" formControlName="directionLabel"
+                [class.is-invalid]="patternForm.controls.directionLabel.invalid && patternForm.controls.directionLabel.touched" />
+              @if (patternForm.controls.directionLabel.invalid && patternForm.controls.directionLabel.touched) {
+                <div class="invalid-feedback">Requis.</div>
+              }
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold" for="p-reliability">Fiabilité (0–1) <span class="text-danger">*</span></label>
+              <input id="p-reliability" type="number" step="0.01" min="0" max="1" class="form-control" formControlName="reliability"
+                [class.is-invalid]="patternForm.controls.reliability.invalid && patternForm.controls.reliability.touched" />
+              @if (patternForm.controls.reliability.invalid && patternForm.controls.reliability.touched) {
+                <div class="invalid-feedback">Valeur entre 0 et 1.</div>
+              }
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" for="p-reliabilityLabel">Fiabilité (libellé FR) <span class="text-danger">*</span></label>
+              <input id="p-reliabilityLabel" type="text" class="form-control" formControlName="reliabilityLabel"
+                [class.is-invalid]="patternForm.controls.reliabilityLabel.invalid && patternForm.controls.reliabilityLabel.touched" />
+              @if (patternForm.controls.reliabilityLabel.invalid && patternForm.controls.reliabilityLabel.touched) {
+                <div class="invalid-feedback">Requis.</div>
+              }
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="p-description">Description <span class="text-danger">*</span></label>
+              <textarea id="p-description" class="form-control" formControlName="description" rows="3"
+                [class.is-invalid]="patternForm.controls.description.invalid && patternForm.controls.description.touched"></textarea>
+              @if (patternForm.controls.description.invalid && patternForm.controls.description.touched) {
+                <div class="invalid-feedback">Requis.</div>
+              }
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="p-narrative">Narration d'analyse <span class="text-danger">*</span></label>
+              <textarea id="p-narrative" class="form-control" formControlName="analysisNarrative" rows="4"
+                [class.is-invalid]="patternForm.controls.analysisNarrative.invalid && patternForm.controls.analysisNarrative.touched"></textarea>
+              @if (patternForm.controls.analysisNarrative.invalid && patternForm.controls.analysisNarrative.touched) {
+                <div class="invalid-feedback">Requis.</div>
+              }
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end mt-3">
+            <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="closePatternForm()">Annuler</button>
+            <button type="submit" class="btn btn-primary rounded-pill" [disabled]="submittingPattern()">
+              @if (submittingPattern()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+              Mettre à jour
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+
+    @if (loadingPatterns()) {
+      <div class="loading-skeleton-group">
+        <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div>
+      </div>
+    } @else if (errorPatterns()) {
+      <div class="error-panel">{{ errorPatterns() }}</div>
+    } @else if (patterns().length === 0) {
+      <div class="empty-state"><div class="fw-semibold">Aucun pattern disponible.</div></div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Libellé</th>
+              <th>Famille</th>
+              <th>Direction</th>
+              <th>Fiabilité</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of patterns(); track item.PatternId) {
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ item.DisplayName }}</div>
+                  <div class="small muted"><span class="code-chip">{{ item.PatternId }}</span></div>
+                </td>
+                <td>{{ item.FamilyLabel }}</td>
+                <td>{{ item.DirectionLabel }}</td>
+                <td>
+                  <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ item.ReliabilityLabel }}</span>
+                  <span class="small muted ms-1">{{ (item.Reliability * 100).toFixed(0) }}%</span>
+                </td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="openEditPattern(item)">
+                    <i class="bi bi-pencil me-1"></i>Modifier
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  @if (activeTab() === 'concepts') {
+    @if (isConceptPanelOpen) {
+      <div class="page-card mb-4">
+        <h2 class="h5 mb-3">{{ isConceptEditing ? 'Modifier le concept' : 'Nouveau concept' }}</h2>
+        <form [formGroup]="conceptForm" (ngSubmit)="submitConcept()" novalidate>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" for="c-code">Code <span class="text-danger">*</span></label>
+              <input id="c-code" type="text" class="form-control" formControlName="code"
+                [class.is-invalid]="conceptForm.controls.code.invalid && conceptForm.controls.code.touched"
+                placeholder="ex : SUPPORT_RESISTANCE" />
+              @if (conceptForm.controls.code.invalid && conceptForm.controls.code.touched) {
+                <div class="invalid-feedback">Le code est requis.</div>
+              }
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold" for="c-label">Libellé <span class="text-danger">*</span></label>
+              <input id="c-label" type="text" class="form-control" formControlName="label"
+                [class.is-invalid]="conceptForm.controls.label.invalid && conceptForm.controls.label.touched" />
+              @if (conceptForm.controls.label.invalid && conceptForm.controls.label.touched) {
+                <div class="invalid-feedback">Le libellé est requis.</div>
+              }
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" for="c-explanation">Explication <span class="text-danger">*</span></label>
+              <textarea id="c-explanation" class="form-control" formControlName="explanation" rows="5"
+                [class.is-invalid]="conceptForm.controls.explanation.invalid && conceptForm.controls.explanation.touched"></textarea>
+              @if (conceptForm.controls.explanation.invalid && conceptForm.controls.explanation.touched) {
+                <div class="invalid-feedback">L'explication est requise.</div>
+              }
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end mt-3">
+            <button type="button" class="btn btn-outline-secondary rounded-pill" (click)="closeConceptForm()">Annuler</button>
+            <button type="submit" class="btn btn-primary rounded-pill" [disabled]="submittingConcept()">
+              @if (submittingConcept()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+              {{ isConceptEditing ? 'Mettre à jour' : 'Ajouter' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+
+    @if (loadingConcepts()) {
+      <div class="loading-skeleton-group">
+        <div class="skeleton-card"><div class="skeleton-line skeleton-w-70"></div><div class="skeleton-line skeleton-w-90"></div></div>
+      </div>
+    } @else if (errorConcepts()) {
+      <div class="error-panel">{{ errorConcepts() }}</div>
+    } @else if (concepts().length === 0) {
+      <div class="empty-state"><div class="fw-semibold">Aucun concept disponible.</div></div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Code</th>
+              <th>Libellé</th>
+              <th>Explication</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of concepts(); track item.Code) {
+              <tr>
+                <td><span class="code-chip">{{ item.Code }}</span></td>
+                <td class="fw-semibold">{{ item.Label }}</td>
+                <td>
+                  <div class="small muted text-truncate" style="max-width: 400px;">{{ item.Explanation }}</div>
+                </td>
+                <td class="text-end">
+                  <div class="d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" (click)="openEditConcept(item)">
+                      <i class="bi bi-pencil me-1"></i>Modifier
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill"
+                      [disabled]="deletingCode() === item.Code" (click)="deleteConcept(item)">
+                      <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</section>

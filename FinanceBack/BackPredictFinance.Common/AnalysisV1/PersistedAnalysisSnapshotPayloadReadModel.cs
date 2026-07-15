@@ -22,6 +22,7 @@ namespace BackPredictFinance.Common.AnalysisV1
         public List<AnalysisSnapshotPatternRow> PatternRows { get; set; } = [];
         public AnalysisSnapshotRecommendation? Recommendation { get; set; }
         public PersistedModelSnapshotReadModel ModelSnapshot { get; set; } = new();
+        public DateTime? EarningsDateUtc { get; set; }
         public PatternAssessmentContract? PrimaryPattern => PatternRows
             .OrderByDescending(x => x.IsPrimaryDisplayCandidate)
             .ThenBy(x => x.DisplayRank)

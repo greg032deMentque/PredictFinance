@@ -6,10 +6,7 @@
       <p class="muted mb-0">Formulaire d’administration aligné sur les champs réellement exposés et acceptés par l’API utilisateur.</p>
     </div>
 
-    <button class="btn btn-outline-secondary rounded-pill" type="button" (click)="cancel()" [disabled]="submitting">
-      <i class="bi bi-arrow-left"></i>
-      <span>Retour à la liste</span>
-    </button>
+    <app-back-button label="Retour à la liste" [disabled]="submitting" (back)="cancel()"></app-back-button>
   </div>
 
   @if (loading) {

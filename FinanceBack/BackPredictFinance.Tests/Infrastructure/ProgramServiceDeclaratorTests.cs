@@ -1,18 +1,22 @@
 ﻿using System.Reflection;
 using BackPredictFinance.API.ProgramSubFiles;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BackPredictFinance.Tests.Infrastructure;
 
 public sealed class ProgramServiceDeclaratorTests
 {
+    private static IConfiguration BuildEmptyConfiguration() =>
+        new ConfigurationBuilder().Build();
+
     [Fact]
     public void ServicesDeclarator_RegistersEveryServiceDependencyUsedByControllers()
     {
         var services = new ServiceCollection();
 
-        ProgramServiceDeclarator.ServicesDeclarator(services);
+        ProgramServiceDeclarator.ServicesDeclarator(services, BuildEmptyConfiguration());
 
         var controllerDependencyTypes = typeof(ProgramServiceDeclarator).Assembly
             .GetTypes()
@@ -21,9 +25,9 @@ public sealed class ProgramServiceDeclaratorTests
             .SelectMany(constructor => constructor.GetParameters())
             .Select(parameter => parameter.ParameterType)
             .Where(type => type.IsInterface)
-            .Where(type => type.Namespace is not null)
-            .Where(type => type.Namespace.StartsWith("BackPredictFinance.Services", StringComparison.Ordinal)
-                || type.Namespace.StartsWith("BackPredictFinance.Patterns", StringComparison.Ordinal))
+            .Where(type => type.Namespace is not null
+                && (type.Namespace.StartsWith("BackPredictFinance.Services", StringComparison.Ordinal)
+                    || type.Namespace.StartsWith("BackPredictFinance.Patterns", StringComparison.Ordinal)))
             .Distinct()
             .OrderBy(type => type.FullName)
             .ToList();
@@ -41,7 +45,7 @@ public sealed class ProgramServiceDeclaratorTests
     {
         var services = new ServiceCollection();
 
-        ProgramServiceDeclarator.ServicesDeclarator(services);
+        ProgramServiceDeclarator.ServicesDeclarator(services, BuildEmptyConfiguration());
 
         var requiredServiceTypes = new[]
         {

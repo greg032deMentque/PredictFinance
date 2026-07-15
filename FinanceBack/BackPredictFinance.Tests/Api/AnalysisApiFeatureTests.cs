@@ -3,6 +3,7 @@ using BackPredictFinance.Patterns;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Patterns;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 using BackPredictFinance.Tests.Infrastructure;
@@ -24,7 +25,7 @@ public sealed class AnalysisApiFeatureTests
                 PatternIds.BullFlagContinuation
             ]
         };
-        var expected = TestInfrastructure.CreateAnalysisResult(
+        var expected = TestInfrastructure.CreateAnalysisDossier(
             PatternIds.RectangleContinuation,
             "bullish_breakout_confirmed",
             RecommendationActionEnum.Buy);
@@ -34,9 +35,9 @@ public sealed class AnalysisApiFeatureTests
 
         var result = await controller.RunAnalysis(request, CancellationToken.None);
 
-        var payload = TestInfrastructure.AssertOkObject<AnalysisResultViewModel>(result);
-        Assert.Equal(PatternIds.RectangleContinuation, payload.Pattern);
-        Assert.Equal(RecommendationActionEnum.Buy, payload.RecommendationAction);
+        var payload = TestInfrastructure.AssertOkObject<AnalysisDossierViewModel>(result.Result!);
+        Assert.Equal(PatternIds.RectangleContinuation, payload.MainPattern?.PatternId);
+        Assert.Equal("Buy", payload.MainPattern?.RecommendationAction);
         service.Verify(x => x.RunAnalysisAsync(request, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -90,52 +91,61 @@ public sealed class AnalysisApiFeatureTests
             patterns.OrderBy(x => x.PatternId, StringComparer.Ordinal),
             x => Assert.Equal(PatternIds.BearFlagContinuation, x.PatternId),
             x => Assert.Equal(PatternIds.BullFlagContinuation, x.PatternId),
+            x => Assert.Equal(PatternIds.DoubleBottom, x.PatternId),
+            x => Assert.Equal(PatternIds.DoubleTop, x.PatternId),
+            x => Assert.Equal(PatternIds.HeadAndShoulders, x.PatternId),
+            x => Assert.Equal(PatternIds.InverseHeadAndShoulders, x.PatternId),
             x => Assert.Equal(PatternIds.RectangleContinuation, x.PatternId),
             x => Assert.Equal(PatternIds.SymmetricalTriangleContinuation, x.PatternId));
     }
 
     [Fact]
-    public void GetPatternCatalog_ReturnsFrontendProjectionForActivePatterns()
+    public async Task GetPatternCatalog_SeedStaysInSyncWithEnginePatternSet()
     {
-        var controller = TestInfrastructure.CreateClientFinanceAnalysisController();
+        // Régression silencieuse couverte : si un pattern est ajouté/retiré du moteur
+        // (PatternCatalog) sans mettre à jour le seed PatternDefinitions, le catalogue
+        // exposé au front devient incohérent. Ce test verrouille cette synchronisation.
+        using var dbContext = TestInfrastructure.CreateInMemoryFinanceDbContext();
 
-        var result = controller.GetPatternCatalog();
+        var payload = await dbContext.PatternDefinitions
+            .AsNoTracking()
+            .Select(pattern => new PatternCatalogViewModel
+            {
+                Id = pattern.PatternId,
+                Label = pattern.DisplayName,
+                Family = pattern.Family,
+                Description = pattern.Description,
+                Direction = pattern.Direction,
+                FamilyLabel = pattern.FamilyLabel,
+                DirectionLabel = pattern.DirectionLabel,
+                AnalysisNarrative = pattern.AnalysisNarrative,
+                Reliability = pattern.Reliability,
+                ReliabilityLabel = pattern.ReliabilityLabel
+            })
+            .ToListAsync(CancellationToken.None);
 
-        var payload = TestInfrastructure.AssertOkObject<List<PatternCatalogViewModel>>(result);
-        Assert.Collection(
-            payload,
-            pattern =>
-            {
-                Assert.Equal(PatternIds.RectangleContinuation, pattern.Id);
-                Assert.Equal("Rectangle continuation", pattern.Label);
-                Assert.Equal("continuation", pattern.Family);
-                Assert.Equal("TrendFollowing", pattern.Direction);
-                Assert.NotEmpty(pattern.Description);
-            },
-            pattern =>
-            {
-                Assert.Equal(PatternIds.SymmetricalTriangleContinuation, pattern.Id);
-                Assert.Equal("Symmetrical triangle continuation", pattern.Label);
-                Assert.Equal("continuation", pattern.Family);
-                Assert.Equal("TrendFollowing", pattern.Direction);
-                Assert.NotEmpty(pattern.Description);
-            },
-            pattern =>
-            {
-                Assert.Equal(PatternIds.BullFlagContinuation, pattern.Id);
-                Assert.Equal("Bull flag continuation", pattern.Label);
-                Assert.Equal("continuation", pattern.Family);
-                Assert.Equal("Bullish", pattern.Direction);
-                Assert.NotEmpty(pattern.Description);
-            },
-            pattern =>
-            {
-                Assert.Equal(PatternIds.BearFlagContinuation, pattern.Id);
-                Assert.Equal("Bear flag continuation", pattern.Label);
-                Assert.Equal("continuation", pattern.Family);
-                Assert.Equal("Bearish", pattern.Direction);
-                Assert.NotEmpty(pattern.Description);
-            });
+        var expectedIds = PatternCatalog.GetTargetPatterns()
+            .Select(x => x.PatternId)
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToList();
+        var actualIds = payload
+            .Select(x => x.Id)
+            .OrderBy(x => x, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Equal(expectedIds, actualIds);
+        Assert.All(payload, pattern =>
+        {
+            Assert.NotEmpty(pattern.Label);
+            Assert.NotEmpty(pattern.Family);
+            Assert.NotEmpty(pattern.Description);
+            Assert.NotEmpty(pattern.Direction);
+            Assert.NotEmpty(pattern.FamilyLabel);
+            Assert.NotEmpty(pattern.DirectionLabel);
+            Assert.NotEmpty(pattern.AnalysisNarrative);
+            Assert.NotEmpty(pattern.ReliabilityLabel);
+            Assert.True(pattern.Reliability > 0m, $"Fiabilité manquante pour {pattern.Id}");
+        });
     }
 
     [Fact]
@@ -159,19 +169,15 @@ public sealed class AnalysisApiFeatureTests
     [InlineData(PatternIds.SymmetricalTriangleContinuation)]
     [InlineData(PatternIds.BullFlagContinuation)]
     [InlineData(PatternIds.BearFlagContinuation)]
+    [InlineData(PatternIds.DoubleBottom)]
+    [InlineData(PatternIds.DoubleTop)]
+    [InlineData(PatternIds.InverseHeadAndShoulders)]
+    [InlineData(PatternIds.HeadAndShoulders)]
     public void PatternIds_RequireActivePatternId_AcceptsActiveV1PatternIds(string patternId)
     {
         var actual = PatternIds.RequireActivePatternId(patternId);
 
         Assert.Equal(patternId, actual);
-    }
-
-    [Fact]
-    public void PatternIds_RequireActivePatternId_RejectsDoubleTopLegacy()
-    {
-        var exception = Assert.Throws<InvalidOperationException>(() => PatternIds.RequireActivePatternId("DOUBLE_TOP"));
-
-        Assert.Contains("n'est pas pris en charge", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

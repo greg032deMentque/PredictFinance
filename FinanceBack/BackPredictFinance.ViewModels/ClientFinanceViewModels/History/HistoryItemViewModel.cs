@@ -7,7 +7,7 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.History
     {
         public string AnalysisId { get; set; } = string.Empty;
         public string SnapshotId { get; set; } = string.Empty;
-        public InstrumentIdentityViewModel Instrument { get; set; } = new();
+        public InstrumentIdentityViewModel? Instrument { get; set; }
         public DateTime TimestampUtc { get; set; }
         public TechnicalAnalysisOutcomeTypeEnum Outcome { get; set; } = TechnicalAnalysisOutcomeTypeEnum.NoCrediblePattern;
         public string OutcomeDisplayLabel { get; set; } = string.Empty;
@@ -20,7 +20,7 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.History
         public string? RecommendationPolicyVersion { get; set; }
         public string? ExplanationPolicyVersion { get; set; }
         public string DetailUrl { get; set; } = string.Empty;
-        public string HistoryUrl { get; set; } = string.Empty;
+        public string? HistoryUrl { get; set; }
         public string ComparisonUrl { get; set; } = string.Empty;
     }
 }

@@ -207,6 +207,18 @@
                   <div class="fw-semibold">{{ current.ExPostEvaluation.InvalidationPrice | number:'1.2-2' }}</div>
                 </div>
               }
+              @if (current.ExPostEvaluation.DaysToOutcome !== null) {
+                <div class="col-6 col-lg-3">
+                  <div class="text-muted small">Durée avant issue</div>
+                  <div class="fw-semibold">{{ current.ExPostEvaluation.DaysToOutcome }} j</div>
+                </div>
+              }
+              @if (current.ExPostEvaluation.OutcomeDate !== null) {
+                <div class="col-6 col-lg-3">
+                  <div class="text-muted small">Date de l'issue</div>
+                  <div class="fw-semibold">{{ current.ExPostEvaluation.OutcomeDate | date:'dd/MM/yyyy' }}</div>
+                </div>
+              }
             </div>
           }
 

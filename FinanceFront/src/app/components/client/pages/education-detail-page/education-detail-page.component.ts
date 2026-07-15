@@ -1,11 +1,12 @@
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { finalize } from 'rxjs';
 import { EducationArticleContent } from '../../../../Models/client-finance-models/education-article.model';
 import { EducationService } from '../../../../services/education.service';
 import { AppRoutes } from '../../../../Routes/app.routes.constants';
+import { BackButtonComponent } from '../../../shared/back-button/back-button.component';
 
 /** Conversion markdown basique vers une seule chaine HTML sûre — sans lib externe.
  *  Seuls les blocs structurels sûrs sont produits : titres, paragraphes, listes
@@ -60,7 +61,7 @@ function applyInline(text: string): string {
 @Component({
   selector: 'app-education-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, BackButtonComponent],
   templateUrl: './education-detail-page.component.html',
   styleUrl: './education-detail-page.component.scss'
 })
@@ -68,6 +69,7 @@ export class EducationDetailPageComponent implements OnInit {
   private readonly educationService = inject(EducationService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -75,6 +77,10 @@ export class EducationDetailPageComponent implements OnInit {
   protected readonly bodyHtml = signal<string>('');
 
   protected readonly backPath = ['/', AppRoutes.ClientRoot, AppRoutes.Education];
+
+  protected goBack(): void {
+    this.router.navigate(this.backPath);
+  }
 
   ngOnInit(): void {
     const slug = (this.route.snapshot.paramMap.get('slug') ?? '').trim();

@@ -9,7 +9,6 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Dashboard
         public int OpenPositions { get; set; }
         public int AnalysesThisWeek { get; set; }
         public int WatchlistCount { get; set; }
-        public decimal RecommendationWinRate { get; set; }
         public DateTime NextMarketOpenAt { get; set; }
         public decimal TotalInvested { get; set; }
         public decimal TotalOutstanding { get; set; }

@@ -6,6 +6,12 @@ using BackPredictFinance.Patterns.Common;
 
 namespace BackPredictFinance.Patterns.Definitions
 {
+    /// <summary>
+    /// Détecte un triangle symétrique : compression bilatérale où les plus-hauts décroissent et les
+    /// plus-bas croissent (régression linéaire sur chaque borne). Comme le rectangle, la direction
+    /// vient de la tendance préalable, pas de la géométrie du triangle elle-même — seul un breakout
+    /// dans le sens de cette tendance confirme la continuation.
+    /// </summary>
     public sealed class SymmetricalTriangleContinuationAnalysisPatternDefinition : ContinuationPatternDefinitionBase
     {
         public SymmetricalTriangleContinuationAnalysisPatternDefinition(IPatternMarketDataProvider marketDataProvider)
@@ -19,6 +25,7 @@ namespace BackPredictFinance.Patterns.Definitions
         protected override int MinimumRequiredCandles => 48;
         protected override string DisplayName => "Symmetrical triangle continuation";
         protected override string PedagogicalDescription => "Compression bilaterale apres tendance, directionnelle seulement apres breakout confirme dans le sens de la tendance prealable.";
+        protected override decimal HistoricalReliability => BulkowskiReliability.SymmetricalTriangleContinuation;
 
         protected override ContinuationPatternAnalysisState Analyze(AnalysisRequest request, IReadOnlyList<TickerCandle> candles)
         {
@@ -30,7 +37,7 @@ namespace BackPredictFinance.Patterns.Definitions
                     PhaseLabel = "Historique insuffisant",
                     Status = PatternStatus.Forming,
                     IsCompatible = false,
-                    StatusReason = "Le moteur n'a pas recu assez de bougies pour evaluer ce pattern de maniere deterministe.",
+                    StatusReason = "Le moteur n'a pas reçu assez de bougies pour évaluer ce pattern de manière déterministe.",
                     ValidationReason = "Une profondeur historique minimale est requise avant toute validation.",
                     InvalidationReason = "Aucune invalidation n'est interpretable avec un historique insuffisant.",
                     Confidence = 0m,
@@ -59,6 +66,11 @@ namespace BackPredictFinance.Patterns.Definitions
             var lowerBoundary = lowerIntercept + (lowerSlope * lastIndex);
             var atr = PatternTechnicals.VolatilityUnit(triangleWindow, currentPrice);
             var priorTrend = ResolveDirectionalTrend(priorWindow);
+            // Compression exigée sur DEUX preuves indépendantes et cohérentes entre elles : la pente
+            // de régression (upperSlope négative, lowerSlope positive) ET la comparaison brute entre
+            // première et seconde moitié de la fenêtre (secondHalfHigh < firstHalfHigh, secondHalfLow
+            // > firstHalfLow). Exiger les deux évite qu'une régression bruitée par quelques mèches ne
+            // valide seule une compression qui n'est pas visible sur les extrêmes réels des bougies.
             var hasCompression = startingHeight > 0m
                 && endingHeight > 0m
                 && endingHeight < startingHeight
@@ -198,6 +210,8 @@ namespace BackPredictFinance.Patterns.Definitions
             };
         }
 
+        // Pondération similaire au rectangle (structure + tendance préalable + breakout), sans le
+        // bonus de "touches" puisqu'un triangle n'a pas de bornes horizontales répétées à compter.
         private static decimal BuildConfidence(bool hasCompression, DirectionalTrend priorTrend, bool breakoutUp, bool breakoutDown)
         {
             var confidence = 0.15m;

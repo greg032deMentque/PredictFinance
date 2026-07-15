@@ -11,10 +11,34 @@ export interface ClientPatternCandidate {
   InvalidationPrice: number | null;
 }
 
+import type { PatternCatalogItem } from './pattern-catalog.model';
+
+export interface AnalysisConcept {
+  Code: string;
+  Label: string;
+  Explanation: string;
+}
+
+/** Ligne d'affichage de l'explorateur : un pattern du catalogue, éventuellement détecté en live. */
+export interface PatternExplorerRow {
+  catalog: PatternCatalogItem;
+  candidate: ClientPatternCandidate | null;
+}
+
+export interface ClientSupportResistanceZone {
+  PriceLow: number;
+  PriceHigh: number;
+  PriceMid: number;
+  TouchCount: number;
+  ZoneType: 'support' | 'resistance' | 'both';
+  Strength: number;
+}
+
 export interface ClientPatternEvaluateResult {
   AnalysisId: string;
   Symbol: string;
   Candidates: ClientPatternCandidate[];
+  SupportResistanceZones: ClientSupportResistanceZone[];
 }
 
 export interface ClientScenarioBranch {

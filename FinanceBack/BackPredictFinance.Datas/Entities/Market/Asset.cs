@@ -27,5 +27,6 @@ namespace BackPredictFinance.Datas.Entities
         public List<AssetCandleSnapshot> CandleSnapshots { get; set; } = [];
         public List<AnalysisRun> AnalysisRuns { get; set; } = [];
         public List<AssetPeaEligibility> PeaEligibilities { get; set; } = [];
+        public List<AssetFundamentalsSnapshot> FundamentalsSnapshots { get; set; } = [];
     }
 }

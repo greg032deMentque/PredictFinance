@@ -6,6 +6,13 @@ using BackPredictFinance.Patterns.Common;
 
 namespace BackPredictFinance.Patterns.Definitions
 {
+    /// <summary>
+    /// Détecte une congestion latérale (rectangle) délimitée par un support et une résistance
+    /// quasi-horizontaux, touchés à plusieurs reprises. Contrairement aux autres patterns de
+    /// continuation, la direction n'est PAS déduite du rectangle lui-même mais de la tendance
+    /// préalable (avant la fenêtre de range) : seul un breakout dans le sens de cette tendance
+    /// confirme la continuation — un breakout à l'opposé invalide directement le scénario.
+    /// </summary>
     public sealed class RectangleContinuationAnalysisPatternDefinition : ContinuationPatternDefinitionBase
     {
         public RectangleContinuationAnalysisPatternDefinition(IPatternMarketDataProvider marketDataProvider)
@@ -19,6 +26,7 @@ namespace BackPredictFinance.Patterns.Definitions
         protected override int MinimumRequiredCandles => 44;
         protected override string DisplayName => "Rectangle continuation";
         protected override string PedagogicalDescription => "Consolidation laterale apres tendance, directionnelle seulement apres breakout confirme dans le sens de la tendance prealable.";
+        protected override decimal HistoricalReliability => BulkowskiReliability.RectangleContinuation;
 
         protected override ContinuationPatternAnalysisState Analyze(AnalysisRequest request, IReadOnlyList<TickerCandle> candles)
         {
@@ -30,7 +38,7 @@ namespace BackPredictFinance.Patterns.Definitions
                     PhaseLabel = "Historique insuffisant",
                     Status = PatternStatus.Forming,
                     IsCompatible = false,
-                    StatusReason = "Le moteur n'a pas recu assez de bougies pour evaluer ce pattern de maniere deterministe.",
+                    StatusReason = "Le moteur n'a pas reçu assez de bougies pour évaluer ce pattern de manière déterministe.",
                     ValidationReason = "Une profondeur historique minimale est requise avant toute validation.",
                     InvalidationReason = "Aucune invalidation n'est interpretable avec un historique insuffisant.",
                     Confidence = 0m,
@@ -38,6 +46,9 @@ namespace BackPredictFinance.Patterns.Definitions
                     ScoreReasons = ["Le nombre minimal de bougies n'est pas atteint pour ce pattern."]
                 };
             }
+            // Deux fenêtres disjointes et chronologiquement adjacentes : les 24 dernières bougies
+            // définissent le rectangle (support/résistance), les 20 bougies immédiatement AVANT celui-ci
+            // définissent la tendance préalable. priorWindow ne chevauche jamais rangeWindow.
             var rangeWindow = PatternTechnicals.Tail(candles, 24);
             var priorWindow = candles.Take(Math.Max(candles.Count - rangeWindow.Count, 0)).TakeLast(20).ToList();
             var currentPrice = candles[^1].Close;
@@ -46,6 +57,9 @@ namespace BackPredictFinance.Patterns.Definitions
             var rangeHeight = resistance - support;
             var averageClose = PatternTechnicals.AverageClose(rangeWindow);
             var atr = PatternTechnicals.VolatilityUnit(rangeWindow, currentPrice);
+            // Tolérance de "touche" exprimée en multiple d'ATR (pas un pourcentage fixe) : une bougie
+            // est comptée comme touchant une borne si elle en est suffisamment proche compte tenu de
+            // la volatilité récente du titre.
             var tolerance = PatternThresholds.RectangleTouchToleranceAtrMultiple * atr;
             var touchesResistance = rangeWindow.Count(candle => Math.Abs(candle.High - resistance) <= tolerance);
             var touchesSupport = rangeWindow.Count(candle => Math.Abs(candle.Low - support) <= tolerance);
@@ -194,6 +208,9 @@ namespace BackPredictFinance.Patterns.Definitions
             };
         }
 
+        // Chaque touche supplémentaire d'une borne renforce la confiance (+0.05 par touche), mais
+        // plafonnée à 3 touches par borne : au-delà, une touche de plus n'ajoute pas d'information
+        // significative sur la solidité du niveau.
         private static decimal BuildConfidence(bool hasStructure, DirectionalTrend priorTrend, bool breakoutUp, bool breakoutDown, int touchesResistance, int touchesSupport)
         {
             var confidence = 0.15m;

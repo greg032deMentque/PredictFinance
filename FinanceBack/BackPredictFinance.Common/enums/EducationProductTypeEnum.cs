@@ -6,6 +6,7 @@ namespace BackPredictFinance.Common.enums
         PEA,
         PEL,
         PER,
-        General
+        General,
+        AnalyseTechnique
     }
 }

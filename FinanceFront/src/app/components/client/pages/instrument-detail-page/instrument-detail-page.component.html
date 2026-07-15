@@ -4,8 +4,8 @@
   <div class="card border-0 shadow-sm">
     <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
       <div>
-        <p class="text-uppercase text-muted small mb-1">Client</p>
-        <h1 class="h3 mb-2">Instrument detail</h1>
+        <app-back-button (back)="goBack()"></app-back-button>
+        <h1 class="h3 mb-2">Fiche instrument</h1>
         <p class="text-body-secondary mb-0">Lecture détaillée d'un instrument et de ses dernières analyses persistées.</p>
       </div>
       @if (detail(); as current) {
@@ -68,13 +68,68 @@
             </div>
             <div>
               <div class="text-muted small">Coût moyen</div>
-              <div>{{ current.PersonalSituation.AverageUnitCost == null ? 'n/a' : (current.PersonalSituation.AverageUnitCost | currency:'EUR':'symbol':'1.0-2':'fr-FR') }}</div>
+              <div>{{ current.PersonalSituation.AverageUnitCost === null ? 'n/a' : (current.PersonalSituation.AverageUnitCost | currency:'EUR':'symbol':'1.0-2':'fr-FR') }}</div>
             </div>
             @if (current.LatestAnalysisId) {
               <a class="btn btn-outline-primary" [routerLink]="toCommands(userPaths.AnalysisDetail(current.LatestAnalysisId))">Ouvrir la dernière analyse</a>
             }
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Onglets analyse / indicateurs / fondamentaux -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <ul class="nav nav-tabs mb-4" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" [class.active]="activeInstrumentTab() === 'analyse'"
+              type="button" role="tab" (click)="switchTab('analyse')">
+              Analyse
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" [class.active]="activeInstrumentTab() === 'indicateurs'"
+              type="button" role="tab" (click)="switchTab('indicateurs')">
+              Indicateurs
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" [class.active]="activeInstrumentTab() === 'fondamentaux'"
+              type="button" role="tab" (click)="switchTab('fondamentaux')">
+              Fondamentaux
+            </button>
+          </li>
+        </ul>
+
+        @if (activeInstrumentTab() === 'analyse') {
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h2 class="h5 mb-0">Analyse technique</h2>
+            <button class="btn btn-sm btn-outline-primary" type="button"
+              [disabled]="dossierLoading()"
+              (click)="launchAnalysis()">
+              @if (dossierLoading()) {
+                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                Analyse en cours…
+              } @else {
+                <i class="bi bi-graph-up me-1"></i>{{ dossier() ? 'Relancer l\'analyse' : 'Analyser cette valeur' }}
+              }
+            </button>
+          </div>
+          @if (dossier() || dossierLoading()) {
+            <app-finance-analysis-result [result]="dossier()" [loading]="dossierLoading()" />
+          } @else {
+            <p class="text-muted mb-0 small">Lance une analyse pour voir le graphe, les figures détectées et les explications pédagogiques.</p>
+          }
+        }
+
+        @if (activeInstrumentTab() === 'indicateurs') {
+          <app-technical-indicators-panel [indicators]="indicators()" [loading]="indicatorsLoading()" />
+        }
+
+        @if (activeInstrumentTab() === 'fondamentaux') {
+          <app-fundamentals-panel [fundamentals]="fundamentals()" [loading]="fundamentalsLoading()" [score]="score()" [scoreLoading]="scoreLoading()" />
+        }
       </div>
     </div>
 
@@ -140,9 +195,15 @@
       </div>
     </div>
 
-  } @else {
+  } @else if (!loading()) {
     <div class="card border-0 shadow-sm">
-      <div class="card-body text-muted">Instrument introuvable.</div>
+      <div class="card-body">
+        @if (instrumentNotFound()) {
+          <div class="alert alert-info mb-0">Cet instrument n'est pas dans votre liste de suivi. Ajoutez-le depuis la page de recherche pour accéder à l'analyse.</div>
+        } @else {
+          <div class="text-muted">Instrument introuvable.</div>
+        }
+      </div>
     </div>
   }
 

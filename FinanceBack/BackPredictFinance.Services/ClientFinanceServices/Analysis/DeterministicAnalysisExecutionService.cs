@@ -28,6 +28,13 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             _patternRegistry = patternRegistry;
         }
 
+        // Chaque pattern est execute independamment via sa propre definition (definition.ExecuteAsync),
+        // avec la meme AnalysisRequest (dont HistoryEndDate) : c'est a chaque definition de pattern de
+        // respecter cette borne temporelle pour rester deterministe. Piege de look-ahead potentiel : si
+        // une definition de pattern lit des donnees de marche sans filtrer sur HistoryEndDate (par ex.
+        // en interrogeant un fournisseur en "dernier cours connu" plutot qu'en "cours a la date demandee"),
+        // le calcul integrerait des informations posterieures a la date d'analyse simulee. Ce risque se
+        // situe dans les definitions de pattern elles-memes (hors de ce fichier), pas dans la fusion ci-dessous.
         public async Task<AnalysisExecutionArtifact> ExecuteAsync(AnalysisRequest request, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(request);
@@ -47,6 +54,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             return MergeExecutionArtifacts(request, executionArtifacts);
         }
 
+        // Fusionne les artefacts produits par chaque pattern execute en un seul artefact global.
         private static AnalysisExecutionArtifact MergeExecutionArtifacts(AnalysisRequest request, IReadOnlyList<AnalysisExecutionArtifact> executionArtifacts)
         {
             ArgumentNullException.ThrowIfNull(request);
@@ -57,6 +65,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 throw new InvalidOperationException("Aucun artefact d'execution n'a ete produit.");
             }
 
+            // Ordre de tri volontaire : le pattern marque IsPrimary passe toujours en tete (c'est celui
+            // demande explicitement), puis a egalite on privilegie la confiance (fiabilite du signal)
+            // avant la probabilite brute (frequence historique du pattern, cf. Bulkowski).
             var orderedPatterns = executionArtifacts
                 .SelectMany(artifact => artifact.Patterns)
                 .OrderByDescending(pattern => pattern.IsPrimary)
@@ -69,6 +80,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 .DefaultIfEmpty(DateTime.UtcNow)
                 .Max();
 
+            // Agregation optimiste : si au moins un pattern execute est valide (Go), le statut global
+            // l'est aussi, meme si d'autres patterns sont degrades. Sinon on retombe sur le statut du
+            // premier artefact (aucun n'etant Go, l'ordre n'a pas d'impact sur la severite affichee).
             var modelStatus = executionArtifacts.Any(artifact => artifact.ModelStatus == ModelStatusEnum.Go)
                 ? ModelStatusEnum.Go
                 : executionArtifacts[0].ModelStatus;
@@ -103,6 +117,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                     })
                 });
 
+            // La serie de bougies retenue est celle du pattern ayant produit le plus de bougies : elle
+            // est supposee la plus complete (les autres patterns peuvent avoir tronque leur historique
+            // selon leurs propres besoins de fenetre de calcul).
             var candles = executionArtifacts
                 .Where(artifact => artifact.Candles.Count > 0)
                 .OrderByDescending(artifact => artifact.Candles.Count)

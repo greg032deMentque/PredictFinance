@@ -1,0 +1,206 @@
+.explanation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.panel-section {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--pf-border);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &--warning {
+    background: var(--pf-soft-warning);
+    border: 1px solid rgba(183, 121, 31, 0.3);
+    border-radius: var(--pf-radius-lg);
+    padding: 0.85rem 1rem;
+    margin: 0;
+  }
+}
+
+.panel-section__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pf-text-soft);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  .panel-section--warning & {
+    color: #9a6c1c;
+  }
+}
+
+// Grille niveaux
+.levels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.level-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--pf-border);
+  background: rgba(255, 255, 255, 0.9);
+
+  &--target {
+    border-left: 3px solid #127a5a;
+    background: var(--pf-soft-success);
+  }
+
+  &--validation {
+    border-left: 3px solid #2f6ea7;
+    background: var(--pf-soft-info);
+  }
+
+  &--invalidation {
+    border-left: 3px solid #b13a3a;
+    background: var(--pf-soft-danger);
+  }
+
+  &--stop {
+    border-left: 3px dashed #a8741a;
+    background: var(--pf-soft-warning);
+  }
+
+  &--rr {
+    border-left: 3px solid var(--pf-navy);
+    background: var(--pf-soft-navy);
+  }
+}
+
+.level-item__icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+
+  .level-item--target & { color: #127a5a; }
+  .level-item--validation & { color: #2f6ea7; }
+  .level-item--invalidation & { color: #b13a3a; }
+  .level-item--stop & { color: #a8741a; }
+  .level-item--rr & { color: var(--pf-navy); }
+}
+
+.level-item__label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--pf-text-soft);
+  margin-bottom: 0.1rem;
+}
+
+.level-item__value {
+  font-size: 0.9rem;
+  display: block;
+}
+
+.positioning-note {
+  font-size: 0.82rem;
+  color: var(--pf-text-soft);
+  margin: 0.5rem 0 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+// Raisons de score
+.score-reasons {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.score-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.score-reason__icon {
+  color: #127a5a;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  font-size: 1rem;
+}
+
+// Texte pédagogique
+.pedagogy-text {
+  font-size: 0.87rem;
+  line-height: 1.6;
+  margin: 0 0 0.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Limites
+.limit-item {
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.limit-item__label {
+  font-weight: 700;
+  color: #9a6c1c;
+  margin-right: 0.25rem;
+}
+
+// Jauge qualité
+.quality-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.quality-gauge__labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--pf-text);
+}
+
+.quality-gauge__count {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--pf-text-soft);
+}
+
+.quality-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.quality-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+
+  &--good { background: #127a5a; }
+  &--partial { background: #a8741a; }
+  &--low { background: #b13a3a; }
+}

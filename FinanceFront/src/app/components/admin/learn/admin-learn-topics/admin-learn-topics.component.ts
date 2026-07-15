@@ -26,10 +26,10 @@ export class AdminLearnTopicsComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly submitting = signal(false);
-  readonly deletingId = signal<number | null>(null);
+  readonly deletingId = signal<string | null>(null);
   readonly formMode = signal<FormMode>('none');
 
-  private editId = 0;
+  private editId = '';
 
   readonly itemForm = this.fb.nonNullable.group({
     topicId: ['', [Validators.required, Validators.maxLength(100)]],
@@ -68,18 +68,18 @@ export class AdminLearnTopicsComponent implements OnInit {
   openAdd(): void {
     this.itemForm.reset({ topicId: '', title: '', summary: '', routePath: '', displayOrder: 0, isPublished: false });
     this.formMode.set('add');
-    this.editId = 0;
+    this.editId = '';
   }
 
   openEdit(item: LearnTopicAdminItem): void {
-    this.editId = item.id;
+    this.editId = item.Id;
     this.itemForm.patchValue({
-      topicId: item.topicId,
-      title: item.title,
-      summary: item.summary,
-      routePath: item.routePath,
-      displayOrder: item.displayOrder,
-      isPublished: item.isPublished
+      topicId: item.TopicId,
+      title: item.Title,
+      summary: item.Summary,
+      routePath: item.RoutePath,
+      displayOrder: item.DisplayOrder,
+      isPublished: item.IsPublished
     });
     this.formMode.set('edit');
   }
@@ -87,7 +87,7 @@ export class AdminLearnTopicsComponent implements OnInit {
   closePanel(): void {
     this.formMode.set('none');
     this.itemForm.reset();
-    this.editId = 0;
+    this.editId = '';
   }
 
   submit(): void {
@@ -130,11 +130,11 @@ export class AdminLearnTopicsComponent implements OnInit {
 
   delete(item: LearnTopicAdminItem): void {
     if (this.deletingId() !== null) return;
-    if (!confirm(`Supprimer « ${item.title} » ?`)) return;
+    if (!confirm(`Supprimer « ${item.Title} » ?`)) return;
 
-    this.deletingId.set(item.id);
+    this.deletingId.set(item.Id);
     this.learnTopicsService
-      .deleteAdmin(item.id)
+      .deleteAdmin(item.Id)
       .pipe(
         finalize(() => this.deletingId.set(null)),
         takeUntilDestroyed(this.destroyRef)

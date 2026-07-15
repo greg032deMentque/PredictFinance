@@ -43,7 +43,7 @@ export function nonNegativeValidator(control: AbstractControl): ValidationErrors
  * // â”‚    2    â”‚ 'phones[0].number'    â”‚ { minlength: { ... } }     â”‚
  * // â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
  *
- * @param form        Le `FormGroup` ou `FormArray` Ã  inspecter.
+ * @param form        Le `FormGroup` ou `FormArray` a inspecter.
  * @param parentPath  (optionnel) Chemin du parent pour la rÃ©cursion interne.
  * @returns Un tableau dâ€™objets `{ path, errors }` listant tous les contrÃ´les invalides.
  */

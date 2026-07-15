@@ -67,6 +67,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             };
         }
 
+        // Toute valeur de statut inconnue ou intermédiaire (ex. "PENDING") retombe sur Partial plutôt
+        // que Met/Absent : un critère de confiance ne doit jamais être présenté comme définitivement
+        // acquis ou définitivement manquant sur un état qu'on ne reconnaît pas explicitement.
         private static CriterionState MapValidationState(string? state)
         {
             return (state ?? string.Empty).Trim().ToUpperInvariant() switch

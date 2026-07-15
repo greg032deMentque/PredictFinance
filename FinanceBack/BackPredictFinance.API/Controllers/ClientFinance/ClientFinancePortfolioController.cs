@@ -39,10 +39,17 @@ namespace BackPredictFinance.API.Controllers.ClientFinance
             return Ok(await portfolioService.RenamePortfolioAsync(id, model, ct));
         }
 
-        [HttpDelete("portfolios/{id}")]
-        public async Task<IActionResult> DeletePortfolio([FromRoute] string id, CancellationToken ct)
+        [HttpPut("portfolios/{id}/archive")]
+        public async Task<IActionResult> ArchivePortfolio([FromRoute] string id, CancellationToken ct)
         {
-            await portfolioService.DeletePortfolioAsync(id, ct);
+            await portfolioService.ArchivePortfolioAsync(id, ct);
+            return NoContent();
+        }
+
+        [HttpPut("portfolios/{id}/restore")]
+        public async Task<IActionResult> RestorePortfolio([FromRoute] string id, CancellationToken ct)
+        {
+            await portfolioService.RestorePortfolioAsync(id, ct);
             return NoContent();
         }
 

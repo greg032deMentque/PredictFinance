@@ -16,7 +16,7 @@ export class FaqService {
     return this.http.get<FaqAdminItem[]>(`${environment.apiUrl}admin/faq`);
   }
 
-  getAdminById(id: number): Observable<FaqAdminItem> {
+  getAdminById(id: string): Observable<FaqAdminItem> {
     return this.http.get<FaqAdminItem>(`${environment.apiUrl}admin/faq/${id}`);
   }
 
@@ -24,11 +24,11 @@ export class FaqService {
     return this.http.post<void>(`${environment.apiUrl}admin/faq`, payload);
   }
 
-  updateAdmin(id: number, payload: FaqUpsertRequest): Observable<void> {
+  updateAdmin(id: string, payload: FaqUpsertRequest): Observable<void> {
     return this.http.put<void>(`${environment.apiUrl}admin/faq/${id}`, payload);
   }
 
-  deleteAdmin(id: number): Observable<void> {
+  deleteAdmin(id: string): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}admin/faq/${id}`);
   }
 }

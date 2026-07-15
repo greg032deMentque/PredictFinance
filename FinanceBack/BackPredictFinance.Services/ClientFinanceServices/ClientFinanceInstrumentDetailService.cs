@@ -114,17 +114,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 return _projectionService.BuildDefaultRecommendation(holdsInstrument);
             }
 
-            if (snapshot.PortfolioContextSnapshot.HoldsInstrument != holdsInstrument)
-            {
-                return new RecommendationSummaryViewModel
-                {
-                    Kind = RecommendationKind.Wait,
-                    HoldingStatus = holdsInstrument ? HoldingStatusEnum.Held : HoldingStatusEnum.NotHeld,
-                    DisplayLabel = "Attendre",
-                    ExplanationSummary = "La derniere recommandation persistee a ete calculee avec un contexte portefeuille different. Une nouvelle analyse est necessaire pour gouverner la recommandation actuelle."
-                };
-            }
-
             return _projectionService.BuildRecommendationSummary(
                 snapshot.Recommendation?.RecommendationPayload,
                 holdsInstrument,
@@ -146,6 +135,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             var transactions = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
                 .Where(x => x.UserAssetId == userAssetId)
+                .ExcludeArchivedPortfolios()
                 .ToListAsync(ct);
             var buyTransactions = transactions.Where(x => x.TransactionType == TransactionTypeEnum.Buy).ToList();
             var boughtQuantity = buyTransactions.Sum(x => x.Quantity);

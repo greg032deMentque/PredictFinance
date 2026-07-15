@@ -17,10 +17,13 @@ namespace BackPredictFinance.ViewModels.Fundamentals
         public decimal? DebtScore { get; set; }
         public decimal? ValuationScore { get; set; }
         public decimal? DividendScore { get; set; }
+        public decimal? GrowthScore { get; set; }
         public List<string> MissingMetrics { get; set; } = [];
         public int? RankPosition { get; set; }
         public int? UniverseSize { get; set; }
         public List<string> Notes { get; set; } = [];
+        public string PercentileGroupLabel { get; set; } = string.Empty;
+        public bool UsedGlobalUniverseFallback { get; set; }
         public PeaEligibilityStatusEnum PeaEligibilityStatus { get; set; }
         public PeaEligibilitySourceTypeEnum PeaEligibilitySourceType { get; set; }
         public string PeaEligibilitySourceReference { get; set; } = string.Empty;

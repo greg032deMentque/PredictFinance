@@ -1,5 +1,5 @@
 ﻿import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject, lastValueFrom, Observable, of, Subscription, throwError, timer } from 'rxjs';
 import { catchError, filter, finalize, map, switchMap, take, tap } from 'rxjs/operators';
@@ -16,12 +16,10 @@ export class AuthService {
   private refreshTokenSubject = new BehaviorSubject<TokenResponse | null>(null);
   private refreshSchedulerSub?: Subscription;
 
-  constructor(
-    private http: HttpClient,
-    private storageService: StorageService,
-    private router: Router,
-    private authStore: AuthStore
-  ) { }
+  private readonly http = inject(HttpClient);
+  private readonly storageService = inject(StorageService);
+  private readonly router = inject(Router);
+  private readonly authStore = inject(AuthStore);
 
   login(model: { Email: string; Password: string }): Observable<void> {
     return this.http.post<TokenResponse>(environment.apiUrl + 'Account/Login', model).pipe(
@@ -61,7 +59,7 @@ export class AuthService {
       const expiry = payload.exp;
       const now = Math.floor(Date.now() / 1000);
       return expiry <= now + marginSeconds;
-    } catch (e) {
+    } catch {
       return true;
     }
   }
@@ -169,7 +167,7 @@ export class AuthService {
   }
 
 
-  private decodeToken<T = any>(token: string): T | null {
+  private decodeToken<T = Record<string, unknown>>(token: string): T | null {
     try {
       const payloadPart = token.split('.')[1];
       const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
@@ -184,7 +182,7 @@ export class AuthService {
     const rawToken = token ?? this.storageService.GetToken?.();
     if (!rawToken) return [];
 
-    const payload = this.decodeToken<any>(rawToken);
+    const payload = this.decodeToken<{ role?: string | string[]; roles?: string | string[] }>(rawToken);
     if (!payload) return [];
 
     const roles = payload.role ?? payload.roles;
