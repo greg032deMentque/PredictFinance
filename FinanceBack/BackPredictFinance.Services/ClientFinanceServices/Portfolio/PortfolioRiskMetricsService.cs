@@ -13,7 +13,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.PortfolioMetrics
     public sealed class PortfolioRiskMetricsService : BaseService, IPortfolioRiskMetricsService
     {
         private const int MinDataPoints = 20;
+        private const int MinRiskFreeDataPoints = 2;
         private const decimal TradingDaysPerYear = 252m;
+        private const string RiskFreeProxySymbol = "XEON.PA";
 
         public PortfolioRiskMetricsService(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
@@ -58,7 +60,44 @@ namespace BackPredictFinance.Services.ClientFinanceServices.PortfolioMetrics
             if (dailyReturns.Count < MinDataPoints)
                 return new PortfolioRiskMetricsViewModel { DataPointsUsed = dailyReturns.Count };
 
-            return ComputeMetrics(dailyReturns, valueSeries);
+            var riskFreeAnnualizedReturn = await ComputeRiskFreeAnnualizedReturnAsync(
+                valueSeries[0].Date, valueSeries[^1].Date, ct);
+
+            return ComputeMetrics(dailyReturns, valueSeries, riskFreeAnnualizedReturn);
+        }
+
+        private async Task<decimal?> ComputeRiskFreeAnnualizedReturnAsync(
+            DateTime periodStartUtc,
+            DateTime periodEndUtc,
+            CancellationToken ct)
+        {
+            var riskFreeAsset = await _financeDbContext.Assets
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Symbol == RiskFreeProxySymbol, ct);
+
+            if (riskFreeAsset == null) return null;
+
+            var candles = await _financeDbContext.AssetCandleSnapshots
+                .AsNoTracking()
+                .Where(c => c.AssetId == riskFreeAsset.Id
+                    && c.Interval == "1d"
+                    && c.TimestampUtc >= periodStartUtc
+                    && c.TimestampUtc <= periodEndUtc)
+                .OrderBy(c => c.TimestampUtc)
+                .ToListAsync(ct);
+
+            if (candles.Count < 2) return null;
+
+            var riskFreeDailyReturns = new List<decimal>(candles.Count - 1);
+            for (int i = 1; i < candles.Count; i++)
+            {
+                if (candles[i - 1].Close <= 0m) continue;
+                riskFreeDailyReturns.Add((candles[i].Close - candles[i - 1].Close) / candles[i - 1].Close);
+            }
+
+            if (riskFreeDailyReturns.Count < MinRiskFreeDataPoints) return null;
+
+            return ComputeAnnualizedReturn(riskFreeDailyReturns);
         }
 
         private static Dictionary<string, List<(DateTime Date, decimal Price)>> BuildAssetPriceLookup(
@@ -151,12 +190,14 @@ namespace BackPredictFinance.Services.ClientFinanceServices.PortfolioMetrics
 
         private static PortfolioRiskMetricsViewModel ComputeMetrics(
             List<decimal> dailyReturns,
-            List<(DateTime Date, decimal Value)> valueSeries)
+            List<(DateTime Date, decimal Value)> valueSeries,
+            decimal? riskFreeAnnualizedReturn)
         {
             var twr = ComputeTwr(dailyReturns);
             var vol = ComputeAnnualizedVolatility(dailyReturns);
             var annualizedReturn = ComputeAnnualizedReturn(dailyReturns);
-            var sharpe = vol is > 0m ? annualizedReturn / vol : null;
+            var excessReturn = annualizedReturn - (riskFreeAnnualizedReturn ?? 0m);
+            var sharpe = vol is > 0m ? excessReturn / vol : null;
             var maxDrawdown = ComputeMaxDrawdown(valueSeries);
 
             return new PortfolioRiskMetricsViewModel
