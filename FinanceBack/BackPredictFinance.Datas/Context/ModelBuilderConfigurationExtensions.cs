@@ -72,6 +72,7 @@ namespace BackPredictFinance.Datas.Context
             modelBuilder.Entity<AssetTransaction>(entity =>
             {
                 entity.HasIndex(x => new { x.PortfolioId, x.TimestampUtc });
+                entity.HasIndex(x => new { x.UserAssetId, x.IsDeleted });
 
                 // Restrict : un portefeuille porteur de transactions ne peut pas être supprimé
                 // physiquement (la suppression est un soft-delete applicatif).

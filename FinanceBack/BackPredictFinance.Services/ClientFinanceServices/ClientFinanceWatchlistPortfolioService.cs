@@ -226,7 +226,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var transactionQuery = _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .Where(x => userAssetIds.Contains(x.UserAssetId));
+                .Where(x => userAssetIds.Contains(x.UserAssetId) && !x.IsDeleted);
 
             if (!string.IsNullOrWhiteSpace(portfolioId))
             {

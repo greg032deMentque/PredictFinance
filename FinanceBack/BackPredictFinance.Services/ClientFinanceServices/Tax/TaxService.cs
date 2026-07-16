@@ -32,7 +32,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Tax
             var allTransactions = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
                 .Include(t => t.UserAsset).ThenInclude(ua => ua.Asset)
-                .Where(t => portfolioIds.Contains(t.PortfolioId))
+                .Where(t => portfolioIds.Contains(t.PortfolioId) && !t.IsDeleted)
                 .OrderBy(t => t.PortfolioId).ThenBy(t => t.UserAsset.AssetId).ThenBy(t => t.TimestampUtc)
                 .ToListAsync(ct);
 

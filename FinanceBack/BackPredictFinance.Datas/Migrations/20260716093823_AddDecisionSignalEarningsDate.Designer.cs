@@ -4,6 +4,7 @@ using BackPredictFinance.Datas.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BackPredictFinance.Datas.Migrations
 {
     [DbContext(typeof(FinanceDbContext))]
-    partial class FinanceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716093823_AddDecisionSignalEarningsDate")]
+    partial class AddDecisionSignalEarningsDate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -470,9 +473,6 @@ namespace BackPredictFinance.Datas.Migrations
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("PortfolioId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -501,8 +501,6 @@ namespace BackPredictFinance.Datas.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PortfolioId", "TimestampUtc");
-
-                    b.HasIndex("UserAssetId", "IsDeleted");
 
                     b.HasIndex("UserAssetId", "TimestampUtc");
 
