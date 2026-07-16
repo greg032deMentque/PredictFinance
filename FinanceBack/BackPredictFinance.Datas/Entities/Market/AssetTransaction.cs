@@ -32,5 +32,7 @@ namespace BackPredictFinance.Datas.Entities
 
         [Column(TypeName = "decimal(18,8)")]
         public decimal Fees { get; set; }
+
+        public bool IsDeleted { get; set; }
     }
 }

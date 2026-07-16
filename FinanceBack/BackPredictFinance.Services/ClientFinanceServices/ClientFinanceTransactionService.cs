@@ -136,7 +136,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .Include(x => x.UserAsset)
                 .ThenInclude(x => x.Asset)
                 .Include(x => x.Portfolio)
-                .Where(x => x.UserAsset.UserId == _currentUserId);
+                .Where(x => x.UserAsset.UserId == _currentUserId && !x.IsDeleted);
 
             if (!string.IsNullOrWhiteSpace(portfolioId))
                 query = query.Where(x => x.PortfolioId == portfolioId);
@@ -161,7 +161,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             var transaction = await _financeDbContext.AssetTransactions
                 .Include(x => x.UserAsset)
                 .ThenInclude(x => x.Asset)
-                .FirstOrDefaultAsync(x => x.Id == transactionId && x.UserAsset.UserId == _currentUserId, ct);
+                .FirstOrDefaultAsync(x => x.Id == transactionId && x.UserAsset.UserId == _currentUserId && !x.IsDeleted, ct);
 
             if (transaction == null)
             {
@@ -187,7 +187,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 userAsset.Quantity += transaction.Quantity;
             }
 
-            _financeDbContext.AssetTransactions.Remove(transaction);
+            transaction.IsDeleted = true;
             await _financeDbContext.SaveChangesAsync(ct);
         }
     }
