@@ -155,6 +155,7 @@ namespace BackPredictFinance.API.ProgramSubFiles
 
         internal static IServiceCollection AddAdminServices(this IServiceCollection services)
         {
+            services.AddScoped<IFundamentalScoringPolicyService, FundamentalScoringPolicyService>();
             services.AddScoped<IFundamentalScoringService, FundamentalScoringService>();
             services.AddScoped<IAdminOverviewService, AdminOverviewService>();
             services.AddScoped<IAdminKpiService, AdminKpiService>();

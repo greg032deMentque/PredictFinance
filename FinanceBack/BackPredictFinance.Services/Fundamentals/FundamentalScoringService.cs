@@ -29,10 +29,6 @@ namespace BackPredictFinance.Services.Fundamentals
         private const string EligibilityPolicyVersion = FundamentalScoringPolicyDefaults.EligibilityPolicyVersion;
         private const string ProviderId = FundamentalScoringPolicyDefaults.ProviderId;
         private const string AsOfUtcSemantics = FundamentalScoringPolicyDefaults.AsOfUtcSemantics;
-        // En dessous de ce seuil, l'echantillon sectoriel est statistiquement trop faible pour un percentile
-        // fiable (une seule valeur extreme suffirait a placer un titre au 0e ou 100e percentile) : on bascule
-        // alors sur l'univers global (voir ResolveComparisonSet).
-        private const int MinimumSectorSampleSize = 5;
 
         // Catalogue des metriques entrant dans le score composite, regroupees par categorie (profitability,
         // liquidity, debt, valuation, dividend, growth). Le booleen HigherIsBetter pilote le sens du percentile
@@ -55,15 +51,18 @@ namespace BackPredictFinance.Services.Fundamentals
 
         private readonly IFundamentalsProvider _fundamentalsProvider;
         private readonly ILogger<FundamentalScoringService> _scoringLogger;
+        private readonly IFundamentalScoringPolicyService _fundamentalScoringPolicyService;
 
         public FundamentalScoringService(
             IServiceProvider serviceProvider,
             IFundamentalsProvider fundamentalsProvider,
-            ILogger<FundamentalScoringService> scoringLogger)
+            ILogger<FundamentalScoringService> scoringLogger,
+            IFundamentalScoringPolicyService fundamentalScoringPolicyService)
             : base(serviceProvider)
         {
             _fundamentalsProvider = fundamentalsProvider;
             _scoringLogger = scoringLogger;
+            _fundamentalScoringPolicyService = fundamentalScoringPolicyService;
         }
 
         /// <summary>
@@ -93,13 +92,17 @@ namespace BackPredictFinance.Services.Fundamentals
                 throw new ArgumentException("At least one symbol is required.", nameof(request));
             }
 
+            var activePolicy = await _fundamentalScoringPolicyService.ResolveActiveAsync(ct);
+
             // Nombre minimal de categories (sur 6) devant disposer d'un score pour qu'un TotalScore soit
-            // considere utilisable ; borne au plancher/plafond de police pour empecher un appelant de
-            // demander un score "utilisable" avec une couverture de donnees trop faible pour etre significative.
+            // considere utilisable ; borne au plancher/plafond de la politique active (ou des valeurs par
+            // defaut si aucune politique n'est active en base) pour empecher un appelant de demander un
+            // score "utilisable" avec une couverture de donnees trop faible pour etre significative.
             var minCategoriesRequired = Math.Clamp(
                 request.MinCategoriesRequired,
-                FundamentalScoringPolicyDefaults.MinimumCategoriesRequiredFloor,
-                FundamentalScoringPolicyDefaults.MinimumCategoriesRequiredCeiling);
+                activePolicy.MinimumCategoriesRequiredFloor,
+                activePolicy.MinimumCategoriesRequiredCeiling);
+            var minimumSectorSampleSize = activePolicy.MinimumSectorSampleSize;
             var runAsOfUtc = DateTime.UtcNow;
 
             var universeEntries = await _financeDbContext.Set<AssetPeaEligibility>()
@@ -113,7 +116,7 @@ namespace BackPredictFinance.Services.Fundamentals
             var universeSnapshots = await LoadUniverseSnapshotsAsync(universeEntries, ct);
             var universeMetricValues = BuildUniverseMetricValues(universeSnapshots);
             var universeMetricValuesBySector = BuildUniverseMetricValuesBySector(universeSnapshots);
-            var universeScored = BuildUniverseScores(universeEntries, universeSnapshots, universeMetricValues, universeMetricValuesBySector, minCategoriesRequired, request.CoveragePenaltyEnabled);
+            var universeScored = BuildUniverseScores(universeEntries, universeSnapshots, universeMetricValues, universeMetricValuesBySector, minCategoriesRequired, request.CoveragePenaltyEnabled, minimumSectorSampleSize);
             var universeRanks = BuildUniverseRanks(universeScored);
             var rankableUniverseSize = universeRanks.Count;
             foreach (var scored in universeScored)
@@ -176,7 +179,8 @@ namespace BackPredictFinance.Services.Fundamentals
                     allowUsableScore: false,
                     universeSize: rankableUniverseSize,
                     rankPosition: null,
-                    additionalNotes: rankableUniverseSize == 0 ? [.. notes, "No confirmed eligible PEA universe member has enough live data for percentile scoring."] : notes);
+                    additionalNotes: rankableUniverseSize == 0 ? [.. notes, "No confirmed eligible PEA universe member has enough live data for percentile scoring."] : notes,
+                    minimumSectorSampleSize: minimumSectorSampleSize);
 
                 if (peaEligibility.Status != PeaEligibilityStatusEnum.ConfirmedEligible)
                 {
@@ -278,7 +282,8 @@ namespace BackPredictFinance.Services.Fundamentals
             Dictionary<string, List<decimal>> universeMetricValues,
             Dictionary<string, Dictionary<string, List<decimal>>> universeMetricValuesBySector,
             int minCategoriesRequired,
-            bool coveragePenaltyEnabled)
+            bool coveragePenaltyEnabled,
+            int minimumSectorSampleSize)
         {
             var results = new List<FundamentalScoreResult>();
             foreach (var entry in universeEntries)
@@ -312,7 +317,8 @@ namespace BackPredictFinance.Services.Fundamentals
                     allowUsableScore: true,
                     universeSize: universeEntries.Count,
                     rankPosition: null,
-                    additionalNotes: []));
+                    additionalNotes: [],
+                    minimumSectorSampleSize: minimumSectorSampleSize));
             }
 
             return results;
@@ -343,18 +349,19 @@ namespace BackPredictFinance.Services.Fundamentals
             bool allowUsableScore,
             int universeSize,
             int? rankPosition,
-            List<string> additionalNotes)
+            List<string> additionalNotes,
+            int minimumSectorSampleSize)
         {
             var missingMetrics = new List<string>();
             var fallbackMetrics = new List<string>();
             var notes = new List<string>(additionalNotes);
 
-            decimal? profitabilityScore = ComputeCategoryScore("profitability", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics);
-            decimal? liquidityScore = ComputeCategoryScore("liquidity", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics);
-            decimal? debtScore = ComputeCategoryScore("debt", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics);
-            decimal? valuationScore = ComputeCategoryScore("valuation", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics);
-            decimal? dividendScore = ComputeCategoryScore("dividend", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics);
-            decimal? growthScore = ComputeCategoryScore("growth", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics);
+            decimal? profitabilityScore = ComputeCategoryScore("profitability", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics, minimumSectorSampleSize);
+            decimal? liquidityScore = ComputeCategoryScore("liquidity", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics, minimumSectorSampleSize);
+            decimal? debtScore = ComputeCategoryScore("debt", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics, minimumSectorSampleSize);
+            decimal? valuationScore = ComputeCategoryScore("valuation", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics, minimumSectorSampleSize);
+            decimal? dividendScore = ComputeCategoryScore("dividend", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics, minimumSectorSampleSize);
+            decimal? growthScore = ComputeCategoryScore("growth", fundamentals, universeMetricValues, universeMetricValuesBySector, missingMetrics, fallbackMetrics, minimumSectorSampleSize);
 
             var categoryScores = new decimal?[]
             {
@@ -439,7 +446,8 @@ namespace BackPredictFinance.Services.Fundamentals
             Dictionary<string, List<decimal>> universeMetricValues,
             Dictionary<string, Dictionary<string, List<decimal>>> universeMetricValuesBySector,
             List<string> missingMetrics,
-            List<string> fallbackMetrics)
+            List<string> fallbackMetrics,
+            int minimumSectorSampleSize)
         {
             if (fundamentals == null)
             {
@@ -462,7 +470,7 @@ namespace BackPredictFinance.Services.Fundamentals
                     continue;
                 }
 
-                var comparisonSet = ResolveComparisonSet(metric.Code, sectorMetricValues, universeMetricValues, fallbackMetrics);
+                var comparisonSet = ResolveComparisonSet(metric.Code, sectorMetricValues, universeMetricValues, fallbackMetrics, minimumSectorSampleSize);
                 if (comparisonSet is null || comparisonSet.Count == 0)
                 {
                     missingMetrics.Add(metric.Code);
@@ -481,18 +489,20 @@ namespace BackPredictFinance.Services.Fundamentals
         }
 
         // Choisit le groupe de comparaison pour le percentile d'une metrique : priorite au secteur si son
-        // echantillon atteint MinimumSectorSampleSize (percentile sectoriel plus pertinent qu'un percentile
+        // echantillon atteint minimumSectorSampleSize (percentile sectoriel plus pertinent qu'un percentile
         // absolu, cf. BuildUniverseMetricValuesBySector), sinon repli sur l'univers global (et la metrique est
         // ajoutee a fallbackMetrics pour que l'appelant puisse tracer ce repli dans les Notes du resultat).
+        // minimumSectorSampleSize provient de la politique de scoring active (voir IFundamentalScoringPolicyService).
         private static List<decimal>? ResolveComparisonSet(
             string metricCode,
             Dictionary<string, List<decimal>>? sectorMetricValues,
             Dictionary<string, List<decimal>> universeMetricValues,
-            List<string> fallbackMetrics)
+            List<string> fallbackMetrics,
+            int minimumSectorSampleSize)
         {
             if (sectorMetricValues is not null
                 && sectorMetricValues.TryGetValue(metricCode, out var sectorList)
-                && sectorList.Count >= MinimumSectorSampleSize)
+                && sectorList.Count >= minimumSectorSampleSize)
             {
                 return sectorList;
             }

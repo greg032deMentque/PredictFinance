@@ -6,8 +6,10 @@ using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services;
+using BackPredictFinance.Services.AdminGovernance;
 using BackPredictFinance.Services.Fundamentals;
 using BackPredictFinance.Services.TwelveDataServices;
+using BackPredictFinance.ViewModels.AdminViewModels.ScoringPolicy;
 using BackPredictFinance.ViewModels.UserViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -24,7 +26,7 @@ public sealed class FundamentalScoringServiceTests
 {
     private const string UniverseId = "PEA_FR_EQUITIES";
 
-    private static async Task<(FinanceDbContext Db, FundamentalScoringService Service, Mock<IFundamentalsProvider> ProviderMock, IAsyncDisposable Scope)> BuildContextAsync()
+    private static async Task<(FinanceDbContext Db, FundamentalScoringService Service, Mock<IFundamentalsProvider> ProviderMock, IAsyncDisposable Scope, IServiceProvider ServiceProvider)> BuildContextAsync()
     {
         var options = new DbContextOptionsBuilder<FinanceDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
@@ -56,9 +58,10 @@ public sealed class FundamentalScoringServiceTests
         var scope = provider.CreateAsyncScope();
 
         var providerMock = new Mock<IFundamentalsProvider>();
-        var service = new FundamentalScoringService(scope.ServiceProvider, providerMock.Object, NullLogger<FundamentalScoringService>.Instance);
+        var policyService = new FundamentalScoringPolicyService(scope.ServiceProvider);
+        var service = new FundamentalScoringService(scope.ServiceProvider, providerMock.Object, NullLogger<FundamentalScoringService>.Instance, policyService);
 
-        return (db, service, providerMock, scope);
+        return (db, service, providerMock, scope, scope.ServiceProvider);
     }
 
     private static Asset BuildAsset(string id, string symbol, string name) => new()
@@ -112,7 +115,7 @@ public sealed class FundamentalScoringServiceTests
     [Fact]
     public async Task ScoreAsync_SectorWithSingleMemberForMetric_FallsBackToGlobalUniverse()
     {
-        var (db, service, providerMock, scope) = await BuildContextAsync();
+        var (db, service, providerMock, scope, _) = await BuildContextAsync();
         await using var _ = scope;
 
         var techAsset = BuildAsset("a1", "TECH1", "Tech One");
@@ -156,7 +159,7 @@ public sealed class FundamentalScoringServiceTests
     [Fact]
     public async Task ScoreAsync_UnknownSector_FallsBackSystematicallyWithEmptyPercentileGroupLabel()
     {
-        var (db, service, providerMock, scope) = await BuildContextAsync();
+        var (db, service, providerMock, scope, _) = await BuildContextAsync();
         await using var _ = scope;
 
         var noSectorAsset = BuildAsset("a1", "NOSEC1", "No Sector One");
@@ -199,7 +202,7 @@ public sealed class FundamentalScoringServiceTests
     [Fact]
     public async Task ScoreAsync_SectorWithAtLeastFiveMembersForMetric_UsesSectorPercentile()
     {
-        var (db, service, providerMock, scope) = await BuildContextAsync();
+        var (db, service, providerMock, scope, _) = await BuildContextAsync();
         await using var _ = scope;
 
         var sectorAssets = Enumerable.Range(1, 5).Select(i => BuildAsset($"a{i}", $"INDUS{i}", $"Industrial {i}")).ToList();
@@ -235,7 +238,7 @@ public sealed class FundamentalScoringServiceTests
     [Fact]
     public async Task ScoreAsync_GrowthCategoryWithOnlyRevenueGrowth_ComputesScoreFromAvailableMetric()
     {
-        var (db, service, providerMock, scope) = await BuildContextAsync();
+        var (db, service, providerMock, scope, _) = await BuildContextAsync();
         await using var _ = scope;
 
         var growthAsset = BuildAsset("a1", "GROWTH1", "Growth One");
@@ -275,7 +278,7 @@ public sealed class FundamentalScoringServiceTests
     [Fact]
     public async Task ScoreAsync_GrowthCategoryFullyAbsent_GrowthScoreNullAndCoverageOverSix()
     {
-        var (db, service, providerMock, scope) = await BuildContextAsync();
+        var (db, service, providerMock, scope, _) = await BuildContextAsync();
         await using var _ = scope;
 
         var asset = BuildAsset("a1", "NOGROWTH1", "No Growth One");
@@ -329,5 +332,77 @@ public sealed class FundamentalScoringServiceTests
         Assert.Null(result.GrowthScore);
         Assert.Equal(3, result.CategoriesPresent);
         Assert.Equal(0.5m, result.CategoryCoverage);
+    }
+
+    [Fact]
+    public async Task ScoreAsync_ActivePolicyLowersMinimumSectorSampleSize_UsesSectorPercentileInsteadOfGlobalFallback()
+    {
+        var (db, service, providerMock, scope, serviceProvider) = await BuildContextAsync();
+        await using var _ = scope;
+
+        var techAsset = BuildAsset("a1", "TECH1", "Tech One");
+        var sectorPeer = BuildAsset("p1", "TECHPEER1", "Tech Peer One");
+        var otherSectorPeers = Enumerable.Range(1, 3).Select(i => BuildAsset($"o{i}", $"OTHER{i}", $"Other {i}")).ToList();
+
+        db.Assets.Add(techAsset);
+        db.Assets.Add(sectorPeer);
+        db.Assets.AddRange(otherSectorPeers);
+        db.AssetPeaEligibilities.Add(BuildEligibility("a1"));
+        db.AssetPeaEligibilities.Add(BuildEligibility("p1"));
+        foreach (var otherPeer in otherSectorPeers)
+        {
+            db.AssetPeaEligibilities.Add(BuildEligibility(otherPeer.Id));
+        }
+        await db.SaveChangesAsync();
+
+        var fundamentalsBySymbol = new Dictionary<string, MarketFundamentalData>
+        {
+            ["TECH1"] = BuildFundamentals("TECH1", "Tech", returnOnEquity: 0.20m),
+            ["TECHPEER1"] = BuildFundamentals("TECHPEER1", "Tech", returnOnEquity: 0.05m)
+        };
+        for (var i = 1; i <= 3; i++)
+        {
+            fundamentalsBySymbol[$"OTHER{i}"] = BuildFundamentals($"OTHER{i}", "Other", returnOnEquity: 0.05m * i);
+        }
+        SetupProvider(providerMock, fundamentalsBySymbol);
+
+        var baselineResponse = await service.ScoreAsync(new FundamentalScoreRequest
+        {
+            UniverseId = UniverseId,
+            Symbols = ["TECH1"],
+            MinCategoriesRequired = 1,
+            CoveragePenaltyEnabled = true,
+            IncludeRankPosition = false
+        });
+
+        var baselineResult = Assert.Single(baselineResponse.Results);
+        Assert.True(baselineResult.UsedGlobalUniverseFallback);
+
+        var policyService = new FundamentalScoringPolicyService(serviceProvider);
+        var adminScoringPolicyService = new AdminScoringPolicyService(serviceProvider, policyService);
+
+        var createdVersion = await adminScoringPolicyService.CreateVersionAsync(new AdminScoringPolicyVersionCreateRequestViewModel
+        {
+            DisplayName = "Lower sector sample threshold",
+            MinimumCategoriesRequiredFloor = 1,
+            MinimumCategoriesRequiredCeiling = 6,
+            MinimumCategoriesRequiredDefault = 3,
+            MinimumSectorSampleSize = 2,
+            CoveragePenaltySupported = true
+        });
+        await adminScoringPolicyService.ActivateVersionAsync(createdVersion.Id);
+
+        var responseAfterActivation = await service.ScoreAsync(new FundamentalScoreRequest
+        {
+            UniverseId = UniverseId,
+            Symbols = ["TECH1"],
+            MinCategoriesRequired = 1,
+            CoveragePenaltyEnabled = true,
+            IncludeRankPosition = false
+        });
+
+        var resultAfterActivation = Assert.Single(responseAfterActivation.Results);
+        Assert.False(resultAfterActivation.UsedGlobalUniverseFallback);
+        Assert.Equal("Tech", resultAfterActivation.PercentileGroupLabel);
     }
 }

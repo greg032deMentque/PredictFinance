@@ -64,6 +64,7 @@ namespace BackPredictFinance.Datas.Context
         public DbSet<AssetPeaEligibility> AssetPeaEligibilities { get; set; } = null!;
         public DbSet<ParameterDictionaryEntry> ParameterDictionaryEntries { get; set; } = null!;
         public DbSet<RecommendationWordingVersion> RecommendationWordingVersions { get; set; } = null!;
+        public DbSet<FundamentalScoringPolicyVersion> FundamentalScoringPolicyVersions { get; set; } = null!;
         public DbSet<RecommendationWordingScenario> RecommendationWordingScenarios { get; set; } = null!;
         public DbSet<UserNotification> UserNotifications { get; set; } = null!;
         public DbSet<SignalOutcome> SignalOutcomes { get; set; } = null!;

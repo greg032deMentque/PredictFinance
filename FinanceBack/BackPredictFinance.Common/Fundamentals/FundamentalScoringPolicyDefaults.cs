@@ -16,5 +16,8 @@ namespace BackPredictFinance.Common.Fundamentals
         public static readonly string[] LowerIsBetterMetricCodes = ["debtToEquity", "trailingPe", "pegRatio", "priceToBook"];
         public const int MinimumCategoriesRequiredFloor = 1;
         public const int MinimumCategoriesRequiredCeiling = 6;
+        public const int MinimumCategoriesRequiredDefault = 3;
+        public const int MinimumSectorSampleSize = 5;
+        public const bool CoveragePenaltySupported = true;
     }
 }

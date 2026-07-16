@@ -13,6 +13,9 @@ namespace BackPredictFinance.ViewModels.AdminViewModels.ScoringPolicy
         public List<string> LowerIsBetterMetricCodes { get; set; } = [];
         public int MinimumCategoriesRequiredFloor { get; set; }
         public int MinimumCategoriesRequiredCeiling { get; set; }
+        public int MinimumCategoriesRequiredDefault { get; set; }
+        public int MinimumSectorSampleSize { get; set; }
         public bool CoveragePenaltySupported { get; set; }
+        public string? ActivePolicyVersionId { get; set; }
     }
 }

@@ -15,6 +15,7 @@ namespace BackPredictFinance.Datas.Context
             ConfigurePatternDefinitions(modelBuilder);
             ConfigureAnalysisConceptExplanations(modelBuilder);
             ConfigureWordingGovernance(modelBuilder);
+            ConfigureFundamentalScoringPolicy(modelBuilder);
             ConfigureNotifications(modelBuilder);
             ConfigureSignalOutcomes(modelBuilder);
             ConfigureUserAlertPreferences(modelBuilder);
@@ -537,6 +538,17 @@ namespace BackPredictFinance.Datas.Context
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasData(BuildWordingScenarioSeedEntries());
+            });
+        }
+
+        private static void ConfigureFundamentalScoringPolicy(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<FundamentalScoringPolicyVersion>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).HasMaxLength(64).IsRequired();
+                entity.Property(x => x.DisplayName).HasMaxLength(160).IsRequired();
+                entity.HasIndex(x => new { x.IsActive, x.ActivatedAtUtc });
             });
         }
 
