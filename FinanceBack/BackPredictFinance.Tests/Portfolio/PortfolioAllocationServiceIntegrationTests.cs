@@ -186,6 +186,69 @@ public sealed class PortfolioAllocationServiceIntegrationTests : IClassFixture<A
         Assert.Equal(0.25m, payload.Allocation.PortfolioReturn365d);
     }
 
+    [Fact]
+    public async Task GetPortfolio_SoftDeletedSellTransaction_IsExcludedFromAllocation()
+    {
+        await using var factory = BuildFactoryWithFixedPrices();
+
+        var userId = $"it-alloc-softdel-{Guid.NewGuid():N}";
+        var suffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var assetId = $"asset-softdel-{suffix}";
+        var userAssetId = $"user-asset-softdel-{suffix}";
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
+
+            db.Assets.Add(BuildAsset(assetId, $"SOFTDEL{suffix}.PA", "EUR"));
+            db.UserAssets.Add(new UserAsset { Id = userAssetId, UserId = userId, AssetId = assetId, Quantity = 10m });
+            db.AssetTransactions.Add(new AssetTransaction
+            {
+                Id = $"tx-buy-{suffix}",
+                UserAssetId = userAssetId,
+                PortfolioId = string.Empty,
+                TimestampUtc = TransactionTimestampUtc,
+                TransactionType = TransactionTypeEnum.Buy,
+                Quantity = 10m,
+                UnitPrice = 80m,
+                Fees = 0m
+            });
+            // Vente totale marquee supprimee : si le filtre !IsDeleted manque dans
+            // PortfolioAllocationService, le FIFO la consomme quand meme et l'actif
+            // disparait de l'allocation (quantite retombant a 0).
+            db.AssetTransactions.Add(new AssetTransaction
+            {
+                Id = $"tx-sell-{suffix}",
+                UserAssetId = userAssetId,
+                PortfolioId = string.Empty,
+                TimestampUtc = TransactionTimestampUtc.AddDays(30),
+                TransactionType = TransactionTypeEnum.Sell,
+                Quantity = 10m,
+                UnitPrice = 150m,
+                Fees = 0m,
+                IsDeleted = true
+            });
+            db.AssetCandleSnapshots.Add(new AssetCandleSnapshot
+            {
+                Id = $"candle-softdel-{suffix}",
+                AssetId = assetId,
+                TimestampUtc = CandleTimestampUtc,
+                Interval = "1d",
+                Close = 100m
+            });
+
+            await db.SaveChangesAsync();
+        }
+
+        var payload = await GetPortfolioAsync(factory, userId, portfolioId: null);
+
+        Assert.NotNull(payload?.Allocation);
+        var eurSlice = Assert.Single(payload!.Allocation!.CurrencyAllocation, x => x.Label == "EUR");
+        Assert.Equal(1000.00m, eurSlice.ValueEur);
+        Assert.NotNull(payload.Allocation.PortfolioReturn365d);
+        Assert.Equal(0.25m, payload.Allocation.PortfolioReturn365d);
+    }
+
     private WebApplicationFactory<Program> BuildFactoryWithFixedPrices()
         => _factory.WithWebHostBuilder(builder =>
         {

@@ -247,4 +247,65 @@ public sealed class PortfolioRiskMetricsServiceTests
 
         Assert.Equal(expectedSharpe, result.SharpeRatio!.Value);
     }
+
+    [Fact]
+    public async Task GetMetricsAsync_XeonCandlesTimestampedLateInDay_StillIncludesLastDayCandle()
+    {
+        var (db, service, _, portfolioId, scope) = await BuildContextAsync();
+        await using var _1 = scope;
+
+        db.Assets.Add(new Asset
+        {
+            Id = RiskFreeAssetId,
+            Symbol = RiskFreeAssetSymbol,
+            ProviderSymbol = RiskFreeAssetSymbol,
+            Exchange = "XPAR",
+            Currency = "EUR",
+            AssetType = AssetTypeEnum.Etf
+        });
+
+        var startDate = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc);
+        var riskFreePrices = BuildAlternatingPriceSeries(100m, 0.001m, -0.0003m, 21);
+        for (var i = 0; i < riskFreePrices.Count; i++)
+        {
+            // Horodatage volontairement place en fin de journee (20h UTC), comme le ferait
+            // un fournisseur qui timestamp une bougie journaliere sur la cloture de marche
+            // plutot que sur minuit. NormalizeCandleTimestampUtc (ingestion reelle) ne
+            // tronque jamais l'heure : ce cas doit rester couvert par la borne de date.
+            db.AssetCandleSnapshots.Add(new AssetCandleSnapshot
+            {
+                Id = Guid.NewGuid().ToString(),
+                AssetId = RiskFreeAssetId,
+                TimestampUtc = startDate.AddDays(i).AddHours(20),
+                Interval = "1d",
+                Open = riskFreePrices[i],
+                High = riskFreePrices[i],
+                Low = riskFreePrices[i],
+                Close = riskFreePrices[i],
+                Volume = 0m,
+                Source = "test"
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var result = await service.GetMetricsAsync(portfolioId);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result!.SharpeRatio);
+
+        var heldPrices = BuildAlternatingPriceSeries(100m, 0.02m, -0.01m, 21);
+        var portfolioReturns = ComputeReturnsFromPrices(heldPrices);
+        var portfolioAnnualizedReturn = ComputeExpectedAnnualizedReturn(portfolioReturns);
+        var portfolioVol = ComputeExpectedAnnualizedVolatility(portfolioReturns);
+
+        // Attendu calcule sur les 21 bougies (20 rendements) : si la derniere bougie
+        // (jour 20, horodatee a 20h) etait exclue a tort par la borne de date, ce calcul
+        // ne porterait que sur 20 bougies (19 rendements) et l'assertion echouerait.
+        var riskFreeReturns = ComputeReturnsFromPrices(riskFreePrices);
+        var riskFreeAnnualizedReturn = ComputeExpectedAnnualizedReturn(riskFreeReturns);
+
+        var expectedSharpe = Math.Round((portfolioAnnualizedReturn - riskFreeAnnualizedReturn) / portfolioVol, 2);
+
+        Assert.Equal(expectedSharpe, result.SharpeRatio!.Value);
+    }
 }

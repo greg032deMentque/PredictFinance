@@ -77,12 +77,14 @@ namespace BackPredictFinance.Services.ClientFinanceServices.PortfolioMetrics
 
             if (riskFreeAsset == null) return null;
 
+            var periodEndExclusiveUtc = periodEndUtc.Date.AddDays(1);
+
             var candles = await _financeDbContext.AssetCandleSnapshots
                 .AsNoTracking()
                 .Where(c => c.AssetId == riskFreeAsset.Id
                     && c.Interval == "1d"
                     && c.TimestampUtc >= periodStartUtc
-                    && c.TimestampUtc <= periodEndUtc)
+                    && c.TimestampUtc < periodEndExclusiveUtc)
                 .OrderBy(c => c.TimestampUtc)
                 .ToListAsync(ct);
 
