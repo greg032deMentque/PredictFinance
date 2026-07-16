@@ -18,6 +18,7 @@ If those contradict this wiki, they win. This wiki documents *how we operate*, n
 | [data-model.md](data-model.md) | Entities by domain, key invariants, soft-delete, migrations workflow |
 | [api-endpoints.md](api-endpoints.md) | The 31 controllers, auth model, route conventions |
 | [glossary.md](glossary.md) | Domain terms (pattern, direction, confidence, PEA, FIFO, ex-post…) |
+| [business-rules-analysis-engine.md](business-rules-analysis-engine.md) | Every analysis the backend runs (patterns, scoring, risk, fundamentals, portfolio, tax, alerts) with the exact thresholds/formulas currently coded |
 
 ### Contribute safely
 | Page | What it covers |

@@ -12,6 +12,7 @@ This is the fast, operational guide for an AI agent contributing here. The **bin
 6. **Tests**: backend tests only when they prove business behaviour at risk of silent regression. **No frontend (Angular/Jasmine) tests** — do not write or suggest them.
 7. **No comments in code.** Names carry meaning. (Documentation like this wiki is fine.)
 8. **No new NuGet/npm package** without it being called out in the plan and approved.
+9. **Keep the business rules registry current.** If you change a threshold, formula, or add/remove an analysis anywhere under `ClientFinanceServices/` or `BackPredictFinance.Patterns/`, update [business-rules-analysis-engine.md](business-rules-analysis-engine.md) in the same change.
 
 ## Where things live
 
@@ -26,6 +27,7 @@ This is the fast, operational guide for an AI agent contributing here. The **bin
 | Understand endpoints | [api-endpoints.md](api-endpoints.md) |
 | Understand the data model | [data-model.md](data-model.md) |
 | Understand domain terms | [glossary.md](glossary.md) |
+| Understand the analysis engine's business rules (thresholds, formulas) | [business-rules-analysis-engine.md](business-rules-analysis-engine.md) |
 
 ## Project boundaries (quick contract)
 
