@@ -21,7 +21,7 @@ namespace BackPredictFinance.Patterns.Definitions
         }
 
         public override string PatternId => PatternIds.BullFlagContinuation;
-        public override string ModelVersion => "analysis-v1-bull-flag-continuation@lot3-atr";
+        public override string ModelVersion => "analysis-v1-bull-flag-continuation@lot-breakout-fix";
         public override int HistoryLookbackMonths => 6;
         protected override int MinimumRequiredCandles => 40;
         protected override string DisplayName => "Bull flag continuation";
@@ -53,18 +53,23 @@ namespace BackPredictFinance.Patterns.Definitions
             var patternWindow = PatternTechnicals.Tail(candles, 22).ToList();
             var pole = patternWindow.Take(12).ToList();
             var flag = patternWindow.Skip(12).ToList();
+            // flagStructure exclut la derniere bougie du flag (celle testee pour le breakout) : la
+            // resistance/le support du flag doivent etre etablis AVANT la bougie evaluee, sinon
+            // celle-ci ne peut jamais depasser un extremum qui l'inclut elle-meme (High >= Close >= Low
+            // par definition OHLC rend tout breakout mathematiquement impossible).
+            var flagStructure = flag.Take(flag.Count - 1).ToList();
             var currentPrice = candles[^1].Close;
             var poleGainPct = PatternTechnicals.ComputeReturnPct(pole[0].Close, pole[^1].Close);
             var poleHeight = pole.Max(candle => candle.High) - pole.Min(candle => candle.Low);
-            var flagResistance = flag.Max(candle => candle.High);
-            var flagSupport = flag.Min(candle => candle.Low);
+            var flagResistance = flagStructure.Max(candle => candle.High);
+            var flagSupport = flagStructure.Min(candle => candle.Low);
             var flagHeight = flagResistance - flagSupport;
             // Profondeur du retracement du flag par rapport à la hauteur du pole (0 = le flag n'a rien
             // repris de l'impulsion, 1 = le flag est redescendu jusqu'au bas du pole). Un flag propre
             // reste "haut" sur cette échelle (retracement faible).
             var flagRetracement = poleHeight <= 0m ? 1m : (pole[^1].Close - flagSupport) / poleHeight;
-            var flagSlope = PatternTechnicals.ComputeSlope(flag.Select(candle => candle.Close).ToList());
-            var averageFlagClose = PatternTechnicals.AverageClose(flag);
+            var flagSlope = PatternTechnicals.ComputeSlope(flagStructure.Select(candle => candle.Close).ToList());
+            var averageFlagClose = PatternTechnicals.AverageClose(flagStructure);
             var atr = PatternTechnicals.VolatilityUnit(patternWindow, currentPrice);
             // Le breakout doit dépasser la résistance/le support d'une marge exprimée en multiples
             // d'ATR (et non un seuil de prix fixe) : le seuil s'adapte ainsi à la volatilité propre du
@@ -125,7 +130,7 @@ namespace BackPredictFinance.Patterns.Definitions
                 };
             }
 
-            if (breakdownDown || flagRetracement > PatternThresholds.FlagMaxRetracement)
+            if (breakdownDown)
             {
                 return new ContinuationPatternAnalysisState
                 {
@@ -133,10 +138,10 @@ namespace BackPredictFinance.Patterns.Definitions
                     PhaseLabel = "Support du flag rompu",
                     Status = PatternStatus.Invalidated,
                     IsCompatible = false,
-                    StatusReason = "Le prix casse le support du flag ou le retracement devient trop profond pour un bull flag propre.",
+                    StatusReason = "Le prix casse le support du flag etabli avant la bougie testee.",
                     ValidationReason = "Le scenario n'est plus compatible avec une continuation haussiere de bull flag.",
                     IsInvalidated = true,
-                    InvalidationReason = "La rupture du support ou un retracement trop profond invalide la lecture de bull flag.",
+                    InvalidationReason = "La rupture du support invalide la lecture de bull flag.",
                     InvalidationRuleCode = "BULL_FLAG_SUPPORT_FAILURE",
                     Confidence = 0.20m,
                     CurrentPrice = currentPrice,

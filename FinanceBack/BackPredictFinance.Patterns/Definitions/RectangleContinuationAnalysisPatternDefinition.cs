@@ -21,7 +21,7 @@ namespace BackPredictFinance.Patterns.Definitions
         }
 
         public override string PatternId => PatternIds.RectangleContinuation;
-        public override string ModelVersion => "analysis-v1-rectangle-continuation@lot3-atr";
+        public override string ModelVersion => "analysis-v1-rectangle-continuation@lot-breakout-fix";
         public override int HistoryLookbackMonths => 6;
         protected override int MinimumRequiredCandles => 44;
         protected override string DisplayName => "Rectangle continuation";
@@ -47,24 +47,29 @@ namespace BackPredictFinance.Patterns.Definitions
                 };
             }
             // Deux fenêtres disjointes et chronologiquement adjacentes : les dernières bougies
-            // définissent le rectangle (support/résistance), les bougies immédiatement AVANT celui-ci
-            // définissent la tendance préalable. priorWindow ne chevauche jamais rangeWindow.
+            // couvrent le rectangle, les bougies immédiatement AVANT celui-ci définissent la
+            // tendance préalable. priorWindow ne chevauche jamais rangeWindow.
             var rangeWindow = PatternTechnicals.Tail(candles, PatternThresholds.PatternRangeWindowCandleCount);
+            // structureWindow exclut la derniere bougie (celle testee pour le breakout) : le
+            // support/resistance doivent etre etablis AVANT la bougie evaluee, sinon celle-ci ne peut
+            // jamais depasser un extremum qui l'inclut elle-meme (High >= Close >= Low par definition
+            // OHLC rend tout breakout mathematiquement impossible).
+            var structureWindow = rangeWindow.Take(rangeWindow.Count - 1).ToList();
             var priorWindow = candles.Take(Math.Max(candles.Count - rangeWindow.Count, 0)).TakeLast(PatternThresholds.PriorTrendWindowCandleCount).ToList();
             var currentPrice = candles[^1].Close;
-            var support = rangeWindow.Min(candle => candle.Low);
-            var resistance = rangeWindow.Max(candle => candle.High);
+            var support = structureWindow.Min(candle => candle.Low);
+            var resistance = structureWindow.Max(candle => candle.High);
             var rangeHeight = resistance - support;
-            var averageClose = PatternTechnicals.AverageClose(rangeWindow);
-            var atr = PatternTechnicals.VolatilityUnit(rangeWindow, currentPrice);
+            var averageClose = PatternTechnicals.AverageClose(structureWindow);
+            var atr = PatternTechnicals.VolatilityUnit(structureWindow, currentPrice);
             // Tolérance de "touche" exprimée en multiple d'ATR (pas un pourcentage fixe) : une bougie
             // est comptée comme touchant une borne si elle en est suffisamment proche compte tenu de
             // la volatilité récente du titre.
             var tolerance = PatternThresholds.RectangleTouchToleranceAtrMultiple * atr;
-            var touchesResistance = rangeWindow.Count(candle => Math.Abs(candle.High - resistance) <= tolerance);
-            var touchesSupport = rangeWindow.Count(candle => Math.Abs(candle.Low - support) <= tolerance);
-            var slopeHigh = PatternTechnicals.ComputeSlope(rangeWindow.Select(candle => candle.High).ToList());
-            var slopeLow = PatternTechnicals.ComputeSlope(rangeWindow.Select(candle => candle.Low).ToList());
+            var touchesResistance = structureWindow.Count(candle => Math.Abs(candle.High - resistance) <= tolerance);
+            var touchesSupport = structureWindow.Count(candle => Math.Abs(candle.Low - support) <= tolerance);
+            var slopeHigh = PatternTechnicals.ComputeSlope(structureWindow.Select(candle => candle.High).ToList());
+            var slopeLow = PatternTechnicals.ComputeSlope(structureWindow.Select(candle => candle.Low).ToList());
             var priorTrend = PatternTechnicals.ResolveDirectionalTrend(priorWindow);
             var isFlatEnough = averageClose > 0m
                 && Math.Abs(slopeHigh) <= PatternThresholds.RectangleMaxBoundarySlopeAtrPerCandle * atr

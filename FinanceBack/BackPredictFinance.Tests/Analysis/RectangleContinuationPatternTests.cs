@@ -5,6 +5,11 @@ using BackPredictFinance.Patterns.Definitions;
 
 namespace BackPredictFinance.Tests.Analysis;
 
+// Les deux derniers tests prouvent la non-regression du fix "lot-breakout-fix" : avant correction,
+// resistance/support etaient calcules sur une fenetre incluant la bougie testee elle-meme, rendant
+// bullish_breakout_confirmed, bearish_breakout_confirmed et opposite_breakout_invalidated
+// mathematiquement inatteignables (High >= Close >= Low interdit a une bougie de depasser un
+// extremum qui l'inclut).
 public sealed class RectangleContinuationPatternTests
 {
     private static AnalysisRequest BuildRequest()
@@ -66,6 +71,29 @@ public sealed class RectangleContinuationPatternTests
             var price = from + (to - from) * i / 19m;
             candles.Add(Flat(decimal.Round(price, 4)));
         }
+
+        return candles;
+    }
+
+    // Serie de 44 bougies (minimum requis) : 20 bougies de tendance haussiere prealable (81..100,
+    // +1/bougie), puis 23 bougies de rectangle 100/110 (oscillation periodique touchant les deux
+    // bornes a plusieurs reprises), puis 1 bougie testee dont le Close est fourni par l'appelant.
+    private static List<TickerCandle> BuildRectangleSeries(decimal testedClose)
+    {
+        var candles = new List<TickerCandle>();
+
+        for (var price = 81m; price <= 100m; price++)
+        {
+            candles.Add(Flat(price));
+        }
+
+        decimal[] rectangle = [100m, 105m, 110m, 105m];
+        for (var i = 0; i < 23; i++)
+        {
+            candles.Add(Flat(rectangle[i % rectangle.Length]));
+        }
+
+        candles.Add(Flat(testedClose));
 
         return candles;
     }
@@ -133,6 +161,35 @@ public sealed class RectangleContinuationPatternTests
 
         var pattern = artifact.Patterns[0];
         Assert.Equal("neutral_rectangle_without_prior_trend", pattern.Phase);
+        Assert.False(pattern.ContractAssessment.Detection.IsCompatible);
+    }
+
+    [Fact]
+    public async Task Analyze_CloseAboveResistanceEstablishedBeforeTestedCandle_ReturnsBullishBreakoutConfirmed()
+    {
+        var candles = BuildRectangleSeries(testedClose: 115m);
+        var definition = new RectangleContinuationAnalysisPatternDefinition(new FakePatternMarketDataProvider(candles));
+
+        var artifact = await definition.ExecuteAsync(BuildRequest());
+
+        var pattern = artifact.Patterns[0];
+        Assert.Equal("bullish_breakout_confirmed", pattern.Phase);
+        Assert.True(pattern.ContractAssessment.Detection.IsCompatible);
+        Assert.Equal("VALIDATED", pattern.ContractAssessment.Validation.State);
+        Assert.NotNull(pattern.TargetPrice);
+    }
+
+    [Fact]
+    public async Task Analyze_CloseBelowSupportOppositeToPriorUptrend_ReturnsOppositeBreakoutInvalidated()
+    {
+        var candles = BuildRectangleSeries(testedClose: 95m);
+        var definition = new RectangleContinuationAnalysisPatternDefinition(new FakePatternMarketDataProvider(candles));
+
+        var artifact = await definition.ExecuteAsync(BuildRequest());
+
+        var pattern = artifact.Patterns[0];
+        Assert.Equal("opposite_breakout_invalidated", pattern.Phase);
+        Assert.Equal("INVALIDATED", pattern.ContractAssessment.Invalidation.State);
         Assert.False(pattern.ContractAssessment.Detection.IsCompatible);
     }
 
