@@ -71,7 +71,7 @@ namespace BackPredictFinance.Services.BackgroundJobs
             }
         }
 
-        private static async Task<IReadOnlyList<string>> ResolveTrackedAssetIdsAsync(
+        internal static async Task<IReadOnlyList<string>> ResolveTrackedAssetIdsAsync(
             FinanceDbContext db,
             CancellationToken ct)
         {

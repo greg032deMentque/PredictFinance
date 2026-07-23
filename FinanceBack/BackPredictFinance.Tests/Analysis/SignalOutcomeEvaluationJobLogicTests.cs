@@ -6,7 +6,6 @@ using BackPredictFinance.Services.BackgroundJobs;
 using BackPredictFinance.Services.Notifications;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -48,40 +47,6 @@ public sealed class SignalOutcomeEvaluationJobLogicTests
         Currency = "EUR",
         AssetType = AssetTypeEnum.Stock
     };
-
-    private static SignalOutcomeEvaluationJob BuildJob(IServiceProvider sp)
-    {
-        var scopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
-        return new SignalOutcomeEvaluationJob(
-            scopeFactory,
-            NullLogger<SignalOutcomeEvaluationJob>.Instance);
-    }
-
-    private static IServiceProvider BuildServiceProvider(FinanceDbContext db)
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton(db);
-        services.AddSingleton<FinanceDbContext>(db);
-        services.AddSingleton<IProactiveAlertEmitter>(new ProactiveAlertEmitter(NullLogger<ProactiveAlertEmitter>.Instance));
-        services.AddScoped<FinanceDbContext>(_ => db);
-        services.AddScoped<IProactiveAlertEmitter>(_ => new ProactiveAlertEmitter(NullLogger<ProactiveAlertEmitter>.Instance));
-
-        var scopeFactoryMock = new Mock<IServiceScopeFactory>();
-        var scopeMock = new Mock<IServiceScope>();
-        var serviceProviderMock = new Mock<IServiceProvider>();
-
-        serviceProviderMock.Setup(p => p.GetService(typeof(FinanceDbContext))).Returns(db);
-        serviceProviderMock.Setup(p => p.GetService(typeof(IProactiveAlertEmitter)))
-            .Returns(new ProactiveAlertEmitter(NullLogger<ProactiveAlertEmitter>.Instance));
-
-        scopeMock.Setup(s => s.ServiceProvider).Returns(serviceProviderMock.Object);
-        scopeMock.Setup(s => s.Dispose());
-        scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scopeMock.Object);
-
-        var rootServices = new ServiceCollection();
-        rootServices.AddSingleton(scopeFactoryMock.Object);
-        return rootServices.BuildServiceProvider();
-    }
 
     [Fact]
     public async Task EvaluatePendingSignals_WhenTargetHitOnFirstEvaluation_PersistsTargetHitOutcome()
@@ -300,7 +265,7 @@ public sealed class SignalOutcomeEvaluationJobLogicTests
             var previousOutcome = await db.SignalOutcomes
                 .FirstOrDefaultAsync(so => so.PatternAssessmentId == patternAssessment.Id);
 
-            var evaluatedOutcome = await EvaluateStaticAsync(db, patternAssessment, now);
+            var evaluatedOutcome = await SignalOutcomeEvaluationJob.EvaluateAsync(db, patternAssessment, now, CancellationToken.None);
 
             var wasStillOpen = previousOutcome?.Outcome == SignalOutcomeEnum.StillOpen;
             var isNowTerminal = evaluatedOutcome.Outcome is SignalOutcomeEnum.TargetHit or SignalOutcomeEnum.InvalidationHit;
@@ -333,84 +298,111 @@ public sealed class SignalOutcomeEvaluationJobLogicTests
         }
     }
 
-    private static async Task<SignalOutcome> EvaluateStaticAsync(
-        FinanceDbContext db,
-        PatternAssessment patternAssessment,
-        DateTime now)
+    [Fact]
+    public async Task EvaluatePendingSignals_WhenBearishPatternHitsTargetViaLowCandle_SkipsFalsePositiveAndPersistsCorrectHitDay()
     {
-        var decisionSignal = patternAssessment.AnalysisRun.DecisionSignal!;
-        var evaluationWindowDays = decisionSignal.HorizonDays > 0 ? decisionSignal.HorizonDays : 30;
-        var evaluationStartUtc = patternAssessment.AnalysisRun.CompletedAtUtc ?? patternAssessment.AnalysisRun.StartedAtUtc;
-        var windowStartUtc = evaluationStartUtc.Date;
-        var windowEndUtcExclusive = windowStartUtc.AddDays(evaluationWindowDays + 1);
-        var windowIsOpen = windowEndUtcExclusive > now;
+        var dbName = $"signal-bearish-1-{Guid.NewGuid():N}";
+        var db = BuildInMemoryDb(dbName);
+        var userId = "user-bearish-1";
+        var assetId = "asset-bearish-1";
 
-        var signalOutcome = new SignalOutcome
+        var user = BuildUser(userId);
+        var asset = BuildAsset(assetId);
+        var completedAt = new DateTime(2026, 5, 1, 8, 0, 0, DateTimeKind.Utc);
+
+        var run = new AnalysisRun
         {
-            AnalysisRunId = patternAssessment.AnalysisRunId,
-            PatternAssessmentId = patternAssessment.Id,
-            DecisionSignalId = decisionSignal.Id,
-            EvaluationWindowDays = evaluationWindowDays,
-            EvaluatedAtUtc = now,
-            PolicyVersion = patternAssessment.AnalysisRun.ModelSnapshot?.ModelVersion ?? string.Empty,
-            ConfidenceLabel = patternAssessment.Confidence >= ConfidenceThresholds.HighFloor
-                ? ConfidenceLabelEnum.High
-                : patternAssessment.Confidence >= ConfidenceThresholds.MediumFloor
-                    ? ConfidenceLabelEnum.Medium
-                    : ConfidenceLabelEnum.Low
+            Id = "run-bearish-1",
+            UserId = userId,
+            AssetId = assetId,
+            Status = AnalysisRunStatusEnum.Completed,
+            StartedAtUtc = completedAt.AddMinutes(-5),
+            CompletedAtUtc = completedAt,
+            RawPayload = "{}"
         };
 
-        if (!patternAssessment.TargetPrice.HasValue && !patternAssessment.InvalidationPrice.HasValue)
+        var decision = new DecisionSignal
         {
-            signalOutcome.Outcome = SignalOutcomeEnum.NotEvaluable;
-            return signalOutcome;
-        }
+            Id = "decision-bearish-1",
+            AnalysisRunId = run.Id,
+            Action = RecommendationActionEnum.Sell,
+            IsActionable = true,
+            Confidence = 0.78m,
+            HorizonDays = 10
+        };
 
-        var scanEndUtcExclusive = windowIsOpen ? now.Date.AddDays(1) : windowEndUtcExclusive;
-
-        var candles = await db.AssetCandleSnapshots
-            .Where(snapshot => snapshot.AssetId == patternAssessment.AnalysisRun.AssetId
-                && snapshot.Interval == "1d"
-                && snapshot.TimestampUtc >= windowStartUtc
-                && snapshot.TimestampUtc < scanEndUtcExclusive)
-            .OrderBy(snapshot => snapshot.TimestampUtc)
-            .ToListAsync();
-
-        foreach (var candle in candles)
+        var assessment = new PatternAssessment
         {
-            var targetHit = patternAssessment.TargetPrice.HasValue && candle.High >= patternAssessment.TargetPrice.Value;
-            var invalidationHit = patternAssessment.InvalidationPrice.HasValue && candle.Low <= patternAssessment.InvalidationPrice.Value;
+            Id = "pa-bearish-1",
+            AnalysisRunId = run.Id,
+            PatternId = "DOUBLE_TOP_REVERSAL",
+            Phase = "bearish_breakdown_confirmed",
+            ProgressStatus = PatternProgressStatusEnum.Confirmed,
+            Direction = PatternDirectionEnum.Bearish,
+            Probability = 0.78m,
+            Confidence = 0.78m,
+            CurrentPrice = 100m,
+            TargetPrice = 85m,
+            InvalidationPrice = 110m,
+            IsPrimary = true
+        };
 
-            if (invalidationHit)
-            {
-                signalOutcome.Outcome = SignalOutcomeEnum.InvalidationHit;
-                signalOutcome.FirstHitAtUtc = candle.TimestampUtc;
-                return signalOutcome;
-            }
+        var windowStart = completedAt.Date;
 
-            if (targetHit)
-            {
-                signalOutcome.Outcome = SignalOutcomeEnum.TargetHit;
-                signalOutcome.FirstHitAtUtc = candle.TimestampUtc;
-                return signalOutcome;
-            }
-        }
-
-        if (windowIsOpen)
+        // Ne touche ni la cible baissière (Low > 85) ni l'invalidation (High < 110) selon la vraie
+        // logique directionnelle. Un clone haussier (High >= target, Low <= invalidation) déclencherait
+        // à tort une InvalidationHit dès cette bougie (Low=98 <= 110).
+        var candleFalsePositive = new AssetCandleSnapshot
         {
-            signalOutcome.Outcome = SignalOutcomeEnum.StillOpen;
-            return signalOutcome;
-        }
+            Id = "candle-bearish-1a",
+            AssetId = assetId,
+            TimestampUtc = windowStart.AddDays(2),
+            Interval = "1d",
+            Open = 99m,
+            High = 101m,
+            Low = 98m,
+            Close = 99m,
+            Volume = 800m,
+            Source = "test"
+        };
 
-        var minCandlesRequired = Math.Max(1, evaluationWindowDays * 5 / 7 / 7);
-        if (candles.Count < minCandlesRequired)
+        // Touche réellement la cible baissière (Low <= 85).
+        var candleRealHit = new AssetCandleSnapshot
         {
-            signalOutcome.Outcome = SignalOutcomeEnum.NotEvaluable;
-            return signalOutcome;
-        }
+            Id = "candle-bearish-1b",
+            AssetId = assetId,
+            TimestampUtc = windowStart.AddDays(5),
+            Interval = "1d",
+            Open = 90m,
+            High = 92m,
+            Low = 84m,
+            Close = 85m,
+            Volume = 1500m,
+            Source = "test"
+        };
 
-        signalOutcome.Outcome = SignalOutcomeEnum.TargetMiss;
-        return signalOutcome;
+        run.DecisionSignal = decision;
+        db.Users.Add(user);
+        db.Assets.Add(asset);
+        db.AnalysisRuns.Add(run);
+        db.DecisionSignals.Add(decision);
+        db.PatternAssessments.Add(assessment);
+        db.AssetCandleSnapshots.Add(candleFalsePositive);
+        db.AssetCandleSnapshots.Add(candleRealHit);
+        await db.SaveChangesAsync();
+
+        var emitter = new ProactiveAlertEmitter(NullLogger<ProactiveAlertEmitter>.Instance);
+        var now = windowStart.AddDays(decision.HorizonDays + 2);
+
+        await InvokeEvaluatePendingSignalsAsync(db, emitter, now);
+
+        var outcome = await db.SignalOutcomes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.PatternAssessmentId == assessment.Id);
+
+        Assert.NotNull(outcome);
+        Assert.Equal(SignalOutcomeEnum.TargetHit, outcome!.Outcome);
+        Assert.Equal(candleRealHit.TimestampUtc, outcome.FirstHitAtUtc);
     }
 
     [Fact]

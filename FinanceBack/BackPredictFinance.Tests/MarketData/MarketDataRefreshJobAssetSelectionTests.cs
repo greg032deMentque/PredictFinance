@@ -1,6 +1,7 @@
 ﻿using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services.BackgroundJobs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Moq;
@@ -63,7 +64,7 @@ public sealed class MarketDataRefreshJobAssetSelectionTests
         });
         await db.SaveChangesAsync();
 
-        var result = await ResolveTrackedAssetIdsAsync(db);
+        var result = await MarketDataRefreshJob.ResolveTrackedAssetIdsAsync(db, CancellationToken.None);
 
         Assert.Contains("asset-refresh-1", result);
     }
@@ -132,7 +133,7 @@ public sealed class MarketDataRefreshJobAssetSelectionTests
         db.SignalOutcomes.Add(outcome);
         await db.SaveChangesAsync();
 
-        var result = await ResolveTrackedAssetIdsAsync(db);
+        var result = await MarketDataRefreshJob.ResolveTrackedAssetIdsAsync(db, CancellationToken.None);
 
         Assert.Contains("asset-refresh-2", result);
     }
@@ -150,7 +151,7 @@ public sealed class MarketDataRefreshJobAssetSelectionTests
         db.Assets.Add(asset);
         await db.SaveChangesAsync();
 
-        var result = await ResolveTrackedAssetIdsAsync(db);
+        var result = await MarketDataRefreshJob.ResolveTrackedAssetIdsAsync(db, CancellationToken.None);
 
         Assert.DoesNotContain("asset-refresh-3", result);
     }
@@ -220,7 +221,7 @@ public sealed class MarketDataRefreshJobAssetSelectionTests
         db.SignalOutcomes.Add(outcome);
         await db.SaveChangesAsync();
 
-        var result = await ResolveTrackedAssetIdsAsync(db);
+        var result = await MarketDataRefreshJob.ResolveTrackedAssetIdsAsync(db, CancellationToken.None);
 
         Assert.Single(result.Where(id => id == "asset-refresh-4"));
     }
@@ -342,29 +343,9 @@ public sealed class MarketDataRefreshJobAssetSelectionTests
         db.SignalOutcomes.Add(openOutcome);
         await db.SaveChangesAsync();
 
-        var result = await ResolveTrackedAssetIdsAsync(db);
+        var result = await MarketDataRefreshJob.ResolveTrackedAssetIdsAsync(db, CancellationToken.None);
 
         Assert.DoesNotContain("asset-refresh-5", result);
         Assert.Contains("asset-refresh-5b", result);
-    }
-
-    private static async Task<IReadOnlyList<string>> ResolveTrackedAssetIdsAsync(
-        FinanceDbContext db,
-        CancellationToken ct = default)
-    {
-        var watchlistAssetIds = await db.UserAssets
-            .AsNoTracking()
-            .Select(ua => ua.AssetId)
-            .ToListAsync(ct);
-
-        var openSignalAssetIds = await db.SignalOutcomes
-            .AsNoTracking()
-            .Where(so => so.Outcome == SignalOutcomeEnum.StillOpen)
-            .Select(so => so.AnalysisRun.AssetId)
-            .ToListAsync(ct);
-
-        return watchlistAssetIds
-            .Union(openSignalAssetIds, StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 }

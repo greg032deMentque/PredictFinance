@@ -139,7 +139,7 @@ namespace BackPredictFinance.Services.BackgroundJobs
                 ct);
         }
 
-        private static async Task<SignalOutcome> EvaluateAsync(
+        internal static async Task<SignalOutcome> EvaluateAsync(
             FinanceDbContext db,
             PatternAssessment patternAssessment,
             DateTime now,
