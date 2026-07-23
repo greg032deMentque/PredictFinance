@@ -4,16 +4,18 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!--
-      Suppressions Sonar ciblees et documentees (Lot 3 - Qualite & CI/CD).
+      Suppressions Sonar ciblees et documentees (Lot 3 - Qualite & CI/CD, revu vague 2 audit
+      d'architecture : S125/S1450 retires du 2026-07-23, cf. CI-05 - echantillon insuffisant pour
+      auditer S1144 sans risque, laisse en l'etat).
       Chaque regle ci-dessous a ete auditee individuellement : aucun bug, risque de
       securite ou defaut de correctness reel identifie. Corriger ces points impliquerait
       soit un renommage massif casse-tout (S2344 : 58 enums serialises JSON/DB partages
       avec FinanceFront), soit un refactor architectural hors perimetre du lot (S6960 :
       split de controllers), soit un gain de lisibilite marginal sans risque (S3358,
       S4136, S1144, S3267, S3459, S1075, S2325, S1186, S1172, xUnit2031, S927, S6968,
-      S6966, S6562, S3878, S3218, S2094, S1450, S125, S1244, S1118, S101).
+      S6966, S6562, S3878, S3218, S2094, S1244, S1118, S101).
     -->
-    <NoWarn>$(NoWarn);S2344;S3358;S6960;S4136;S1144;S3267;S3459;S1075;S2325;S1186;S1172;xUnit2031;S927;S6968;S6966;S6562;S3878;S3218;S2094;S1450;S125;S1244;S1118;S101</NoWarn>
+    <NoWarn>$(NoWarn);S2344;S3358;S6960;S4136;S1144;S3267;S3459;S1075;S2325;S1186;S1172;xUnit2031;S927;S6968;S6966;S6562;S3878;S3218;S2094;S1244;S1118;S101</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SonarAnalyzer.CSharp" Version="10.10.0.116381" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />

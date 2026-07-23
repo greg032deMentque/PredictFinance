@@ -35,9 +35,34 @@ namespace BackPredictFinance.ViewModels.UserViewModels
     {
         public UserViewModelProfile()
         {
-            CreateMap<User, UserViewModel>();
+            // LockoutEnd : DateTimeOffset? cote Identity (IdentityUser) vs DateTime? cote ViewModel —
+            // AutoMapper ne convertit pas ce couple par convention (AssertConfigurationIsValid le signale).
+            // Roles : resolu par service (UserManager.GetRolesAsync), jamais par navigation directe sur User.
+            CreateMap<User, UserViewModel>()
+                .ForMember(dest => dest.LockoutEnd, opt => opt.MapFrom(src => src.LockoutEnd.HasValue ? src.LockoutEnd.Value.UtcDateTime : (DateTime?)null))
+                .ForMember(dest => dest.Roles, opt => opt.Ignore());
+            // UserViewModel -> User : champs Identity/securite/consentement/alertes jamais ecrasables
+            // depuis un formulaire d'edition de profil (geres par leurs propres flux dedies :
+            // UserManager pour PasswordHash/SecurityStamp/ConcurrencyStamp, JwtGeneratorService pour
+            // RefreshToken*, endpoints RGPD dedies pour les consentements, endpoints alertes pour les
+            // preferences AlertX, suppression de compte pour DeletedAt).
             CreateMap<UserViewModel, User>()
-                .ForMember(dest => dest.UserName, opt => opt.Ignore());
+                .ForMember(dest => dest.UserName, opt => opt.Ignore())
+                .ForMember(dest => dest.LockoutEnd, opt => opt.MapFrom(src => src.LockoutEnd.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(src.LockoutEnd.Value, DateTimeKind.Utc)) : (DateTimeOffset?)null))
+                .ForMember(dest => dest.RefreshToken, opt => opt.Ignore())
+                .ForMember(dest => dest.RefreshTokenExpiryTime, opt => opt.Ignore())
+                .ForMember(dest => dest.AlertPatternStateChangeEnabled, opt => opt.Ignore())
+                .ForMember(dest => dest.AlertLevelCrossedEnabled, opt => opt.Ignore())
+                .ForMember(dest => dest.AlertDataStaleEnabled, opt => opt.Ignore())
+                .ForMember(dest => dest.AnalyticsConsent, opt => opt.Ignore())
+                .ForMember(dest => dest.MarketingEmailConsent, opt => opt.Ignore())
+                .ForMember(dest => dest.ProductImprovementConsent, opt => opt.Ignore())
+                .ForMember(dest => dest.ConsentLastUpdatedUtc, opt => opt.Ignore())
+                .ForMember(dest => dest.DeletedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.UserAssets, opt => opt.Ignore())
+                .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+                .ForMember(dest => dest.SecurityStamp, opt => opt.Ignore())
+                .ForMember(dest => dest.ConcurrencyStamp, opt => opt.Ignore());
         }
     }
 

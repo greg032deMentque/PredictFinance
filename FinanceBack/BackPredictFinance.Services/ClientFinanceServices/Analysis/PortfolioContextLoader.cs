@@ -50,7 +50,7 @@ public interface IPortfolioContextLoader
 
             var transactionQuery = _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .Where(x => x.UserAssetId == userAsset.Id && !x.IsDeleted);
+                .Where(x => x.UserAssetId == userAsset.Id);
 
             var transactions = await transactionQuery
                 .OrderBy(x => x.TimestampUtc)

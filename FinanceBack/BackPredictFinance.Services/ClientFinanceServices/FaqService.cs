@@ -25,7 +25,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var entries = await _financeDbContext.FaqEntries
                 .AsNoTracking()
-                .Where(e => e.IsActive && e.IsPublished && !e.IsDeleted)
+                .Where(e => e.IsActive && e.IsPublished)
                 .OrderBy(e => e.DisplayOrder)
                 .ToListAsync(ct);
 
@@ -36,7 +36,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var entries = await _financeDbContext.FaqEntries
                 .AsNoTracking()
-                .Where(e => !e.IsDeleted)
                 .OrderBy(e => e.DisplayOrder)
                 .ToListAsync(ct);
 
@@ -47,7 +46,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var entry = await _financeDbContext.FaqEntries
                 .AsNoTracking()
-                .Where(e => !e.IsDeleted && e.Id == id)
+                .Where(e => e.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             return entry is null ? null : _mapper.Map<FaqEntryAdminViewModel>(entry);
@@ -76,7 +75,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task<FaqEntryAdminViewModel> UpdateAsync(string id, FaqEntryUpsertRequestViewModel request, CancellationToken ct = default)
         {
             var entry = await _financeDbContext.FaqEntries
-                .Where(e => !e.IsDeleted && e.Id == id)
+                .Where(e => e.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (entry is null)
@@ -96,7 +95,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task DeleteAsync(string id, CancellationToken ct = default)
         {
             var entry = await _financeDbContext.FaqEntries
-                .Where(e => !e.IsDeleted && e.Id == id)
+                .Where(e => e.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (entry is null)

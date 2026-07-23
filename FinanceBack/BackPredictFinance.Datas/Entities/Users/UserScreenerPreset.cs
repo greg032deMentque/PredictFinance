@@ -4,7 +4,7 @@ namespace BackPredictFinance.Datas.Entities
     /// Combinaison de filtres du screener sauvegardée par un utilisateur pour être rejouée
     /// ultérieurement sans ressaisie.
     /// </summary>
-    public class UserScreenerPreset : AuditableEntityBase
+    public class UserScreenerPreset : AuditableEntityBase, ISoftDeletable
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

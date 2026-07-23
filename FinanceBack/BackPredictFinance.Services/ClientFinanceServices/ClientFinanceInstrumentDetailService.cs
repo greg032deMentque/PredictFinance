@@ -134,7 +134,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var transactions = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .Where(x => x.UserAssetId == userAssetId && !x.IsDeleted)
+                .Where(x => x.UserAssetId == userAssetId)
                 .ExcludeArchivedPortfolios()
                 .ToListAsync(ct);
             var buyTransactions = transactions.Where(x => x.TransactionType == TransactionTypeEnum.Buy).ToList();

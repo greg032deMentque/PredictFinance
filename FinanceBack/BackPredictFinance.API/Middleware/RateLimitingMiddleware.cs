@@ -10,7 +10,9 @@ namespace BackPredictFinance.API.Middleware
         private readonly RequestDelegate _next;
         private readonly ILogger<RateLimitingMiddleware> _logger;
         private readonly IMemoryCache _cache;
-        private const int LIMIT = 200;
+        private const int GlobalLimit = 200;
+        private const int AccountLimit = 10;
+        private const string AccountPathPrefix = "/api/Account";
         private readonly TimeSpan PERIOD = TimeSpan.FromMinutes(1);
 
         private sealed record WindowState(int Count, DateTime WindowStart);
@@ -24,7 +26,10 @@ namespace BackPredictFinance.API.Middleware
 
         public async Task Invoke(HttpContext context)
         {
-            var key = $"RateLimit_{context.Connection.RemoteIpAddress}";
+            var isAccountRoute = context.Request.Path.StartsWithSegments(AccountPathPrefix, StringComparison.OrdinalIgnoreCase);
+            var limit = isAccountRoute ? AccountLimit : GlobalLimit;
+            var tier = isAccountRoute ? "Account" : "Global";
+            var key = $"RateLimit_{tier}_{context.Connection.RemoteIpAddress}";
             var now = DateTime.UtcNow;
 
             WindowState state;
@@ -40,9 +45,9 @@ namespace BackPredictFinance.API.Middleware
             var remaining = PERIOD - (now - state.WindowStart);
             _cache.Set(key, state, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = remaining });
 
-            if (state.Count > LIMIT)
+            if (state.Count > limit)
             {
-                _logger.LogWarning("Rate limit exceeded for {IP}.", context.Connection.RemoteIpAddress);
+                _logger.LogWarning("Rate limit exceeded for {IP} on tier {Tier}.", context.Connection.RemoteIpAddress, tier);
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 await context.Response.WriteAsync("Too many requests. Please try again later.");
                 return;

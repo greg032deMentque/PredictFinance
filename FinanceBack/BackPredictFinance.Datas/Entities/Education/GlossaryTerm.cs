@@ -5,7 +5,7 @@ namespace BackPredictFinance.Datas.Entities
     /// <summary>
     /// Terme du glossaire produits (PEA, PER, PEL, assurance vie, général).
     /// </summary>
-    public sealed class GlossaryTerm : AuditableEntityBase
+    public sealed class GlossaryTerm : AuditableEntityBase, ISoftDeletable
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Term { get; set; } = string.Empty;

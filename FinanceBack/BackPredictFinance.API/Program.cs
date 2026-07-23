@@ -4,14 +4,17 @@ using BackPredictFinance.API.HealthChecks;
 using BackPredictFinance.API.Middleware;
 using BackPredictFinance.API.ProgramSubFiles;
 using BackPredictFinance.Common;
+using BackPredictFinance.Common.Auth;
 using BackPredictFinance.Common.Email;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.Jwt;
+using BackPredictFinance.Common.Security;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
@@ -99,6 +102,33 @@ builder.Services
             NameClaimType = ClaimTypes.NameIdentifier,
             RoleClaimType = ClaimTypes.Role
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userId = context.Principal?.GetUserId();
+                var tokenStamp = context.Principal?.FindFirst(JwtClaimTypes.SecurityStamp)?.Value;
+                if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(tokenStamp))
+                {
+                    context.Fail("Invalid token claims.");
+                    return;
+                }
+
+                var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<User>>();
+                var user = await userManager.FindByIdAsync(userId);
+                if (user is null || !user.IsActive)
+                {
+                    context.Fail("User is not available.");
+                    return;
+                }
+
+                var currentStamp = await userManager.GetSecurityStampAsync(user);
+                if (!string.Equals(tokenStamp, currentStamp, StringComparison.Ordinal))
+                {
+                    context.Fail("Token security stamp mismatch.");
+                }
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -178,6 +208,10 @@ var mapperConfiguration = new MapperConfiguration(cfg =>
     cfg.AddMaps(typeof(BackPredictFinance.ViewModels.UserViewModels.UserViewModelProfile).Assembly);
 }, NullLoggerFactory.Instance);
 
+// Fait echouer le demarrage si l'un des 21 profils AutoMapper est mal configure (champ non mappe,
+// mapping ambigu...) plutot que de laisser une valeur null silencieuse apparaitre en production.
+mapperConfiguration.AssertConfigurationIsValid();
+
 builder.Services.AddSingleton<IMapper>(mapperConfiguration.CreateMapper());
 
 builder.Services.Configure<EmailServiceConfiguration>(configuration.GetSection("EmailService"));
@@ -195,6 +229,41 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = null;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
+// Aligne la forme des erreurs 400 de validation de modèle sur celle produite par ExceptionMiddleware
+// ({ message, errors: string[] }, voir Middleware/ExceptionMiddleware.cs) : sans cette configuration,
+// le ValidationProblemDetails natif (dictionnaire { "Champ": ["message"] }) n'est pas reconnu par
+// l'intercepteur d'erreurs du front, qui attend un tableau de strings.
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var traceId = System.Diagnostics.Activity.Current?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier;
+        var errors = context.ModelState.Values
+            .SelectMany(x => x.Errors)
+            .Select(x => x.ErrorMessage)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToArray();
+
+        var problem = new
+        {
+            type = "about:blank",
+            title = "Requête invalide",
+            status = StatusCodes.Status400BadRequest,
+            message = "Requête invalide.",
+            errors,
+            detail = (string?)null,
+            traceId,
+            instance = context.HttpContext.Request.Path.Value,
+            method = context.HttpContext.Request.Method,
+        };
+
+        return new BadRequestObjectResult(problem)
+        {
+            ContentTypes = { "application/problem+json" }
+        };
+    };
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -218,6 +287,14 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+var configuredKnownProxies = app.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+var configuredKnownNetworks = app.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+if (configuredKnownProxies.Length == 0 && configuredKnownNetworks.Length == 0)
+{
+    throw new InvalidOperationException(
+        "ForwardedHeaders:KnownProxies (or ForwardedHeaders:KnownNetworks) must be configured when X-Forwarded-For handling is enabled.");
+}
 
 app.UseForwardedHeaders();
 

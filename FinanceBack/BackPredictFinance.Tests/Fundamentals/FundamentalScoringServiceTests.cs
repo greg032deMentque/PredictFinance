@@ -145,7 +145,6 @@ public sealed class FundamentalScoringServiceTests
             UniverseId = UniverseId,
             Symbols = ["TECH1"],
             MinCategoriesRequired = 1,
-            CoveragePenaltyEnabled = true,
             IncludeRankPosition = false
         });
 
@@ -189,7 +188,6 @@ public sealed class FundamentalScoringServiceTests
             UniverseId = UniverseId,
             Symbols = ["NOSEC1"],
             MinCategoriesRequired = 1,
-            CoveragePenaltyEnabled = true,
             IncludeRankPosition = false
         });
 
@@ -225,7 +223,6 @@ public sealed class FundamentalScoringServiceTests
             UniverseId = UniverseId,
             Symbols = ["INDUS1"],
             MinCategoriesRequired = 1,
-            CoveragePenaltyEnabled = true,
             IncludeRankPosition = false
         });
 
@@ -266,7 +263,6 @@ public sealed class FundamentalScoringServiceTests
             UniverseId = UniverseId,
             Symbols = ["GROWTH1"],
             MinCategoriesRequired = 1,
-            CoveragePenaltyEnabled = true,
             IncludeRankPosition = false
         });
 
@@ -324,7 +320,6 @@ public sealed class FundamentalScoringServiceTests
             UniverseId = UniverseId,
             Symbols = ["NOGROWTH1"],
             MinCategoriesRequired = 1,
-            CoveragePenaltyEnabled = true,
             IncludeRankPosition = false
         });
 
@@ -371,7 +366,6 @@ public sealed class FundamentalScoringServiceTests
             UniverseId = UniverseId,
             Symbols = ["TECH1"],
             MinCategoriesRequired = 1,
-            CoveragePenaltyEnabled = true,
             IncludeRankPosition = false
         });
 
@@ -397,7 +391,6 @@ public sealed class FundamentalScoringServiceTests
             UniverseId = UniverseId,
             Symbols = ["TECH1"],
             MinCategoriesRequired = 1,
-            CoveragePenaltyEnabled = true,
             IncludeRankPosition = false
         });
 

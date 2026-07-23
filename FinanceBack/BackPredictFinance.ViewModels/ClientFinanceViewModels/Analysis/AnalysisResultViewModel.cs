@@ -1,6 +1,4 @@
-using AutoMapper;
 using BackPredictFinance.Common.enums;
-using BackPredictFinance.Datas.Entities;
 
 namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis
 {
@@ -24,15 +22,5 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis
         public decimal? NecklinePrice { get; set; }
         public decimal? TargetPrice { get; set; }
         public decimal? InvalidationPrice { get; set; }
-    }
-
-    public sealed class AnalysisResultViewModelProfile : Profile
-    {
-        public AnalysisResultViewModelProfile()
-        {
-            CreateMap<AnalysisRun, AnalysisResultViewModel>()
-                .ForMember(dest => dest.Symbol, opt => opt.MapFrom(src => src.Asset.Symbol))
-                .ForMember(dest => dest.CompanyName, opt => opt.MapFrom(src => src.Asset.Name ?? src.Asset.Symbol));
-        }
     }
 }

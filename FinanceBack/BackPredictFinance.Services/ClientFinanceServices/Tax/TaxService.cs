@@ -22,7 +22,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Tax
         {
             var portfolios = await _financeDbContext.Portfolios
                 .AsNoTracking()
-                .Where(p => p.UserId == _currentUserId && !p.IsDeleted)
+                .Where(p => p.UserId == _currentUserId)
                 .ToListAsync(ct);
 
             if (portfolios.Count == 0) return [];
@@ -32,7 +32,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Tax
             var allTransactions = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
                 .Include(t => t.UserAsset).ThenInclude(ua => ua.Asset)
-                .Where(t => portfolioIds.Contains(t.PortfolioId) && !t.IsDeleted)
+                .Where(t => portfolioIds.Contains(t.PortfolioId))
                 .OrderBy(t => t.PortfolioId).ThenBy(t => t.UserAsset.AssetId).ThenBy(t => t.TimestampUtc)
                 .ToListAsync(ct);
 

@@ -25,7 +25,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.PortfolioMetrics
 
             var portfolio = await _financeDbContext.Portfolios
                 .AsNoTracking()
-                .Where(p => p.Id == portfolioId && p.UserId == _currentUserId && !p.IsDeleted)
+                .Where(p => p.Id == portfolioId && p.UserId == _currentUserId)
                 .FirstOrDefaultAsync(ct);
 
             if (portfolio == null) return null;
@@ -33,7 +33,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.PortfolioMetrics
             var transactions = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
                 .Include(t => t.UserAsset).ThenInclude(ua => ua.Asset)
-                .Where(t => t.PortfolioId == portfolioId && !t.IsDeleted)
+                .Where(t => t.PortfolioId == portfolioId)
                 .OrderBy(t => t.TimestampUtc)
                 .ToListAsync(ct);
 

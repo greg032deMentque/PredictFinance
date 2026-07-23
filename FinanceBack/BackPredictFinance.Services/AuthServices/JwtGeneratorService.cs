@@ -44,11 +44,21 @@ namespace BackPredictFinance.Services.AuthServices
     public class JwtGeneratorService : BaseService, IJwtGeneratorService
     {
         private readonly JWTToken _userJwt;
+        private readonly byte[] _refreshTokenHmacKey;
+
         public JwtGeneratorService(
         IOptions<JWTToken> jwtOptions,
         IServiceProvider serviceProvider) : base(serviceProvider)
         {
             _userJwt = jwtOptions.Value ?? throw new InvalidOperationException("JWT options are missing.");
+
+            var hmacKeyConfig = _configuration["Security:RefreshTokenHmacKey"];
+            if (string.IsNullOrWhiteSpace(hmacKeyConfig))
+            {
+                throw new InvalidOperationException("Security:RefreshTokenHmacKey is missing.");
+            }
+
+            _refreshTokenHmacKey = Encoding.UTF8.GetBytes(hmacKeyConfig);
         }
 
         public async Task<string> GenerateJwtToken(User user)
@@ -56,13 +66,15 @@ namespace BackPredictFinance.Services.AuthServices
             var now = DateTime.UtcNow;
             var ttl = Math.Clamp(_userJwt.ValidityMinutesAcessToken > 0 ? _userJwt.ValidityMinutesAcessToken : 15, 5, 60);
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_userJwt.Secret));
+            var securityStamp = await _userManager.GetSecurityStampAsync(user);
 
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
                 new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
-                new("amr", "pwd")
+                new("amr", "pwd"),
+                new(JwtClaimTypes.SecurityStamp, securityStamp)
             };
 
             var roles = await _userManager.GetRolesAsync(user);
@@ -96,7 +108,7 @@ namespace BackPredictFinance.Services.AuthServices
             var token = Convert.ToBase64String(random);
             var expires = DateTime.UtcNow.AddMinutes(Math.Max(_userJwt.ValidityMinutesRefreshToken, 60));
 
-            var hash = HashRefresh(token);
+            var hash = EncodeHash(ComputeRefreshHmac(token));
             _financeDbContext.RefreshTokens.Add(new RefreshToken
             {
                 UserId = user.Id,
@@ -112,10 +124,11 @@ namespace BackPredictFinance.Services.AuthServices
 
         public async Task<(string accessToken, RefreshTokenResult refresh)> RotateRefresh(string presentedRefresh, string? deviceId = null, CancellationToken ct = default)
         {
+            var computedHash = EncodeHash(ComputeRefreshHmac(presentedRefresh));
             var rec = await _financeDbContext.RefreshTokens
-            .SingleOrDefaultAsync(r => r.TokenHash == HashRefresh(presentedRefresh), ct);
+            .SingleOrDefaultAsync(r => r.TokenHash == computedHash, ct);
 
-            if (rec is null || rec.RevokedAtUtc != null || rec.ExpiresAtUtc < DateTime.UtcNow)
+            if (rec is null || !VerifyRefreshHash(presentedRefresh, rec.TokenHash) || rec.RevokedAtUtc != null || rec.ExpiresAtUtc < DateTime.UtcNow)
                 throw new SecurityException("invalid refresh");
 
             if (!string.IsNullOrWhiteSpace(rec.ReplacedByTokenHash))
@@ -134,8 +147,8 @@ namespace BackPredictFinance.Services.AuthServices
 
             var newRefresh = await GenerateUserRefreshToken(user, deviceId, ct);
 
-            var newHash = HashRefresh(newRefresh.Token);
-            rec.ReplacedByTokenHash = newHash; 
+            var newHash = EncodeHash(ComputeRefreshHmac(newRefresh.Token));
+            rec.ReplacedByTokenHash = newHash;
 
             await _financeDbContext.SaveChangesAsync(ct);
 
@@ -151,10 +164,11 @@ namespace BackPredictFinance.Services.AuthServices
                 return;
             }
 
+            var computedHash = EncodeHash(ComputeRefreshHmac(presentedRefresh));
             var rec = await _financeDbContext.RefreshTokens
-                .SingleOrDefaultAsync(r => r.TokenHash == HashRefresh(presentedRefresh), ct);
+                .SingleOrDefaultAsync(r => r.TokenHash == computedHash, ct);
 
-            if (rec is null)
+            if (rec is null || !VerifyRefreshHash(presentedRefresh, rec.TokenHash))
             {
                 return;
             }
@@ -184,34 +198,25 @@ namespace BackPredictFinance.Services.AuthServices
         }
 
 
-        private string HashRefresh(string presented)
+        private byte[] ComputeRefreshHmac(string presented)
+            => HMACSHA256.HashData(_refreshTokenHmacKey, Encoding.UTF8.GetBytes(presented));
+
+        private static string EncodeHash(byte[] hash) => Convert.ToBase64String(hash);
+
+        private bool VerifyRefreshHash(string presented, string storedHashBase64)
         {
-            var configuredSalt = _configuration["ServerSalt"];
-            byte[] salt;
-
-            if (!string.IsNullOrWhiteSpace(configuredSalt))
+            byte[] stored;
+            try
             {
-                try
-                {
-                    salt = Convert.FromBase64String(configuredSalt);
-                }
-                catch (FormatException)
-                {
-                    salt = SHA256.HashData(Encoding.UTF8.GetBytes(_userJwt.Secret));
-                }
+                stored = Convert.FromBase64String(storedHashBase64);
             }
-            else
+            catch (FormatException)
             {
-                salt = SHA256.HashData(Encoding.UTF8.GetBytes(_userJwt.Secret));
+                return false;
             }
 
-            var derivedBytes = Rfc2898DeriveBytes.Pbkdf2(
-                Encoding.UTF8.GetBytes(presented),
-                salt,
-                100_000,
-                HashAlgorithmName.SHA256,
-                32);
-            return Convert.ToBase64String(derivedBytes);
+            var computed = ComputeRefreshHmac(presented);
+            return CryptographicOperations.FixedTimeEquals(computed, stored);
         }
 
     }

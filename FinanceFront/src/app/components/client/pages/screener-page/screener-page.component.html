@@ -75,7 +75,6 @@
         <div class="col-12 col-md-3">
           <label class="form-label small fw-semibold" for="minScoreFilter">Score fondamental min</label>
           <input id="minScoreFilter" type="number" min="0" max="100" class="form-control" placeholder="Ex : 60" formControlName="minScore" />
-          <small class="text-muted d-block mt-1">Filtre appliqué aux résultats de la page affichée</small>
         </div>
 
         <div class="col-12 col-md-3 d-flex flex-column gap-3">
@@ -142,8 +141,6 @@
         <div class="alert alert-danger mb-0">{{ error() }}</div>
       } @else if (screener().Items.length === 0) {
         <div class="text-center text-muted py-4">Aucun instrument ne correspond à cette combinaison de critères — essayez de réduire vos filtres.</div>
-      } @else if (filteredItems().length === 0) {
-        <div class="text-center text-muted py-4">Aucun résultat sur cette page n'atteint le score fondamental minimum. Ajustez le filtre ou changez de page.</div>
       } @else {
 
         <div class="table-responsive">
@@ -205,7 +202,7 @@
               </tr>
             </thead>
             <tbody>
-              @for (item of filteredItems(); track item.Symbol) {
+              @for (item of screener().Items; track item.Symbol) {
                 <tr class="clickable-row" (click)="navigateToInstrument(item)">
                   <td class="fw-semibold">{{ item.Symbol }}</td>
                   <td>

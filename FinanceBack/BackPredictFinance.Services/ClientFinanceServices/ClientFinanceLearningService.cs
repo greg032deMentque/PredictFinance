@@ -59,7 +59,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var hasTransaction = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .AnyAsync(x => x.UserAsset.UserId == userId && !x.IsDeleted, ct);
+                .AnyAsync(x => x.UserAsset.UserId == userId, ct);
 
             if (!hasWatchlistAsset && !hasCompletedAnalysis && !hasTransaction)
             {

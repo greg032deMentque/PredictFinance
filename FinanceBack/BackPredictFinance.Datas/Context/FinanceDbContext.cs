@@ -10,18 +10,16 @@ namespace BackPredictFinance.Datas.Context
 {
     public class FinanceDbContext : IdentityDbContext<User>
     {
-        private readonly HttpContext? _context;
-
         public string CurrentUserId { get; private set; } = string.Empty;
         public User? CurrentUser { get; private set; }
 
         public FinanceDbContext(DbContextOptions<FinanceDbContext> options, IHttpContextAccessor httpContextAccessor) : base(options)
         {
-            _context = httpContextAccessor?.HttpContext;
+            var context = httpContextAccessor?.HttpContext;
 
-            if (_context != null)
+            if (context != null)
             {
-                CurrentUserId = ResolveCurrentUserId(_context.User) ?? string.Empty;
+                CurrentUserId = ResolveCurrentUserId(context.User) ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(CurrentUserId))
                 {
                     CurrentUser = Users.AsNoTracking().FirstOrDefault(u => u.Id == CurrentUserId);

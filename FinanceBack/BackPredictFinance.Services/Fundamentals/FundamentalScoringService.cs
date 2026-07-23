@@ -116,7 +116,7 @@ namespace BackPredictFinance.Services.Fundamentals
             var universeSnapshots = await LoadUniverseSnapshotsAsync(universeEntries, ct);
             var universeMetricValues = BuildUniverseMetricValues(universeSnapshots);
             var universeMetricValuesBySector = BuildUniverseMetricValuesBySector(universeSnapshots);
-            var universeScored = BuildUniverseScores(universeEntries, universeSnapshots, universeMetricValues, universeMetricValuesBySector, minCategoriesRequired, request.CoveragePenaltyEnabled, minimumSectorSampleSize);
+            var universeScored = BuildUniverseScores(universeEntries, universeSnapshots, universeMetricValues, universeMetricValuesBySector, minCategoriesRequired, activePolicy.CoveragePenaltySupported, minimumSectorSampleSize);
             var universeRanks = BuildUniverseRanks(universeScored);
             var rankableUniverseSize = universeRanks.Count;
             foreach (var scored in universeScored)
@@ -175,7 +175,7 @@ namespace BackPredictFinance.Services.Fundamentals
                     universeMetricValues,
                     universeMetricValuesBySector,
                     minCategoriesRequired,
-                    request.CoveragePenaltyEnabled,
+                    activePolicy.CoveragePenaltySupported,
                     allowUsableScore: false,
                     universeSize: rankableUniverseSize,
                     rankPosition: null,

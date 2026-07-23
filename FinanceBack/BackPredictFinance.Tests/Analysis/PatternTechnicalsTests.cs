@@ -28,8 +28,10 @@ public sealed class PatternTechnicalsTests
             Candle(high: 22m, low: 20m, close: 21m)  // TR = 2
         };
 
+#pragma warning disable S125 // Faux positif Sonar : calcul explicatif du resultat attendu, pas du code commenté.
         // Wilder periode 3 : amorcage = moyenne(TR0,TR1,TR2) = (2+11+2)/3 = 5 ;
         // puis lissage bougie 3 : (5*2 + 2)/3 = 4.
+#pragma warning restore S125
         var atr = PatternTechnicals.AverageTrueRange(candles, period: 3);
 
         Assert.Equal(4m, atr);

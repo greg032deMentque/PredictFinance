@@ -7,7 +7,7 @@ namespace BackPredictFinance.Datas.Entities
     /// <summary>
     /// Historise chaque transaction d'un utilisateur pour reconstruire son portefeuille.
     /// </summary>
-    public class AssetTransaction : AuditableEntityBase
+    public class AssetTransaction : AuditableEntityBase, ISoftDeletable
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string UserAssetId { get; set; } = string.Empty;

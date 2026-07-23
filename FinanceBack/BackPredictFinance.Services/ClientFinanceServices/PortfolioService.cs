@@ -28,7 +28,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var portfolios = await _financeDbContext.Portfolios
                 .AsNoTracking()
-                .Where(p => p.UserId == _currentUserId && !p.IsDeleted && p.Status == PortfolioStatusEnum.Active)
+                .Where(p => p.UserId == _currentUserId && p.Status == PortfolioStatusEnum.Active)
                 .OrderBy(p => p.Name)
                 .ToListAsync(ct);
 
@@ -47,7 +47,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var duplicate = await _financeDbContext.Portfolios
                 .AsNoTracking()
-                .AnyAsync(p => p.UserId == _currentUserId && p.Name == request.Name && !p.IsDeleted, ct);
+                .AnyAsync(p => p.UserId == _currentUserId && p.Name == request.Name, ct);
 
             if (duplicate)
             {
@@ -74,7 +74,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task<UserPortfolioViewModel> RenamePortfolioAsync(string portfolioId, PortfolioRenameRequestViewModel request, CancellationToken ct = default)
         {
             var portfolio = await _financeDbContext.Portfolios
-                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == _currentUserId && !p.IsDeleted, ct);
+                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == _currentUserId, ct);
 
             if (portfolio is null)
             {
@@ -88,7 +88,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var duplicate = await _financeDbContext.Portfolios
                 .AsNoTracking()
-                .AnyAsync(p => p.UserId == _currentUserId && p.Name == request.Name && p.Id != portfolioId && !p.IsDeleted, ct);
+                .AnyAsync(p => p.UserId == _currentUserId && p.Name == request.Name && p.Id != portfolioId, ct);
 
             if (duplicate)
             {
@@ -107,7 +107,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task ArchivePortfolioAsync(string portfolioId, CancellationToken ct = default)
         {
             var portfolio = await _financeDbContext.Portfolios
-                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == _currentUserId && !p.IsDeleted, ct);
+                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == _currentUserId, ct);
 
             if (portfolio is null)
             {
@@ -121,7 +121,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task RestorePortfolioAsync(string portfolioId, CancellationToken ct = default)
         {
             var portfolio = await _financeDbContext.Portfolios
-                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == _currentUserId && !p.IsDeleted, ct);
+                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == _currentUserId, ct);
 
             if (portfolio is null)
             {
@@ -136,7 +136,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var portfolio = await _financeDbContext.Portfolios
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == userId && !p.IsDeleted, ct);
+                .FirstOrDefaultAsync(p => p.Id == portfolioId && p.UserId == userId, ct);
 
             if (portfolio is null)
             {

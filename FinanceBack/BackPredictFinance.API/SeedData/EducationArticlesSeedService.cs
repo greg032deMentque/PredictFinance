@@ -31,6 +31,7 @@ namespace BackPredictFinance.API.SeedData
             var context = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
 
             var existingSlugs = await context.EducationArticles
+                .IgnoreQueryFilters()
                 .Select(a => a.Slug)
                 .ToHashSetAsync(cancellationToken);
 

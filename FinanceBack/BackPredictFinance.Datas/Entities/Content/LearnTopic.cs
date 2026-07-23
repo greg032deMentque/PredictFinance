@@ -1,6 +1,6 @@
 namespace BackPredictFinance.Datas.Entities
 {
-    public sealed class LearnTopic : AuditableEntityBase
+    public sealed class LearnTopic : AuditableEntityBase, ISoftDeletable
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string TopicId { get; set; } = string.Empty;

@@ -25,7 +25,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var cards = await _financeDbContext.LegalCards
                 .AsNoTracking()
-                .Where(c => c.IsActive && c.IsPublished && !c.IsDeleted)
+                .Where(c => c.IsActive && c.IsPublished)
                 .OrderBy(c => c.DisplayOrder)
                 .ToListAsync(ct);
 
@@ -36,7 +36,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var cards = await _financeDbContext.LegalCards
                 .AsNoTracking()
-                .Where(c => !c.IsDeleted)
                 .OrderBy(c => c.DisplayOrder)
                 .ToListAsync(ct);
 
@@ -47,7 +46,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var card = await _financeDbContext.LegalCards
                 .AsNoTracking()
-                .Where(c => !c.IsDeleted && c.Id == id)
+                .Where(c => c.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             return card is null ? null : _mapper.Map<LegalCardAdminViewModel>(card);
@@ -79,7 +78,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task<LegalCardAdminViewModel> UpdateAsync(string id, LegalCardUpsertRequestViewModel request, CancellationToken ct = default)
         {
             var card = await _financeDbContext.LegalCards
-                .Where(c => !c.IsDeleted && c.Id == id)
+                .Where(c => c.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (card is null)
@@ -102,7 +101,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task DeleteAsync(string id, CancellationToken ct = default)
         {
             var card = await _financeDbContext.LegalCards
-                .Where(c => !c.IsDeleted && c.Id == id)
+                .Where(c => c.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (card is null)

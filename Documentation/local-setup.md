@@ -34,7 +34,9 @@ This file is **gitignored** — each developer/machine keeps its own. It holds o
     "ValidityMinutesAcessToken": "15",
     "ValidityMinutesRefreshToken": "1440"
   },
-  "ServerSalt": "set-via-user-secrets",
+  "Security": {
+    "RefreshTokenHmacKey": "set-via-user-secrets"
+  },
   "AutomapperLicense": "set-via-user-secrets",
   "adminEmail": "set-via-user-secrets",
   "adminPwd": "set-via-user-secrets",
@@ -52,7 +54,7 @@ User-secrets are stored in your Windows user profile, outside the repository, an
 ```powershell
 $api = "FinanceBack/BackPredictFinance.API"
 dotnet user-secrets set "JWTToken:Secret"   "<a-long-random-dev-key>"  --project $api
-dotnet user-secrets set "ServerSalt"        "<a-random-base64-salt>"   --project $api
+dotnet user-secrets set "Security:RefreshTokenHmacKey" "<a-random-64-char-key>" --project $api
 dotnet user-secrets set "AutomapperLicense" "<automapper-license-key>" --project $api
 dotnet user-secrets set "adminEmail"        "admin@finance.dev"        --project $api
 dotnet user-secrets set "adminPwd"          "<strong-dev-password>"    --project $api

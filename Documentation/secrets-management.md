@@ -13,7 +13,7 @@ appsettings.json  →  appsettings.{Env}.json  →  user-secrets (dev)  →  env
 | Key | Secret? | Where it lives |
 |---|---|---|
 | `JWTToken:Secret` | yes | user-secrets (dev) / env var (staging, prod) |
-| `ServerSalt` | yes | user-secrets / env var |
+| `Security:RefreshTokenHmacKey` | yes | user-secrets / env var |
 | `AutomapperLicense` | yes | user-secrets / env var |
 | `EmailConfig` (SMTP user/password) | yes | user-secrets / env var |
 | `adminEmail` / `adminPwd` / `userEmail` / `userPwd` (seed accounts) | yes (dev only) | user-secrets |
@@ -35,7 +35,7 @@ Set secrets as **Application Settings / environment variables** on the host (e.g
 ```
 ConnectionStrings__DefaultConnection = <prod-db-connection-string>
 JWTToken__Secret                     = <prod-signing-key>
-ServerSalt                           = <prod-salt>
+Security__RefreshTokenHmacKey        = <prod-refresh-token-hmac-key>
 AutomapperLicense                    = <license>
 EmailConfig__Password                = <smtp-password>
 ```
@@ -59,7 +59,7 @@ For centralised storage, rotation, and audit: secrets live in Key Vault, the hos
 
 Secrets were historically committed to git and are recoverable from history — they are **compromised**. Regardless of the storage change above, they must be:
 
-1. **Rotated** — generate new values (JWT secret, SMTP password, `ServerSalt`, any DB password, seed passwords). Old values are burned.
+1. **Rotated** — generate new values (JWT secret, SMTP password, `Security:RefreshTokenHmacKey`, any DB password, seed passwords). Old values are burned.
 2. **Purged from history** (optional but recommended) — e.g. `git filter-repo` to remove the old files from all commits, then force-update the remote.
 
 Changing the storage mechanism does **not** protect values already in history; rotation is the only real fix.

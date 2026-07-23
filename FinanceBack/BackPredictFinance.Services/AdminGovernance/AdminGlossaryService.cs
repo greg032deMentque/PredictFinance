@@ -25,7 +25,6 @@ namespace BackPredictFinance.Services.AdminGovernance
         {
             var terms = await _financeDbContext.GlossaryTerms
                 .AsNoTracking()
-                .Where(t => !t.IsDeleted)
                 .OrderBy(t => t.Term)
                 .ToListAsync(ct);
 
@@ -36,7 +35,7 @@ namespace BackPredictFinance.Services.AdminGovernance
         {
             var term = await _financeDbContext.GlossaryTerms
                 .AsNoTracking()
-                .Where(t => !t.IsDeleted && t.Id == id)
+                .Where(t => t.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             return term is null ? null : _mapper.Map<GlossaryTermAdminViewModel>(term);
@@ -65,7 +64,7 @@ namespace BackPredictFinance.Services.AdminGovernance
         public async Task<GlossaryTermAdminViewModel> UpdateAsync(string id, GlossaryTermUpsertRequestViewModel request, CancellationToken ct = default)
         {
             var term = await _financeDbContext.GlossaryTerms
-                .Where(t => !t.IsDeleted && t.Id == id)
+                .Where(t => t.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (term is null)
@@ -85,7 +84,7 @@ namespace BackPredictFinance.Services.AdminGovernance
         public async Task DeleteAsync(string id, CancellationToken ct = default)
         {
             var term = await _financeDbContext.GlossaryTerms
-                .Where(t => !t.IsDeleted && t.Id == id)
+                .Where(t => t.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (term is null)

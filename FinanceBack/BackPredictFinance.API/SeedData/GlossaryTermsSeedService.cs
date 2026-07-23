@@ -31,6 +31,7 @@ namespace BackPredictFinance.API.SeedData
             var context = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
 
             var existingKeys = await context.GlossaryTerms
+                .IgnoreQueryFilters()
                 .Select(t => t.NormalizedTerm)
                 .ToHashSetAsync(cancellationToken);
 

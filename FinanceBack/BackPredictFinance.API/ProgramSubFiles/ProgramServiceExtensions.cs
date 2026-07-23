@@ -36,7 +36,6 @@ namespace BackPredictFinance.API.ProgramSubFiles
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IUserPrivacyService, UserPrivacyService>();
             services.AddScoped<ICurrentUserSessionService, CurrentUserSessionService>();
-            services.AddScoped<IUserAssetService, UserAssetService>();
             services.AddScoped<IUserRoleDataService, UserRoleDataService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IUserAdminService, UserAdminService>();

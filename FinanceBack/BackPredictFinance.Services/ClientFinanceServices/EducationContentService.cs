@@ -26,7 +26,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var articles = await _financeDbContext.EducationArticles
                 .AsNoTracking()
-                .Where(a => a.IsActive && a.IsPublished && !a.IsDeleted)
+                .Where(a => a.IsActive && a.IsPublished)
                 .OrderBy(a => a.DisplayOrder)
                 .ToListAsync(ct);
 
@@ -37,7 +37,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var article = await _financeDbContext.EducationArticles
                 .AsNoTracking()
-                .Where(a => a.IsActive && a.IsPublished && !a.IsDeleted && a.Slug == slug)
+                .Where(a => a.IsActive && a.IsPublished && a.Slug == slug)
                 .FirstOrDefaultAsync(ct);
 
             return article is null ? null : _mapper.Map<EducationArticleDetailViewModel>(article);

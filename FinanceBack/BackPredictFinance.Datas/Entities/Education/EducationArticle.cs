@@ -5,7 +5,7 @@ namespace BackPredictFinance.Datas.Entities
     /// <summary>
     /// Article éducatif pédagogique associé à un type de produit financier.
     /// </summary>
-    public sealed class EducationArticle : AuditableEntityBase
+    public sealed class EducationArticle : AuditableEntityBase, ISoftDeletable
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Slug { get; set; } = string.Empty;

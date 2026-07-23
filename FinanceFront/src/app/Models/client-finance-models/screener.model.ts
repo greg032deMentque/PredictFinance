@@ -40,6 +40,7 @@ export interface ScreenerQueryOptions {
   MaxPE?: number | null;
   MinDividendYield?: number | null;
   MinMarketCap?: number | null;
+  MinScore?: number | null;
 }
 
 export const AssetTypeOptions = [

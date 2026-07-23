@@ -20,6 +20,7 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Assets
             CreateMap<PriceHistory, LiveQuoteViewModel>()
                 .ForMember(dest => dest.Symbol, opt => opt.MapFrom(src => src.Asset.Symbol))
                 .ForMember(dest => dest.AssetType, opt => opt.MapFrom(src => src.Asset.AssetType.ToString()))
+                .ForMember(dest => dest.CompanyName, opt => opt.MapFrom(src => src.Asset.Name ?? src.Asset.Symbol))
                 .ForMember(dest => dest.LastPrice, opt => opt.MapFrom(src => src.Price))
                 .ForMember(dest => dest.AsOfUtc, opt => opt.MapFrom(src => src.RetrievedAtUtc))
                 .ForMember(dest => dest.DayVariationPct, opt => opt.Ignore());

@@ -28,7 +28,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var query = _financeDbContext.GlossaryTerms
                 .AsNoTracking()
-                .Where(t => t.IsActive && t.IsPublished && !t.IsDeleted);
+                .Where(t => t.IsActive && t.IsPublished);
 
             if (!string.IsNullOrWhiteSpace(search))
             {

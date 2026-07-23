@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, inject, signal, computed } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
@@ -116,20 +116,6 @@ export class ScreenerPageComponent {
 
   readonly search = this.fb.nonNullable.control('');
 
-  private readonly minScoreSignal = toSignal(this.filters.controls.minScore.valueChanges, { initialValue: null as number | null });
-
-  readonly filteredItems = computed(() => {
-    const items = this.screener().Items;
-    const minScore = this.minScoreSignal();
-    if (minScore === null || minScore === undefined) return items;
-
-    const scores = this.scoreBySymbol();
-    return items.filter(item => {
-      const s = scores[item.Symbol];
-      return !!s && s.UsableScore && s.TotalScore !== null && s.TotalScore >= minScore;
-    });
-  });
-
   private currentPage = 1;
 
   constructor() {
@@ -186,7 +172,7 @@ export class ScreenerPageComponent {
     this.exporting.set(true);
     this.error.set(null);
 
-    const { sectors, countries, peaOnly, assetType, minPE, maxPE, minDividendYield, minMarketCap } = this.filters.getRawValue();
+    const { sectors, countries, peaOnly, assetType, minPE, maxPE, minDividendYield, minMarketCap, minScore } = this.filters.getRawValue();
 
     this.screenerService.exportCsv({
       SortBy: this.sortBy(),
@@ -199,7 +185,8 @@ export class ScreenerPageComponent {
       MinPE: minPE,
       MaxPE: maxPE,
       MinDividendYield: minDividendYield,
-      MinMarketCap: minMarketCap
+      MinMarketCap: minMarketCap,
+      MinScore: minScore
     }).pipe(
       finalize(() => this.exporting.set(false)),
       takeUntilDestroyed(this.destroyRef)
@@ -210,8 +197,7 @@ export class ScreenerPageComponent {
   }
 
   private serializeServerFilters(value: Record<string, unknown>): string {
-    const entries = Object.entries(value).filter(([key]) => key !== 'minScore');
-    return JSON.stringify(entries);
+    return JSON.stringify(Object.entries(value));
   }
 
   formatMarketCap(value: number | null): string {
@@ -247,7 +233,7 @@ export class ScreenerPageComponent {
       maxPE: q.MaxPE ?? null,
       minDividendYield: q.MinDividendYield ?? null,
       minMarketCap: q.MinMarketCap ?? null,
-      minScore: null
+      minScore: q.MinScore ?? null
     });
     this.search.setValue(q.Search ?? '');
     if (q.SortBy) this.sortBy.set(q.SortBy);
@@ -262,7 +248,7 @@ export class ScreenerPageComponent {
     if (!name?.trim()) return;
 
     this.savingPreset.set(true);
-    const { sectors, countries, peaOnly, assetType, minPE, maxPE, minDividendYield, minMarketCap } = this.filters.getRawValue();
+    const { sectors, countries, peaOnly, assetType, minPE, maxPE, minDividendYield, minMarketCap, minScore } = this.filters.getRawValue();
 
     this.screenerService.savePreset({
       Name: name.trim(),
@@ -277,7 +263,8 @@ export class ScreenerPageComponent {
         MinPE: minPE,
         MaxPE: maxPE,
         MinDividendYield: minDividendYield,
-        MinMarketCap: minMarketCap
+        MinMarketCap: minMarketCap,
+        MinScore: minScore
       }
     }).pipe(
       finalize(() => this.savingPreset.set(false)),
@@ -360,7 +347,7 @@ export class ScreenerPageComponent {
     this.loading.set(true);
     this.error.set(null);
 
-    const { sectors, countries, peaOnly, assetType, minPE, maxPE, minDividendYield, minMarketCap } = this.filters.getRawValue();
+    const { sectors, countries, peaOnly, assetType, minPE, maxPE, minDividendYield, minMarketCap, minScore } = this.filters.getRawValue();
 
     this.screenerService.getScreener({
       Page: this.currentPage,
@@ -375,7 +362,8 @@ export class ScreenerPageComponent {
       MinPE: minPE,
       MaxPE: maxPE,
       MinDividendYield: minDividendYield,
-      MinMarketCap: minMarketCap
+      MinMarketCap: minMarketCap,
+      MinScore: minScore
     }).pipe(
       finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef)

@@ -110,6 +110,8 @@ namespace BackPredictFinance.Services.UserServices
                 return;
             }
 
+            await _userManager.UpdateSecurityStampAsync(user);
+
             var result = await _userManager.DeleteAsync(user);
             if (!result.Succeeded)
             {
@@ -224,6 +226,7 @@ namespace BackPredictFinance.Services.UserServices
             user.LastName = model.LastName?.Trim() ?? user.LastName;
             user.PhoneNumber = model.PhoneNumber?.Trim() ?? user.PhoneNumber;
             user.EmailConfirmed = true;
+            var isBeingDeactivated = model.IsActive.HasValue && !model.IsActive.Value;
             if (model.IsActive.HasValue)
             {
                 user.IsActive = model.IsActive.Value;
@@ -234,6 +237,11 @@ namespace BackPredictFinance.Services.UserServices
             if (!updateResult.Succeeded)
             {
                 throw new CustomException(string.Join(" | ", updateResult.Errors.Select(x => x.Description)));
+            }
+
+            if (isBeingDeactivated)
+            {
+                await _userManager.UpdateSecurityStampAsync(user);
             }
 
             if (!string.IsNullOrWhiteSpace(model.Role))

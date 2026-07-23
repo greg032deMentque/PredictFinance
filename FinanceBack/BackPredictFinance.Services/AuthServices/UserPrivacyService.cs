@@ -167,6 +167,7 @@ namespace BackPredictFinance.Services.AuthServices
 
             _financeDbContext.RefreshTokens.RemoveRange(refreshTokens);
 
+            await _userManager.UpdateSecurityStampAsync(user);
             await _userManager.UpdateAsync(user);
             await _financeDbContext.SaveChangesAsync(ct);
 

@@ -134,29 +134,27 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
         public async Task<Dictionary<string, PersistedAnalysisSnapshotPayloadReadModel>> LoadLatestAnalysisByAssetIdAsync(List<string> assetIds, CancellationToken ct = default)
         {
-            var analysisRuns = await _financeDbContext.AnalysisRuns
+            // Dédup côté SQL (1 ligne par actif) plutôt que de matérialiser tout l'historique
+            // (RawPayload en nvarchar(max)) pour ne garder que la plus récente en mémoire.
+            var latestRuns = await _financeDbContext.AnalysisRuns
                 .AsNoTracking()
                 .Where(x => x.UserId == GetRequiredCurrentUserId() && x.Status == CompletedStatus && assetIds.Contains(x.AssetId))
-                .OrderByDescending(x => x.CompletedAtUtc ?? x.StartedAtUtc)
+                .GroupBy(x => x.AssetId)
+                .Select(g => g.OrderByDescending(x => x.CompletedAtUtc ?? x.StartedAtUtc).First())
                 .ToListAsync(ct);
 
             var response = new Dictionary<string, PersistedAnalysisSnapshotPayloadReadModel>(StringComparer.Ordinal);
             var latestRunIdByAssetId = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var analysisRun in analysisRuns)
+            foreach (var latestRun in latestRuns)
             {
-                if (response.ContainsKey(analysisRun.AssetId))
-                {
-                    continue;
-                }
-
-                var snapshot = TryReadSnapshot(analysisRun.RawPayload);
+                var snapshot = TryReadSnapshot(latestRun.RawPayload);
                 if (snapshot == null)
                 {
                     continue;
                 }
 
-                response[analysisRun.AssetId] = snapshot;
-                latestRunIdByAssetId[analysisRun.AssetId] = analysisRun.Id;
+                response[latestRun.AssetId] = snapshot;
+                latestRunIdByAssetId[latestRun.AssetId] = latestRun.Id;
             }
 
             await ApplyEarningsDatesAsync(response, latestRunIdByAssetId, ct);

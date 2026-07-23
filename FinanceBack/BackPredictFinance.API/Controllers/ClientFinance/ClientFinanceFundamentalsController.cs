@@ -32,7 +32,6 @@ namespace BackPredictFinance.API.Controllers.ClientFinance
                 UniverseId = model.UniverseId,
                 Symbols = model.Symbols,
                 MinCategoriesRequired = model.MinCategoriesRequired,
-                CoveragePenaltyEnabled = model.CoveragePenaltyEnabled,
                 IncludeRankPosition = model.IncludeRankPosition
             }, ct);
 

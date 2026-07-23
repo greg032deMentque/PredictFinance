@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.ViewModels.AdminViewModels.SnapshotAudit;
 using Microsoft.EntityFrameworkCore;
@@ -124,6 +125,10 @@ namespace BackPredictFinance.Services.AdminGovernance
             };
         }
 
+        // Le RawPayload est écrit avec AnalysisSnapshotJsonOptions.Shared (camelCase, voir
+        // AnalysisSnapshotPersistenceService.TryPersistAnalysisRunAsync) : la lecture doit utiliser les
+        // mêmes options (case-insensitive) plutôt qu'un JsonDocument.TryGetProperty sensible à la casse,
+        // qui rate silencieusement toutes les propriétés (piège déjà documenté ailleurs pour ce payload).
         private static ParsedSnapshotPayload ParsePayload(string? rawPayload)
         {
             if (string.IsNullOrWhiteSpace(rawPayload))
@@ -133,59 +138,28 @@ namespace BackPredictFinance.Services.AdminGovernance
 
             try
             {
-                using var document = JsonDocument.Parse(rawPayload);
-                var root = document.RootElement;
+                var payload = JsonSerializer.Deserialize<RawSnapshotPayload>(rawPayload, AnalysisSnapshotJsonOptions.Shared);
+                if (payload is null)
+                {
+                    return new ParsedSnapshotPayload();
+                }
+
                 return new ParsedSnapshotPayload
                 {
-                    TraceId = ReadString(root, "TraceId") ?? string.Empty,
-                    PrimaryPatternId = ReadString(root, "PrimaryPatternId"),
-                    RecommendationAction = ReadNestedString(root, "Recommendation", "Action"),
-                    RecommendationPolicyVersion = ReadString(root, "RecommendationPolicyVersion"),
-                    ExplanationPolicyVersion = ReadString(root, "ExplanationPolicyVersion"),
-                    AnalysisEngineVersion = ReadString(root, "AnalysisEngineVersion"),
-                    RequestedPatternIds = ReadStringArray(root, "RequestedPatternIds"),
-                    ExecutedPatternIds = ReadStringArray(root, "ExecutedPatternIds")
+                    TraceId = payload.TraceId ?? string.Empty,
+                    PrimaryPatternId = payload.PrimaryPatternId,
+                    RecommendationAction = payload.Recommendation?.RecommendationPayload?.Kind,
+                    RecommendationPolicyVersion = payload.RecommendationPolicyVersion,
+                    ExplanationPolicyVersion = payload.ExplanationPolicyVersion,
+                    AnalysisEngineVersion = payload.AnalysisEngineVersion,
+                    RequestedPatternIds = payload.RequestedPatternIds ?? [],
+                    ExecutedPatternIds = payload.ExecutedPatternIds ?? []
                 };
             }
             catch (JsonException)
             {
                 return new ParsedSnapshotPayload();
             }
-        }
-
-        private static string? ReadString(JsonElement root, string propertyName)
-        {
-            return root.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
-                ? value.GetString()
-                : null;
-        }
-
-        private static string? ReadNestedString(JsonElement root, string parentPropertyName, string childPropertyName)
-        {
-            if (!root.TryGetProperty(parentPropertyName, out var parent) || parent.ValueKind != JsonValueKind.Object)
-            {
-                return null;
-            }
-
-            return parent.TryGetProperty(childPropertyName, out var child) && child.ValueKind == JsonValueKind.String
-                ? child.GetString()
-                : null;
-        }
-
-        private static List<string> ReadStringArray(JsonElement root, string propertyName)
-        {
-            if (!root.TryGetProperty(propertyName, out var array) || array.ValueKind != JsonValueKind.Array)
-            {
-                return [];
-            }
-
-            return array
-                .EnumerateArray()
-                .Where(x => x.ValueKind == JsonValueKind.String)
-                .Select(x => x.GetString())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Cast<string>()
-                .ToList();
         }
 
         private sealed class ParsedSnapshotPayload
@@ -198,6 +172,31 @@ namespace BackPredictFinance.Services.AdminGovernance
             public string? AnalysisEngineVersion { get; set; }
             public List<string> RequestedPatternIds { get; set; } = [];
             public List<string> ExecutedPatternIds { get; set; } = [];
+        }
+
+        // Sous-ensemble du payload réel (PersistedAnalysisSnapshotPayload, privé à
+        // AnalysisSnapshotPersistenceService) nécessaire à l'audit : seules les propriétés lues ici
+        // doivent matcher le JSON, les autres sont ignorées par la désérialisation.
+        private sealed class RawSnapshotPayload
+        {
+            public string? TraceId { get; set; }
+            public string? PrimaryPatternId { get; set; }
+            public string? RecommendationPolicyVersion { get; set; }
+            public string? ExplanationPolicyVersion { get; set; }
+            public string? AnalysisEngineVersion { get; set; }
+            public List<string>? RequestedPatternIds { get; set; }
+            public List<string>? ExecutedPatternIds { get; set; }
+            public RawSnapshotRecommendation? Recommendation { get; set; }
+        }
+
+        private sealed class RawSnapshotRecommendation
+        {
+            public RawSnapshotRecommendationPayload? RecommendationPayload { get; set; }
+        }
+
+        private sealed class RawSnapshotRecommendationPayload
+        {
+            public string? Kind { get; set; }
         }
     }
 }

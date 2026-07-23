@@ -89,6 +89,10 @@ export class ScreenerService {
       params = params.set('MinMarketCap', options.MinMarketCap);
     }
 
+    if (options.MinScore !== null && options.MinScore !== undefined) {
+      params = params.set('MinScore', options.MinScore);
+    }
+
     return params;
   }
 }

@@ -67,6 +67,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             var asset = await _assetSupportService.EnsureAssetAsync(symbol, symbol, ct);
 
             var userAsset = await _financeDbContext.UserAssets
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(x => x.UserId == _currentUserId && x.AssetId == asset.Id, ct);
 
             if (userAsset == null)
@@ -79,6 +80,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 };
 
                 await _financeDbContext.UserAssets.AddAsync(userAsset, ct);
+            }
+            else if (userAsset.IsDeleted)
+            {
+                userAsset.IsDeleted = false;
             }
 
             if (transactionType == TransactionTypeEnum.Sell && userAsset.Quantity < request.Quantity)
@@ -136,7 +141,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .Include(x => x.UserAsset)
                 .ThenInclude(x => x.Asset)
                 .Include(x => x.Portfolio)
-                .Where(x => x.UserAsset.UserId == _currentUserId && !x.IsDeleted);
+                .Where(x => x.UserAsset.UserId == _currentUserId);
 
             if (!string.IsNullOrWhiteSpace(portfolioId))
                 query = query.Where(x => x.PortfolioId == portfolioId);
@@ -161,7 +166,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             var transaction = await _financeDbContext.AssetTransactions
                 .Include(x => x.UserAsset)
                 .ThenInclude(x => x.Asset)
-                .FirstOrDefaultAsync(x => x.Id == transactionId && x.UserAsset.UserId == _currentUserId && !x.IsDeleted, ct);
+                .FirstOrDefaultAsync(x => x.Id == transactionId && x.UserAsset.UserId == _currentUserId, ct);
 
             if (transaction == null)
             {

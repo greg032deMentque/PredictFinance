@@ -1,6 +1,6 @@
 namespace BackPredictFinance.Datas.Entities
 {
-    public sealed class LegalCard : AuditableEntityBase
+    public sealed class LegalCard : AuditableEntityBase, ISoftDeletable
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Key { get; set; } = string.Empty;

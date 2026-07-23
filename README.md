@@ -56,7 +56,7 @@ The backend needs local configuration that is **not** committed (`appsettings.De
 ```powershell
 # one-time: create your local dev config from the template, then set secrets
 dotnet user-secrets set "JWTToken:Secret" "<dev-signing-key>" --project FinanceBack/BackPredictFinance.API
-# ...repeat for ServerSalt, AutomapperLicense, adminEmail/adminPwd, userEmail/userPwd
+# ...repeat for Security:RefreshTokenHmacKey, AutomapperLicense, adminEmail/adminPwd, userEmail/userPwd
 dotnet ef database update --project FinanceBack/BackPredictFinance.Datas --startup-project FinanceBack/BackPredictFinance.API
 ```
 

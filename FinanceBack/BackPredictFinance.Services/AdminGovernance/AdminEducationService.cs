@@ -23,7 +23,6 @@ namespace BackPredictFinance.Services.AdminGovernance
         {
             var articles = await _financeDbContext.EducationArticles
                 .AsNoTracking()
-                .Where(a => !a.IsDeleted)
                 .OrderBy(a => a.DisplayOrder)
                 .ToListAsync(ct);
 
@@ -34,7 +33,7 @@ namespace BackPredictFinance.Services.AdminGovernance
         {
             var article = await _financeDbContext.EducationArticles
                 .AsNoTracking()
-                .Where(a => !a.IsDeleted && a.Id == id)
+                .Where(a => a.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             return article is null ? null : _mapper.Map<EducationArticleAdminViewModel>(article);
@@ -65,7 +64,7 @@ namespace BackPredictFinance.Services.AdminGovernance
         public async Task<EducationArticleAdminViewModel> UpdateAsync(string id, EducationArticleUpsertRequestViewModel request, CancellationToken ct = default)
         {
             var article = await _financeDbContext.EducationArticles
-                .Where(a => !a.IsDeleted && a.Id == id)
+                .Where(a => a.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (article is null)
@@ -87,7 +86,7 @@ namespace BackPredictFinance.Services.AdminGovernance
         public async Task DeleteAsync(string id, CancellationToken ct = default)
         {
             var article = await _financeDbContext.EducationArticles
-                .Where(a => !a.IsDeleted && a.Id == id)
+                .Where(a => a.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (article is null)

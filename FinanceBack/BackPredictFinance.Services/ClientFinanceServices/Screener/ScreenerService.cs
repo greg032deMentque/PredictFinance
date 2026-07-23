@@ -1,6 +1,8 @@
 using System.Text.Json;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.Fundamentals;
 using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services.Fundamentals;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Screener;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -48,7 +50,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
             var page = Math.Max(1, query.Page);
             var pageSize = Math.Clamp(query.PageSize, 1, 100);
 
-            var filtered = BuildFilteredQuery(query);
+            var filtered = await BuildFilteredQueryAsync(query, ct);
             var total = await filtered.CountAsync(ct);
 
             var projected = ApplySort(ProjectWithQuoteAndPea(filtered), query.SortBy, query.SortDirection);
@@ -103,7 +105,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
 
         public async Task<byte[]> ExportCsvAsync(ScreenerQueryViewModel query, CancellationToken ct = default)
         {
-            var filtered = BuildFilteredQuery(query);
+            var filtered = await BuildFilteredQueryAsync(query, ct);
             var projected = ApplySort(ProjectWithQuoteAndPea(filtered), query.SortBy, query.SortDirection);
 
             var items = await projected
@@ -113,7 +115,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
             return ScreenerCsvWriter.BuildCsv(items);
         }
 
-        private IQueryable<Asset> BuildFilteredQuery(ScreenerQueryViewModel query)
+        private async Task<IQueryable<Asset>> BuildFilteredQueryAsync(ScreenerQueryViewModel query, CancellationToken ct)
         {
             var baseQuery = _financeDbContext.Assets
                 .AsNoTracking();
@@ -162,6 +164,39 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
 
                 var matchingAssetIds = latestFundamentals.Select(f => f.AssetId);
                 baseQuery = baseQuery.Where(a => matchingAssetIds.Contains(a.Id));
+            }
+
+            if (query.MinScore.HasValue)
+            {
+                var candidateSymbols = await baseQuery.Select(a => a.Symbol).ToListAsync(ct);
+                if (candidateSymbols.Count == 0)
+                {
+                    return baseQuery;
+                }
+
+                // Le score fondamental n'est pas persiste : il est recalcule a la demande par
+                // IFundamentalScoringService, exactement comme pour l'affichage de la colonne "Score
+                // fondamental" du screener (voir screener-page.component.ts). On reutilise ici les memes
+                // parametres implicites que le front (MinCategoriesRequired par defaut, pas de classement)
+                // pour garantir que le score qui filtre est toujours celui qui est affiche.
+                var fundamentalScoringService = _serviceProvider.GetRequiredService<IFundamentalScoringService>();
+                var scoreResponse = await fundamentalScoringService.ScoreAsync(new FundamentalScoreRequest
+                {
+                    UniverseId = FundamentalScoringPolicyDefaults.SupportedUniverseId,
+                    Symbols = candidateSymbols,
+                    MinCategoriesRequired = FundamentalScoringPolicyDefaults.MinimumCategoriesRequiredDefault,
+                    IncludeRankPosition = false
+                }, ct);
+
+                // Un actif sans score utilisable (hors univers PEA confirme eligible, couverture de
+                // categories insuffisante, fondamentaux indisponibles) ne peut pas satisfaire "score >= X" :
+                // il est exclu, exactement comme un actif sans TrailingPE l'est deja pour MinPE/MaxPE.
+                var matchingSymbols = scoreResponse.Results
+                    .Where(r => r.UsableScore && r.TotalScore.HasValue && r.TotalScore.Value >= query.MinScore.Value)
+                    .Select(r => r.Symbol)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                baseQuery = baseQuery.Where(a => matchingSymbols.Contains(a.Symbol));
             }
 
             return baseQuery;
@@ -250,7 +285,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
 
             var presets = await _financeDbContext.UserScreenerPresets
                 .AsNoTracking()
-                .Where(p => p.UserId == userId && !p.IsDeleted)
+                .Where(p => p.UserId == userId)
                 .OrderByDescending(p => p.CreatedAtUtc)
                 .ToListAsync(ct);
 
@@ -284,7 +319,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
             var userId = _currentUserId;
 
             var preset = await _financeDbContext.UserScreenerPresets
-                .FirstOrDefaultAsync(p => p.Id == presetId && p.UserId == userId && !p.IsDeleted, ct)
+                .FirstOrDefaultAsync(p => p.Id == presetId && p.UserId == userId, ct)
                 ?? throw new KeyNotFoundException($"Preset {presetId} introuvable.");
 
             preset.IsDeleted = true;

@@ -112,6 +112,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var asset = await _assetSupportService.EnsureAssetAsync(symbol, request.CompanyName, ct);
             var userAsset = await _financeDbContext.UserAssets
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(x => x.UserId == _currentUserId && x.AssetId == asset.Id, ct);
 
             if (userAsset == null)
@@ -124,6 +125,11 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 };
 
                 await _financeDbContext.UserAssets.AddAsync(userAsset, ct);
+                await _financeDbContext.SaveChangesAsync(ct);
+            }
+            else if (userAsset.IsDeleted)
+            {
+                userAsset.IsDeleted = false;
                 await _financeDbContext.SaveChangesAsync(ct);
             }
 
@@ -177,7 +183,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 throw new InvalidOperationException("Impossible de supprimer une valeur avec une position ouverte.");
             }
 
-            _financeDbContext.UserAssets.Remove(userAsset);
+            userAsset.IsDeleted = true;
             await _financeDbContext.SaveChangesAsync(ct);
         }
 
@@ -226,7 +232,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var transactionQuery = _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .Where(x => userAssetIds.Contains(x.UserAssetId) && !x.IsDeleted);
+                .Where(x => userAssetIds.Contains(x.UserAssetId));
 
             if (!string.IsNullOrWhiteSpace(portfolioId))
             {

@@ -66,84 +66,51 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
             _fundamentalsProvider = fundamentalsProvider;
         }
 
+        // Upsert en 1 SELECT groupé + staging dans le tracker (pas de SaveChanges ici) : l'appelant
+        // committe l'ensemble (bougies + éventuelle AnalysisRun associée) en un seul SaveChangesAsync,
+        // dans une transaction explicite côté appelant. Ne jamais réintroduire un ChangeTracker.Clear()
+        // ici : ce contexte peut porter une AnalysisRun non encore sauvegardée (voir TryPersistAnalysisRunAsync).
         private async Task UpsertCandlesAsync(
             string assetId,
             IReadOnlyList<TickerCandle> candles,
             CancellationToken ct)
         {
-            foreach (var candle in candles)
+            var normalizedCandles = candles
+                .Select(candle => (Candle: candle, TimestampUtc: NormalizeCandleTimestampUtc(candle.Date)))
+                .ToList();
+
+            var timestamps = normalizedCandles.Select(x => x.TimestampUtc).ToList();
+
+            var existingSnapshots = await _financeDbContext.AssetCandleSnapshots
+                .Where(x => x.AssetId == assetId && x.Interval == "1d" && timestamps.Contains(x.TimestampUtc))
+                .ToDictionaryAsync(x => x.TimestampUtc, ct);
+
+            foreach (var (candle, candleTimestampUtc) in normalizedCandles)
             {
-                var candleTimestampUtc = NormalizeCandleTimestampUtc(candle.Date);
-                await UpsertSingleCandleAsync(assetId, candle, candleTimestampUtc, ct);
-            }
-        }
-
-        private async Task UpsertSingleCandleAsync(
-            string assetId,
-            TickerCandle candle,
-            DateTime candleTimestampUtc,
-            CancellationToken ct)
-        {
-            var existing = await _financeDbContext.AssetCandleSnapshots
-                .FirstOrDefaultAsync(
-                    x => x.AssetId == assetId
-                        && x.Interval == "1d"
-                        && x.TimestampUtc == candleTimestampUtc,
-                    ct);
-
-            if (existing is null)
-            {
-                _financeDbContext.AssetCandleSnapshots.Add(
-                    new AssetCandleSnapshot
-                    {
-                        AssetId = assetId,
-                        Interval = "1d",
-                        TimestampUtc = candleTimestampUtc,
-                        Open = candle.Open,
-                        High = candle.High,
-                        Low = candle.Low,
-                        Close = candle.Close,
-                        Volume = candle.Volume,
-                        Source = "PIPELINE"
-                    });
-
-                try
+                if (existingSnapshots.TryGetValue(candleTimestampUtc, out var existing))
                 {
-                    await _financeDbContext.SaveChangesAsync(ct);
+                    existing.Open = candle.Open;
+                    existing.High = candle.High;
+                    existing.Low = candle.Low;
+                    existing.Close = candle.Close;
+                    existing.Volume = candle.Volume;
                 }
-                catch (DbUpdateException)
+                else
                 {
-                    // Course entre deux analyses concurrentes sur le même actif/jour : l'insertion
-                    // échoue sur la contrainte unique (AssetId, Interval, TimestampUtc). On efface le
-                    // tracker (l'entité en échec y reste attachée) puis on relit la ligne réellement
-                    // en base pour basculer en update — évite un doublon de bougie sans lock explicite.
-                    _financeDbContext.ChangeTracker.Clear();
-
-                    var conflicted = await _financeDbContext.AssetCandleSnapshots
-                        .FirstOrDefaultAsync(
-                            x => x.AssetId == assetId
-                                && x.Interval == "1d"
-                                && x.TimestampUtc == candleTimestampUtc,
-                            ct);
-
-                    if (conflicted is not null)
-                    {
-                        conflicted.Open = candle.Open;
-                        conflicted.High = candle.High;
-                        conflicted.Low = candle.Low;
-                        conflicted.Close = candle.Close;
-                        conflicted.Volume = candle.Volume;
-                        await _financeDbContext.SaveChangesAsync(ct);
-                    }
+                    _financeDbContext.AssetCandleSnapshots.Add(
+                        new AssetCandleSnapshot
+                        {
+                            AssetId = assetId,
+                            Interval = "1d",
+                            TimestampUtc = candleTimestampUtc,
+                            Open = candle.Open,
+                            High = candle.High,
+                            Low = candle.Low,
+                            Close = candle.Close,
+                            Volume = candle.Volume,
+                            Source = "PIPELINE"
+                        });
                 }
-            }
-            else
-            {
-                existing.Open = candle.Open;
-                existing.High = candle.High;
-                existing.Low = candle.Low;
-                existing.Close = candle.Close;
-                existing.Volume = candle.Volume;
             }
         }
 
@@ -200,12 +167,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 return;
             }
 
-            foreach (var candle in candles)
-            {
-                var candleTimestampUtc = NormalizeCandleTimestampUtc(candle.Date);
-                await UpsertSingleCandleAsync(assetId, candle, candleTimestampUtc, ct);
-            }
-
+            await UpsertCandlesAsync(assetId, candles, ct);
             await _financeDbContext.SaveChangesAsync(ct);
         }
 
@@ -291,12 +253,15 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 }
             };
 
+            await using var transaction = await _financeDbContext.Database.BeginTransactionAsync(ct);
+
             await _financeDbContext.AnalysisRuns.AddAsync(analysisRun, ct);
             if (executionArtifact.Candles.Count > 0)
             {
                 await UpsertCandlesAsync(asset.Id, executionArtifact.Candles, ct);
             }
             await _financeDbContext.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
             return analysisRun;
         }
 
@@ -681,10 +646,17 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
         private async Task<UserAsset> EnsureUserAssetAsync(string userId, string assetId, CancellationToken ct)
         {
             var userAsset = await _financeDbContext.UserAssets
+                .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(x => x.UserId == userId && x.AssetId == assetId, ct);
 
             if (userAsset != null)
             {
+                if (userAsset.IsDeleted)
+                {
+                    userAsset.IsDeleted = false;
+                    await _financeDbContext.SaveChangesAsync(ct);
+                }
+
                 return userAsset;
             }
 

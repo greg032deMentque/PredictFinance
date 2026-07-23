@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
@@ -220,6 +221,9 @@ public sealed class AdminGovernanceApiFeatureTests : IClassFixture<ApiIntegratio
             Status = AnalysisRunStatusEnum.Completed,
             StartedAtUtc = new DateTime(2026, 4, 10, 8, 0, 0, DateTimeKind.Utc),
             CompletedAtUtc = new DateTime(2026, 4, 10, 8, 5, 0, DateTimeKind.Utc),
+            // Sérialisé avec AnalysisSnapshotJsonOptions.Shared (camelCase + JsonStringEnumConverter),
+            // exactement comme AnalysisSnapshotPersistenceService.TryPersistAnalysisRunAsync : la forme
+            // imbriquée Recommendation.RecommendationPayload.Kind reflète le payload réellement persisté.
             RawPayload = JsonSerializer.Serialize(new
             {
                 TraceId = "trace-001",
@@ -228,12 +232,15 @@ public sealed class AdminGovernanceApiFeatureTests : IClassFixture<ApiIntegratio
                 PrimaryPatternId = "RectangleContinuation",
                 Recommendation = new
                 {
-                    Action = "Buy"
+                    RecommendationPayload = new
+                    {
+                        Kind = RecommendationKind.Buy
+                    }
                 },
                 RecommendationPolicyVersion = "REC_V1",
                 ExplanationPolicyVersion = "EXP_V1",
                 AnalysisEngineVersion = "ENGINE_V1"
-            }),
+            }, AnalysisSnapshotJsonOptions.Shared),
             ErrorMessage = (string?)null
         };
 

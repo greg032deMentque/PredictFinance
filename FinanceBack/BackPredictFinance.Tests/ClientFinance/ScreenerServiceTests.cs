@@ -1,10 +1,12 @@
 using AutoMapper;
+using BackPredictFinance.Common.Fundamentals;
 using BackPredictFinance.Common.Localization;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services;
 using BackPredictFinance.Services.ClientFinanceServices.Screener;
+using BackPredictFinance.Services.Fundamentals;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Screener;
 using BackPredictFinance.ViewModels.UserViewModels;
 using Microsoft.AspNetCore.Http;
@@ -41,6 +43,44 @@ public sealed class ScreenerServiceTests
         }, NullLoggerFactory.Instance).CreateMapper());
         services.AddSingleton(Mock.Of<IStringLocalizer<SharedResources>>());
         services.AddScoped<ILogService>(_ => Mock.Of<ILogService>());
+        services.AddMemoryCache();
+
+        services
+            .AddIdentity<User, IdentityRole>()
+            .AddEntityFrameworkStores<FinanceDbContext>()
+            .AddDefaultTokenProviders();
+
+        var provider = services.BuildServiceProvider();
+        var scope = provider.CreateAsyncScope();
+
+        var service = new ScreenerService(scope.ServiceProvider);
+
+        return (db, service, scope);
+    }
+
+    private static async Task<(FinanceDbContext Db, ScreenerService Service, IAsyncDisposable Scope)> BuildContextWithScoringAsync(
+        IFundamentalScoringService fundamentalScoringService)
+    {
+        var options = new DbContextOptionsBuilder<FinanceDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
+            .Options;
+
+        var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        httpContextAccessorMock.Setup(x => x.HttpContext).Returns((HttpContext?)null);
+        var db = new FinanceDbContext(options, httpContextAccessorMock.Object);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddSingleton(httpContextAccessorMock.Object);
+        services.AddSingleton(db);
+        services.AddSingleton<IMapper>(new MapperConfiguration(cfg =>
+        {
+            cfg.AddMaps(typeof(UserViewModel).Assembly);
+        }, NullLoggerFactory.Instance).CreateMapper());
+        services.AddSingleton(Mock.Of<IStringLocalizer<SharedResources>>());
+        services.AddScoped<ILogService>(_ => Mock.Of<ILogService>());
+        services.AddSingleton(fundamentalScoringService);
         services.AddMemoryCache();
 
         services
@@ -346,6 +386,38 @@ public sealed class ScreenerServiceTests
     }
 
     [Fact]
+    public async Task GetPagedAsync_FiltersByMinScore_ExcludesBelowThresholdAndUnscoredAssets()
+    {
+        var scoringServiceMock = new Mock<IFundamentalScoringService>();
+        scoringServiceMock
+            .Setup(s => s.ScoreAsync(It.IsAny<FundamentalScoreRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FundamentalScoreResponse
+            {
+                Results =
+                [
+                    new FundamentalScoreResult { Symbol = "HIGH.PA", UsableScore = true, TotalScore = 80m },
+                    new FundamentalScoreResult { Symbol = "LOW.PA", UsableScore = true, TotalScore = 40m },
+                    new FundamentalScoreResult { Symbol = "UNSCORED.PA", UsableScore = false, TotalScore = null }
+                ]
+            });
+
+        var (db, service, scope) = await BuildContextWithScoringAsync(scoringServiceMock.Object);
+        await using var _ = scope;
+
+        db.Assets.AddRange(
+            BuildAsset("a1", "HIGH.PA", "High", "XPAR", "France", "Sector", AssetTypeEnum.Stock),
+            BuildAsset("a2", "LOW.PA", "Low", "XPAR", "France", "Sector", AssetTypeEnum.Stock),
+            BuildAsset("a3", "UNSCORED.PA", "Unscored", "XPAR", "France", "Sector", AssetTypeEnum.Stock));
+        await db.SaveChangesAsync();
+
+        var result = await service.GetPagedAsync(new ScreenerQueryViewModel { MinScore = 60m });
+
+        Assert.Single(result.Items);
+        Assert.Equal("HIGH.PA", result.Items[0].Symbol);
+        Assert.Equal(1, result.Total);
+    }
+
+    [Fact]
     public async Task GetPagedAsync_ProjectsLatestFundamentalsSnapshot()
     {
         var (db, service, scope) = await BuildContextAsync();
@@ -412,7 +484,7 @@ public sealed class ScreenerServiceTests
         var presets = await service.GetPresetsAsync();
         Assert.Empty(presets);
 
-        var stored = await db.UserScreenerPresets.FirstAsync(p => p.Id == created.Id);
+        var stored = await db.UserScreenerPresets.IgnoreQueryFilters().FirstAsync(p => p.Id == created.Id);
         Assert.True(stored.IsDeleted);
     }
 

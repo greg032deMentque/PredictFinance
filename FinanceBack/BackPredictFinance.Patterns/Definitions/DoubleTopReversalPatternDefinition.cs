@@ -71,9 +71,11 @@ namespace BackPredictFinance.Patterns.Definitions
             var (firstIndex, secondIndex, necklinePrice) = peakPair.Value;
             var high1 = candles[firstIndex].High;
             var high2 = candles[secondIndex].High;
+#pragma warning disable S125 // Faux positif Sonar : prose explicative (le "pourquoi"), pas du code commenté.
             // Hauteur de la figure = distance entre la moyenne des deux sommets et la neckline ;
             // l'objectif de prix projette cette même distance sous la neckline (règle de mesure
             // classique de l'analyse technique pour les figures en double sommet/creux).
+#pragma warning restore S125
             var figureHeight = (high1 + high2) / 2m - necklinePrice;
             var targetPrice = necklinePrice - figureHeight;
             var hasVolumeExpansion = PatternTechnicals.IsVolumeExpanding(candles);

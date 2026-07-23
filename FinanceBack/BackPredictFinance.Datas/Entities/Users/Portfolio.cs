@@ -8,7 +8,7 @@ namespace BackPredictFinance.Datas.Entities
     /// Archivage : un portefeuille archivé (Status) reste consultable directement mais est
     /// exclu des agrégats globaux.
     /// </summary>
-    public class Portfolio : AuditableEntityBase
+    public class Portfolio : AuditableEntityBase, ISoftDeletable
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
 

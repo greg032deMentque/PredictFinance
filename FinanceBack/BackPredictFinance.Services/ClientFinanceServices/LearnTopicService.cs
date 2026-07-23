@@ -25,7 +25,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var topics = await _financeDbContext.LearnTopics
                 .AsNoTracking()
-                .Where(t => t.IsActive && t.IsPublished && !t.IsDeleted)
+                .Where(t => t.IsActive && t.IsPublished)
                 .OrderBy(t => t.DisplayOrder)
                 .ToListAsync(ct);
 
@@ -36,7 +36,6 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var topics = await _financeDbContext.LearnTopics
                 .AsNoTracking()
-                .Where(t => !t.IsDeleted)
                 .OrderBy(t => t.DisplayOrder)
                 .ToListAsync(ct);
 
@@ -47,7 +46,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         {
             var topic = await _financeDbContext.LearnTopics
                 .AsNoTracking()
-                .Where(t => !t.IsDeleted && t.Id == id)
+                .Where(t => t.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             return topic is null ? null : _mapper.Map<LearnTopicAdminViewModel>(topic);
@@ -77,7 +76,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task<LearnTopicAdminViewModel> UpdateAsync(string id, LearnTopicUpsertRequestViewModel request, CancellationToken ct = default)
         {
             var topic = await _financeDbContext.LearnTopics
-                .Where(t => !t.IsDeleted && t.Id == id)
+                .Where(t => t.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (topic is null)
@@ -98,7 +97,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
         public async Task DeleteAsync(string id, CancellationToken ct = default)
         {
             var topic = await _financeDbContext.LearnTopics
-                .Where(t => !t.IsDeleted && t.Id == id)
+                .Where(t => t.Id == id)
                 .FirstOrDefaultAsync(ct);
 
             if (topic is null)

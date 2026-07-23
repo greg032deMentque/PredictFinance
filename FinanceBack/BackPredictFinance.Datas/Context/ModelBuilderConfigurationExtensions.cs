@@ -37,6 +37,7 @@ namespace BackPredictFinance.Datas.Context
                 entity.Property(x => x.QueryJson).HasMaxLength(4000).IsRequired();
 
                 entity.HasIndex(x => new { x.UserId, x.IsDeleted });
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 entity.HasOne(x => x.User)
                     .WithMany()
@@ -63,6 +64,7 @@ namespace BackPredictFinance.Datas.Context
                     .IsUnique()
                     .HasFilter("[IsDeleted] = 0");
                 entity.HasIndex(x => new { x.UserId, x.IsDeleted });
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 entity.HasOne(x => x.User)
                     .WithMany()
@@ -74,12 +76,20 @@ namespace BackPredictFinance.Datas.Context
             {
                 entity.HasIndex(x => new { x.PortfolioId, x.TimestampUtc });
                 entity.HasIndex(x => new { x.UserAssetId, x.IsDeleted });
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 // Restrict : un portefeuille porteur de transactions ne peut pas être supprimé
                 // physiquement (la suppression est un soft-delete applicatif).
                 entity.HasOne(x => x.Portfolio)
                     .WithMany(x => x.Transactions)
                     .HasForeignKey(x => x.PortfolioId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Restrict : une ligne UserAsset porteuse de transactions (historique fiscal) ne
+                // peut pas être supprimée physiquement (la suppression est un soft-delete applicatif).
+                entity.HasOne(x => x.UserAsset)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserAssetId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }
@@ -157,11 +167,22 @@ namespace BackPredictFinance.Datas.Context
             {
                 entity.HasIndex(x => new { x.UserId, x.AssetId }).IsUnique();
                 entity.Property(x => x.Quantity).HasPrecision(18, 8);
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 entity.ToTable(tableBuilder =>
                 {
                     tableBuilder.HasCheckConstraint("CK_UserAssets_Quantity_NonNegative", "[Quantity] >= 0");
                 });
+            });
+
+            // Restrict : une ligne UserAsset porteuse de recommandations historisées ne peut pas
+            // être supprimée physiquement (la suppression est un soft-delete applicatif).
+            modelBuilder.Entity<Recommendation>(entity =>
+            {
+                entity.HasOne(x => x.UserAsset)
+                    .WithMany(x => x.Recommendations)
+                    .HasForeignKey(x => x.UserAssetId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<AssetTransaction>(entity =>
@@ -791,6 +812,7 @@ namespace BackPredictFinance.Datas.Context
                 entity.HasIndex(x => x.Slug).IsUnique();
                 entity.HasIndex(x => new { x.IsActive, x.IsPublished, x.DisplayOrder });
                 entity.HasIndex(x => x.IsDeleted);
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 entity.HasData(BuildEducationArticleSeedEntries());
             });
@@ -806,6 +828,7 @@ namespace BackPredictFinance.Datas.Context
                 entity.HasIndex(x => x.NormalizedTerm);
                 entity.HasIndex(x => new { x.IsActive, x.IsPublished, x.Category });
                 entity.HasIndex(x => x.IsDeleted);
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 entity.HasData(BuildGlossaryTermSeedEntries());
             });
@@ -1009,6 +1032,7 @@ Vous versez librement sur le PER individuel (PERin). Les sommes sont investies s
                 entity.Property(x => x.Answer).HasMaxLength(2048).IsRequired();
                 entity.HasIndex(x => new { x.IsActive, x.IsPublished, x.DisplayOrder });
                 entity.HasIndex(x => x.IsDeleted);
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 entity.HasData(BuildFaqEntrySeedEntries());
             });
@@ -1025,6 +1049,7 @@ Vous versez librement sur le PER individuel (PERin). Les sommes sont investies s
                 entity.HasIndex(x => x.Key).IsUnique();
                 entity.HasIndex(x => new { x.IsActive, x.IsPublished, x.DisplayOrder });
                 entity.HasIndex(x => x.IsDeleted);
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 entity.HasData(BuildLegalCardSeedEntries());
             });
@@ -1040,6 +1065,7 @@ Vous versez librement sur le PER individuel (PERin). Les sommes sont investies s
                 entity.HasIndex(x => x.TopicId).IsUnique();
                 entity.HasIndex(x => new { x.IsActive, x.IsPublished, x.DisplayOrder });
                 entity.HasIndex(x => x.IsDeleted);
+                entity.HasQueryFilter(x => !x.IsDeleted);
 
                 entity.HasData(BuildLearnTopicSeedEntries());
             });

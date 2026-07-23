@@ -15,5 +15,6 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Screener
         public decimal? MaxPE { get; set; }
         public decimal? MinDividendYield { get; set; }
         public decimal? MinMarketCap { get; set; }
+        public decimal? MinScore { get; set; }
     }
 }

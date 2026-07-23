@@ -159,7 +159,7 @@ public sealed class ClientFinanceTransactionServiceSoftDeleteTests
 
         await transactionService.DeleteTransactionAsync("tx-sell-1");
 
-        var storedTransaction = await db.AssetTransactions.AsNoTracking().SingleAsync(x => x.Id == "tx-sell-1");
+        var storedTransaction = await db.AssetTransactions.AsNoTracking().IgnoreQueryFilters().SingleAsync(x => x.Id == "tx-sell-1");
         Assert.True(storedTransaction.IsDeleted);
 
         var reloadedUserAsset = await db.UserAssets.AsNoTracking().SingleAsync(x => x.Id == userAssetId);
