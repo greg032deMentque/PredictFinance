@@ -20,7 +20,7 @@ namespace BackPredictFinance.Patterns.Definitions
         }
 
         public override string PatternId => PatternIds.BearFlagContinuation;
-        public override string ModelVersion => "analysis-v1-bear-flag-continuation@lot3-atr";
+        public override string ModelVersion => "analysis-v1-bear-flag-continuation@lot-breakout-fix";
         public override int HistoryLookbackMonths => 6;
         protected override int MinimumRequiredCandles => 40;
         protected override string DisplayName => "Bear flag continuation";
@@ -50,17 +50,22 @@ namespace BackPredictFinance.Patterns.Definitions
             var patternWindow = PatternTechnicals.Tail(candles, 22).ToList();
             var pole = patternWindow.Take(12).ToList();
             var flag = patternWindow.Skip(12).ToList();
+            // flagStructure exclut la derniere bougie du flag (celle testee pour le breakout) : la
+            // resistance/le support du flag doivent etre etablis AVANT la bougie evaluee, sinon
+            // celle-ci ne peut jamais depasser un extremum qui l'inclut elle-meme (High >= Close >= Low
+            // par definition OHLC rend tout breakout mathematiquement impossible).
+            var flagStructure = flag.Take(flag.Count - 1).ToList();
             var currentPrice = candles[^1].Close;
             var poleDropPct = PatternTechnicals.ComputeReturnPct(pole[0].Close, pole[^1].Close);
             var poleHeight = pole.Max(candle => candle.High) - pole.Min(candle => candle.Low);
-            var flagResistance = flag.Max(candle => candle.High);
-            var flagSupport = flag.Min(candle => candle.Low);
+            var flagResistance = flagStructure.Max(candle => candle.High);
+            var flagSupport = flagStructure.Min(candle => candle.Low);
             var flagHeight = flagResistance - flagSupport;
             // Retracement du rebond par rapport à la hauteur du pole (0 = le flag n'a rien repris de
             // la chute, 1 = le flag est remonté jusqu'en haut du pole).
             var flagRetracement = poleHeight <= 0m ? 1m : (flagResistance - pole[^1].Close) / poleHeight;
-            var flagSlope = PatternTechnicals.ComputeSlope(flag.Select(candle => candle.Close).ToList());
-            var averageFlagClose = PatternTechnicals.AverageClose(flag);
+            var flagSlope = PatternTechnicals.ComputeSlope(flagStructure.Select(candle => candle.Close).ToList());
+            var averageFlagClose = PatternTechnicals.AverageClose(flagStructure);
             var atr = PatternTechnicals.VolatilityUnit(patternWindow, currentPrice);
             // Marge de breakout exprimée en multiples d'ATR (adaptative à la volatilité du titre),
             // symétrique au bull flag.
@@ -117,7 +122,7 @@ namespace BackPredictFinance.Patterns.Definitions
                 };
             }
 
-            if (breakoutUp || flagRetracement > PatternThresholds.FlagMaxRetracement)
+            if (breakoutUp)
             {
                 return new ContinuationPatternAnalysisState
                 {
@@ -125,10 +130,10 @@ namespace BackPredictFinance.Patterns.Definitions
                     PhaseLabel = "Resistance du flag rompue",
                     Status = PatternStatus.Invalidated,
                     IsCompatible = false,
-                    StatusReason = "Le prix casse la resistance du flag ou le rebond devient trop profond pour un bear flag propre.",
+                    StatusReason = "Le prix casse la resistance du flag etablie avant la bougie testee.",
                     ValidationReason = "Le scenario n'est plus compatible avec une continuation baissiere de bear flag.",
                     IsInvalidated = true,
-                    InvalidationReason = "La rupture de resistance ou un rebond trop profond invalide la lecture de bear flag.",
+                    InvalidationReason = "La rupture de resistance invalide la lecture de bear flag.",
                     InvalidationRuleCode = "BEAR_FLAG_RESISTANCE_FAILURE",
                     Confidence = 0.20m,
                     CurrentPrice = currentPrice,
