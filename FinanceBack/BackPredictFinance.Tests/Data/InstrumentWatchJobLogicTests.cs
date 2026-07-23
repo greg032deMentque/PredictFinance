@@ -1,10 +1,11 @@
 ﻿using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Context;
 using BackPredictFinance.Datas.Entities;
-using BackPredictFinance.Services.ClientFinanceServices.Analysis;
+using BackPredictFinance.Services.BackgroundJobs;
 using BackPredictFinance.Services.Notifications;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -81,7 +82,7 @@ public sealed class InstrumentWatchJobLogicTests
 
         var emitter = new ProactiveAlertEmitter(NullLogger<ProactiveAlertEmitter>.Instance);
 
-        await InvokeProcessDataStaleAsync(db, emitter, userId, assetId, now);
+        await BuildJob().ProcessDataStaleAsync(db, emitter, userId, assetId, now, CancellationToken.None);
 
         var notifications = await db.UserNotifications
             .AsNoTracking()
@@ -119,8 +120,8 @@ public sealed class InstrumentWatchJobLogicTests
 
         var emitter = new ProactiveAlertEmitter(NullLogger<ProactiveAlertEmitter>.Instance);
 
-        await InvokeProcessDataStaleAsync(db, emitter, userId, assetId, now);
-        await InvokeProcessDataStaleAsync(db, emitter, userId, assetId, now);
+        await BuildJob().ProcessDataStaleAsync(db, emitter, userId, assetId, now, CancellationToken.None);
+        await BuildJob().ProcessDataStaleAsync(db, emitter, userId, assetId, now, CancellationToken.None);
 
         var count = await db.UserNotifications
             .AsNoTracking()
@@ -155,7 +156,7 @@ public sealed class InstrumentWatchJobLogicTests
 
         var emitter = new ProactiveAlertEmitter(NullLogger<ProactiveAlertEmitter>.Instance);
 
-        await InvokeProcessDataStaleAsync(db, emitter, userId, assetId, now);
+        await BuildJob().ProcessDataStaleAsync(db, emitter, userId, assetId, now, CancellationToken.None);
 
         var count = await db.UserNotifications
             .AsNoTracking()
@@ -164,37 +165,6 @@ public sealed class InstrumentWatchJobLogicTests
         Assert.Equal(0, count);
     }
 
-    private static async Task InvokeProcessDataStaleAsync(
-        FinanceDbContext db,
-        IProactiveAlertEmitter emitter,
-        string userId,
-        string assetId,
-        DateTime now,
-        CancellationToken ct = default)
-    {
-        var latestCandle = await db.AssetCandleSnapshots
-            .AsNoTracking()
-            .Where(c => c.AssetId == assetId && c.Interval == "1d")
-            .OrderByDescending(c => c.TimestampUtc)
-            .Select(c => (DateTime?)c.TimestampUtc)
-            .FirstOrDefaultAsync(ct);
-
-        var freshness = FreshnessClassifier.Classify(latestCandle, now);
-
-        if (freshness != FreshnessStatusEnum.Stale)
-        {
-            return;
-        }
-
-        await emitter.EmitAsync(
-            db,
-            userId,
-            AlertTrigger.DataStale,
-            NotificationTargetScreenEnum.InstrumentDetail,
-            assetId,
-            now,
-            "Donnees de marche obsoletes",
-            "Les donnees de marche de cet instrument n'ont pas ete actualisees depuis plusieurs jours de bourse.",
-            ct);
-    }
+    private static InstrumentWatchJob BuildJob() =>
+        new(Mock.Of<IServiceScopeFactory>(), NullLogger<InstrumentWatchJob>.Instance);
 }

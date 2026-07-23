@@ -122,7 +122,7 @@ namespace BackPredictFinance.Services.BackgroundJobs
                 ct);
         }
 
-        private async Task ProcessDataStaleAsync(
+        internal async Task ProcessDataStaleAsync(
             FinanceDbContext db,
             IProactiveAlertEmitter emitter,
             string userId,
