@@ -16,3 +16,6 @@ FinanceBack/BackPredictFinance.API/appsettings*.json
 
 # Cache local du SDK .NET / NuGet — ne doit jamais etre versionne
 FinanceBack/.dotnet/
+
+# Archives — jamais versionnees (peuvent embarquer des artefacts de build ou des secrets locaux)
+*.zip

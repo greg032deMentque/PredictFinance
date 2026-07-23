@@ -466,7 +466,7 @@ Forbidden content:
 - treating the root `README.md` as a competing normative source
 
 Mandatory rules:
-- `Doc/product/12_v1_documentation_baseline_and_canonical_map.md` remains the canonical map for documentation authority
+- `Doc/v1/00_INDEX.md` remains the canonical map for documentation authority
 - agent-operating files may interpret how to work safely, but they must not silently override canonical product contracts
 - documentation must distinguish `PROVEN`, `DECIDED`, `PROPOSED`, `DEROGATION`, and `REMAINING TO ARBITRATE`
 - documentation must distinguish an existing endpoint with an insufficient payload from a truly missing route

@@ -60,20 +60,9 @@ namespace BackPredictFinance.Services.TwelveDataServices
     }
 
     /// <summary>
-    /// Fournit la lecture descriptive d'un ETF (TER, encours, famille, indice).
-    /// </summary>
-    public interface IEtfProfileProvider
-    {
-        /// <summary>
-        /// Retourne le profil ETF d'un instrument.
-        /// </summary>
-        Task<MarketEtfProfileData> GetEtfProfileAsync(string symbol, CancellationToken ct = default);
-    }
-
-    /// <summary>
     /// Implémente l'accès au fournisseur de données de marché distant.
     /// </summary>
-    public sealed class YahooFinanceMarketDataProvider : IMarketCatalogProvider, IMarketPriceProvider, IFundamentalsProvider, IEtfProfileProvider
+    public sealed class YahooFinanceMarketDataProvider : IMarketCatalogProvider, IMarketPriceProvider, IFundamentalsProvider
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;
@@ -379,64 +368,6 @@ namespace BackPredictFinance.Services.TwelveDataServices
 
             _cache.Set(cacheKey, fundamentals, TimeSpan.FromMinutes(_options.ProfileCacheMinutes));
             return fundamentals;
-        }
-
-        public async Task<MarketEtfProfileData> GetEtfProfileAsync(string symbol, CancellationToken ct = default)
-        {
-            var normalized = NormalizeSymbol(symbol);
-            var cacheKey = $"market_etf_profile::{normalized}";
-            if (_cache.TryGetValue(cacheKey, out MarketEtfProfileData? cached) && cached is not null)
-            {
-                return cached;
-            }
-
-            var url = $"{_options.YahooQuoteSummaryUrl}/{Uri.EscapeDataString(normalized)}?modules=fundProfile,topHoldings,defaultKeyStatistics,summaryDetail";
-            using var response = await SendV10Async(url, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning(
-                    "Yahoo quoteSummary etfProfile {Symbol} -> HTTP {StatusCode}. Body(300): {Body}",
-                    normalized, (int)response.StatusCode,
-                    errorBody.Length > 300 ? errorBody[..300] : errorBody);
-                throw new InvalidOperationException($"Yahoo quoteSummary etfProfile failed for {normalized}: HTTP {(int)response.StatusCode}");
-            }
-
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
-            var root = document.RootElement;
-            if (!root.TryGetProperty("quoteSummary", out var quoteSummaryNode)
-                || !quoteSummaryNode.TryGetProperty("result", out var resultArrayNode)
-                || resultArrayNode.ValueKind != JsonValueKind.Array
-                || resultArrayNode.GetArrayLength() == 0)
-            {
-                _logger.LogWarning("Yahoo quoteSummary etfProfile {Symbol}: réponse sans result exploitable", normalized);
-                throw new InvalidOperationException($"Yahoo quoteSummary etfProfile returned no result for {normalized}");
-            }
-
-            var result = resultArrayNode[0];
-            var fundProfile = result.TryGetProperty("fundProfile", out var fundProfileNode) ? fundProfileNode : default;
-            var defaultKeyStatistics = result.TryGetProperty("defaultKeyStatistics", out var defaultKeyStatisticsNode) ? defaultKeyStatisticsNode : default;
-            var summaryDetail = result.TryGetProperty("summaryDetail", out var summaryDetailNode) ? summaryDetailNode : default;
-            var topHoldings = result.TryGetProperty("topHoldings", out var topHoldingsNode) ? topHoldingsNode : default;
-
-            var profile = new MarketEtfProfileData
-            {
-                Symbol = normalized,
-                FundFamily = ReadString(fundProfile, "family"),
-                Category = ReadString(fundProfile, "categoryName"),
-                LegalType = ReadString(fundProfile, "legalType"),
-                IndexTracked = ReadString(topHoldings, "equityHoldings"),
-                TotalExpenseRatio = ReadDecimal(fundProfile, "annualReportExpenseRatio")
-                    ?? ReadDecimal(defaultKeyStatistics, "annualHoldingsTurnover"),
-                TotalAssets = ReadDecimal(summaryDetail, "totalAssets"),
-                ReplicationMethod = null,
-                YtdReturn = ReadDecimal(fundProfile, "ytdReturn"),
-                ThreeYearAverageReturn = ReadDecimal(fundProfile, "threeYearAverageReturn"),
-                FiveYearAverageReturn = ReadDecimal(fundProfile, "fiveYearAverageReturn")
-            };
-
-            _cache.Set(cacheKey, profile, TimeSpan.FromMinutes(_options.ProfileCacheMinutes));
-            return profile;
         }
 
         private async Task<YahooChartEnvelope> GetChartInternalAsync(string symbol, string interval, string range, CancellationToken ct)

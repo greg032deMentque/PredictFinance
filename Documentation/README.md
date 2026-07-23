@@ -41,4 +41,4 @@ If those contradict this wiki, they win. This wiki documents *how we operate*, n
 - **Build/test**: `dotnet build FinanceBack/BackPredictFinance.sln`, `dotnet test FinanceBack/BackPredictFinance.Tests/BackPredictFinance.Tests.csproj`. `TreatWarningsAsErrors` is on — a warning fails the build.
 - **Config**: `appsettings.json` (committed, structure/defaults) → `appsettings.{Env}.json` (committed for staging/prod as placeholders; **gitignored** for Development) → **user-secrets** (dev) / **environment variables** (staging/prod). Secrets never live in the repo — see [secrets-management.md](secrets-management.md).
 - **Migrations**: EF Core, in `BackPredictFinance.Datas/Migrations/`. Never auto-generate without explicit instruction; never apply to a database as part of a code change.
-- **Latest audit + follow-ups**: [`../REMEDIATION-SUMMARY.md`](../REMEDIATION-SUMMARY.md).
+- **Latest audit + follow-ups**: [`../KNOWN_ISSUES.md`](../KNOWN_ISSUES.md).

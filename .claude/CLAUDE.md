@@ -111,6 +111,6 @@ AGENTS.md                       -> contrat de travail complet — lire en premie
 ## Specs canoniques
 
 - Contrat de travail complet : `AGENTS.md`
-- Documentation produit : `Doc/product/`
-- Carte canonique : `Doc/product/12_v1_documentation_baseline_and_canonical_map.md`
+- Documentation produit : `Doc/v1/`
+- Carte canonique : `Doc/v1/00_INDEX.md`
 - Backlog sprint V1 : `Doc/PredictFinance_V1_Sprint_Backlog_Operational.md`

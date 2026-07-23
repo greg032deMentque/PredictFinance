@@ -79,7 +79,6 @@
 | A-03 | Profondeur de lecture support persistée au snapshot (T-05 / C-07) | Conditionne l'auditabilité et la comparaison de la lecture support sans reconstruction (RM-20). | Trancher si le composite/PEA doit être figé au snapshot ou rester une lecture vivante. |
 | A-05 | ETF : enum présent, runtime exclu | Risque d'élargissement silencieux du périmètre V1. | Maintenir le garde-fou `UnsupportedInstrument` ; n'activer les ETF qu'après contrat V2 dédié. |
 | A-09 | Définition canonique de « actif » (DAU/WAU/MAU) | Login ? requête ? analyse ? Change toutes les métriques d'engagement. | Fixer une définition unique (ex. au moins une requête authentifiée dans la fenêtre) et la documenter. |
-| A-10 | 🔴 RGPD — rétention des KPI nominatifs (RM-29b) | `Analytic` stocke IP + identifiant en clair, **sans champ de rétention modélisé** ; les KPI d'usage s'en servent. | Cap à 13 mois + anonymisation mensuelle automatique. Obligation CNIL, non optionnel. À implémenter avant ouverture au public. |
 
 ---
 
@@ -94,7 +93,7 @@
 | Accompagnement (plan d'action, confiance expliquée, glossaire, onboarding) | **Moyenne-élevée** | Plan d'action + confiance expliquée livrés ; reste le glossaire inline et l'empty-state déclenché. |
 | Boucle ex post & alertes | **Moyenne-élevée** | `SignalOutcome` + job quotidien + alerte `LevelCrossed` livrés ; manque un écran d'alertes dédié. |
 | Persistance de la lecture support | **Moyenne** | Exposée en direct mais non figée au snapshot (T-05 / C-07). |
-| Rétention RGPD des logs `Analytic` | **Nulle** | Aucun cap 13 mois modélisé (A-10) — écart réglementaire ouvert. |
+| Rétention RGPD des logs `Analytic` | **Élevée** | `AnalyticsRetentionJob` (job mensuel hébergé) anonymise les lignes de plus de 13 mois (login haché, IP/body/UA/referer vidés). |
 | Cohérence doc ↔ code | **Restaurée** | Réconciliée au 2026-07-13. |
 
 ---
@@ -102,10 +101,10 @@
 ## 6b. Blocages légaux — état 2026-07-13
 
 > ✅ **Résolus depuis 2026-05-28** : suppression de compte (RGPD Art. 17 — `DELETE account/self` + `User.DeletedAt`) et export de données (RGPD Art. 20 — `POST account/data-export`). Retirés du tableau.
+> ✅ **Résolu** : rétention `Analytic` cappée à 13 mois (`AnalyticsRetentionJob`, anonymisation mensuelle automatique). Retiré du tableau (ex A-10).
 
 | Blocage | Référence légale | Gravité | Action requise |
 |---|---|---|---|
-| **Rétention `Analytic` non cappée à 13 mois** | Délibération CNIL, RGPD Art. 5(1)(e) | 🔴 CRITIQUE | Champ de rétention + job d'anonymisation mensuel automatique (A-10). Aucune rétention modélisée à ce jour. |
 | **Requalification CIF/AMF non tranchée** | Art. L541-1 CMF, Directive MIF 2 | 🟠 À CADRER | Pertinence conditionnée à une éventuelle mise en ligne commerciale (application à usage personnel aujourd'hui). |
 | **Documents légaux** (CGU, confidentialité, mentions, disclaimer) | LCEN Art. 6, RGPD Art. 13, Code conso | 🟠 À CADRER | Requis avant toute mise en ligne publique ; sans objet en usage personnel. |
 

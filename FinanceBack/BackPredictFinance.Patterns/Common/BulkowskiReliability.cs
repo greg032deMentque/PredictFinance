@@ -12,7 +12,7 @@ namespace BackPredictFinance.Patterns.Common
         public const decimal BullFlag = 0.67m;
         public const decimal BearFlag = 0.67m;
 
-        // Retournements (M4 — non encore branchés)
+        // Retournements
         public const decimal HeadAndShoulders = 0.51m;
         public const decimal InverseHeadAndShoulders = 0.71m;
         public const decimal DoubleTop = 0.64m;

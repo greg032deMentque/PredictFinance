@@ -31,7 +31,6 @@ namespace BackPredictFinance.API.ProgramSubFiles
         internal static IServiceCollection AddAuthAndUserServices(this IServiceCollection services)
         {
             services.AddScoped<ILogService, LogService>();
-            services.AddScoped<IPathService, PathService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IJwtGeneratorService, JwtGeneratorService>();
             services.AddScoped<IAccountService, AccountService>();
@@ -82,7 +81,6 @@ namespace BackPredictFinance.API.ProgramSubFiles
             services.AddTransient<IMarketCatalogProvider>(sp => sp.GetRequiredService<YahooFinanceMarketDataProvider>());
             services.AddTransient<IMarketPriceProvider>(sp => sp.GetRequiredService<YahooFinanceMarketDataProvider>());
             services.AddTransient<IFundamentalsProvider>(sp => sp.GetRequiredService<YahooFinanceMarketDataProvider>());
-            services.AddTransient<IEtfProfileProvider>(sp => sp.GetRequiredService<YahooFinanceMarketDataProvider>());
             services.AddScoped<ITickerService, TickerService>();
             return services;
         }

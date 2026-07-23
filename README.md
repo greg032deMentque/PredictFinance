@@ -22,8 +22,8 @@ The product helps a user maintain a watchlist and portfolio, run technical analy
   - **operational documentation** — local setup, CI/CD, deployment, and secrets management
 - `AGENTS.md`
   - repository working contract for coding agents (read first before writing code)
-- `REMEDIATION-SUMMARY.md`
-  - running log of audit fixes applied and the manual follow-ups they require
+- `KNOWN_ISSUES.md`
+  - tracked deviations from the architecture contract, and audit fixes with manual follow-ups
 
 ### Backend project map (quick orientation for agents)
 
@@ -44,11 +44,10 @@ The core business flow lives in `BackPredictFinance.Services/ClientFinanceServic
 ## Recommended reading order
 
 1. `AGENTS.md`
-2. `Doc/product/README.md`
-3. `Doc/product/12_v1_documentation_baseline_and_canonical_map.md`
-4. `Doc/PredictFinance_V1_Sprint_Backlog_Operational.md`
+2. `Doc/v1/00_INDEX.md`
+3. `Doc/PredictFinance_V1_Sprint_Backlog_Operational.md`
 
-The root README is an entry point only. Canonical product authority remains in `Doc/product/*` and the contract map above. For **operational** topics (running locally, CI/CD, deployment, secrets), see the [`Documentation/`](Documentation/README.md) wiki.
+The root README is an entry point only. Canonical product authority remains in `Doc/v1/*` and the contract map above. For **operational** topics (running locally, CI/CD, deployment, secrets), see the [`Documentation/`](Documentation/README.md) wiki.
 
 ## Local development setup
 
@@ -95,4 +94,4 @@ Notes:
 - part of the current analysis-domain contract still lives under `BackPredictFinance.Common/AnalysisV1` (to shrink, not extend).
 - `ViewModels` still expose some internal analysis contracts directly instead of dedicated projections.
 
-`DOUBLE_TOP` is **not** legacy residue: it is a first-class reversal pattern (`DoubleTopReversalPatternDefinition`). See `REMEDIATION-SUMMARY.md` for the latest audit fixes and outstanding follow-ups.
+`DOUBLE_TOP` is **not** legacy residue: it is a first-class reversal pattern (`DoubleTopReversalPatternDefinition`). See `KNOWN_ISSUES.md` for the latest audit fixes and outstanding follow-ups.

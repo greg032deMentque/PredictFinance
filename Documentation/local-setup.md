@@ -88,7 +88,7 @@ npm install --prefix FinanceFront ; npm start --prefix FinanceFront   # frontend
 dotnet test FinanceBack/BackPredictFinance.Tests/BackPredictFinance.Tests.csproj
 ```
 
-Integration tests use an in-memory EF provider and a committed, secret-free `appsettings.Testing.json`, so they need no local config. Six integration tests are currently expected to fail on missing business seed data (tracked in [ci-cd.md](ci-cd.md) and [`../REMEDIATION-SUMMARY.md`](../REMEDIATION-SUMMARY.md)); the CI gate excludes exactly those.
+Integration tests use an in-memory EF provider and a committed, secret-free `appsettings.Testing.json`, so they need no local config. Six integration tests are currently expected to fail on missing business seed data (tracked in [ci-cd.md](ci-cd.md) and [`../KNOWN_ISSUES.md`](../KNOWN_ISSUES.md)); the CI gate excludes exactly those.
 
 ## Frontend tests
 

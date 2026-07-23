@@ -23,7 +23,6 @@ namespace BackPredictFinance.Services
         protected IConfiguration _configuration { get; }
         protected FinanceDbContext _financeDbContext { get; }
         protected IHttpContextAccessor? _httpContextAccessor { get; }
-        protected List<IdentityUserRole<string>> _currentUserRoles { get; private set; } = [];
         protected string? _currentUserId { get; private set; }
         protected readonly UserManager<User> _userManager;
         protected readonly RoleManager<IdentityRole> _roleManager;
@@ -53,7 +52,6 @@ namespace BackPredictFinance.Services
                 if (!string.IsNullOrWhiteSpace(userId))
                 {
                     _currentUserId = userId;
-                    _currentUserRoles = _financeDbContext.UserRoles.Where(ur => ur.UserId == userId).ToList();
                 }
             }
         }

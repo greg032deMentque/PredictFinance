@@ -50,4 +50,4 @@ Method-level exclusion preserves coverage of healthy sibling tests (e.g. the aut
 - Pin toolchain versions (`global.json` for the SDK, `engines` in `package.json` for Node).
 - Add `dotnet format --verify-no-changes` as an explicit style gate.
 
-See [`../REMEDIATION-SUMMARY.md`](../REMEDIATION-SUMMARY.md) for what has already been applied.
+See [`../KNOWN_ISSUES.md`](../KNOWN_ISSUES.md) for what has already been applied.

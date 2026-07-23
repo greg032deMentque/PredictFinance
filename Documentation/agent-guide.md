@@ -68,5 +68,5 @@ When routing work: full-stack or unclear scope → `project-orchestrator`; backe
 ## When you finish
 
 - Update [pitfalls.md](pitfalls.md) if you hit or fixed a new trap.
-- Update [`../REMEDIATION-SUMMARY.md`](../REMEDIATION-SUMMARY.md) if you applied audit fixes with manual follow-ups.
+- Update [`../KNOWN_ISSUES.md`](../KNOWN_ISSUES.md) if you applied audit fixes with manual follow-ups.
 - Keep this wiki accurate — a stale doc costs the next agent more than no doc.

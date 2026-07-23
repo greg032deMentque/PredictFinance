@@ -14,10 +14,6 @@ it is contained and does not leak into the pattern engine.
 `Common` is meant to stay minimal and free of domain concepts. This contract should move
 into the analysis capability that owns it.
 
-**Legacy `DOUBLE_TOP` residue remains in the backend.**
-A retired pattern whose compatibility shims have not been fully removed. It is not part of
-the four supported continuation patterns.
-
 ## Documentation
 
 **`FinanceFront/README.md` is obsolete.**
