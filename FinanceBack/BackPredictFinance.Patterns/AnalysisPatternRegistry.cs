@@ -30,7 +30,7 @@ namespace BackPredictFinance.Patterns
             // sont une erreur de configuration DI et doivent lever plutot que de se substituer
             // silencieusement l'une a l'autre.
             _definitions = definitions
-                .GroupBy(definition => NormalizePatternId(definition.PatternId), StringComparer.OrdinalIgnoreCase)
+                .GroupBy(definition => PatternIds.Normalize(definition.PatternId), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
                     group => group.Key,
                     group => group.Single(),
@@ -56,7 +56,7 @@ namespace BackPredictFinance.Patterns
 
         public IAnalysisPatternDefinition ResolveDefinition(string? requestedPatternId)
         {
-            var normalizedPatternId = NormalizePatternId(requestedPatternId);
+            var normalizedPatternId = PatternIds.Normalize(requestedPatternId);
             if (string.IsNullOrWhiteSpace(normalizedPatternId))
             {
                 throw new InvalidOperationException("Un identifiant de pattern explicite est obligatoire pour resoudre une definition unique.");
@@ -73,21 +73,14 @@ namespace BackPredictFinance.Patterns
         public IReadOnlyList<IAnalysisPatternDefinition> ResolveDefinitions(IEnumerable<string>? requestedPatternIds)
         {
             var normalizedPatternIds = (requestedPatternIds ?? [])
-                .Select(NormalizePatternId)
+                .Select(PatternIds.Normalize)
                 .Where(patternId => !string.IsNullOrWhiteSpace(patternId))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             if (normalizedPatternIds.Count == 0)
             {
-                var targetPatternIds = PatternCatalog.GetTargetPatterns()
-                    .Select(pattern => NormalizePatternId(pattern.PatternId))
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                return _definitions.Values
-                    .Where(definition => targetPatternIds.Contains(NormalizePatternId(definition.PatternId)))
-                    .OrderBy(definition => definition.PatternId, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
+                return ResolveEnabledDefinitions();
             }
 
             return normalizedPatternIds
@@ -97,20 +90,24 @@ namespace BackPredictFinance.Patterns
 
         public IReadOnlyList<ResolvedAnalysisPattern> GetEnabledPatterns()
         {
-            var targetPatternIds = PatternCatalog.GetTargetPatterns()
-                .Select(pattern => NormalizePatternId(pattern.PatternId))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            return _definitions.Values
-                .Where(definition => targetPatternIds.Contains(NormalizePatternId(definition.PatternId)))
-                .OrderBy(definition => definition.PatternId, StringComparer.OrdinalIgnoreCase)
+            return ResolveEnabledDefinitions()
                 .Select(definition => definition.BuildResolvedPattern())
                 .ToList();
         }
 
-        private static string NormalizePatternId(string? patternId)
+        // Facteur commun a ResolveDefinitions (fallback liste vide) et GetEnabledPatterns : ne
+        // garde que les definitions enregistrees dont le PatternId figure dans le catalogue des
+        // patterns actifs (PatternCatalog), triees par PatternId.
+        private IReadOnlyList<IAnalysisPatternDefinition> ResolveEnabledDefinitions()
         {
-            return (patternId ?? string.Empty).Trim().ToUpperInvariant();
+            var targetPatternIds = PatternCatalog.GetTargetPatterns()
+                .Select(pattern => PatternIds.Normalize(pattern.PatternId))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return _definitions.Values
+                .Where(definition => targetPatternIds.Contains(PatternIds.Normalize(definition.PatternId)))
+                .OrderBy(definition => definition.PatternId, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
     }
 }

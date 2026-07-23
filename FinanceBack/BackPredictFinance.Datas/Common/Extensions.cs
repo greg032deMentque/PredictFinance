@@ -3,6 +3,16 @@ using System.Linq.Expressions;
 
 namespace BackPredictFinance.Datas.Common
 {
+    public static class PaginationExtensions
+    {
+        public static (int Page, int PageSize) NormalizePagination(int page, int pageSize, int maxPageSize = 100)
+        {
+            var normalizedPage = Math.Max(1, page);
+            var normalizedPageSize = Math.Clamp(pageSize, 1, maxPageSize);
+            return (normalizedPage, normalizedPageSize);
+        }
+    }
+
     public static class QueryableOrderExtensions
     {
         public static IQueryable<T> OrderByDynamic<T>(this IQueryable<T> source, string sortActive, bool desc)

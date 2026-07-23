@@ -13,22 +13,28 @@ const SECTOR_MAP: Record<string, string> = {
   'Communication Services': 'Services de communication'
 };
 
-/** Traductions pays courants → FR. Fallback = valeur brute. */
+/** Traductions pays (code ISO-2, cf. CountryCodeNormalizer.cs côté back) → FR. Fallback = valeur brute. */
 const COUNTRY_MAP: Record<string, string> = {
-  'United States': 'États-Unis',
-  'France': 'France',
-  'Germany': 'Allemagne',
-  'United Kingdom': 'Royaume-Uni',
-  'Netherlands': 'Pays-Bas',
-  'Switzerland': 'Suisse',
-  'Spain': 'Espagne',
-  'Italy': 'Italie',
-  'Belgium': 'Belgique',
-  'Canada': 'Canada',
-  'Japan': 'Japon',
-  'China': 'Chine',
-  'Ireland': 'Irlande',
-  'Luxembourg': 'Luxembourg'
+  'FR': 'France',
+  'US': 'États-Unis',
+  'NL': 'Pays-Bas',
+  'DE': 'Allemagne',
+  'GB': 'Royaume-Uni',
+  'CH': 'Suisse',
+  'BE': 'Belgique',
+  'ES': 'Espagne',
+  'IT': 'Italie',
+  'SE': 'Suède',
+  'LU': 'Luxembourg',
+  'IE': 'Irlande',
+  'DK': 'Danemark',
+  'FI': 'Finlande',
+  'NO': 'Norvège',
+  'PT': 'Portugal',
+  'AT': 'Autriche',
+  'JP': 'Japon',
+  'CN': 'Chine',
+  'CA': 'Canada'
 };
 
 export function translateSector(raw: string | null | undefined): string {

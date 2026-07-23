@@ -113,7 +113,7 @@ public sealed class YahooQuoteSummaryToleranceTests
         Assert.NotNull(result);
         Assert.Equal("AIR.PA", result.Symbol);
         Assert.Equal("Airbus SE", result.CompanyName);
-        Assert.Equal("France", result.Country);
+        Assert.Equal("FR", result.Country);
         Assert.Null(result.ReturnOnEquity);
         Assert.Null(result.OperatingMargin);
         Assert.Null(result.CurrentRatio);

@@ -76,8 +76,6 @@ namespace BackPredictFinance.Patterns.Definitions
         private static (int FirstIndex, int SecondIndex, decimal Low1, decimal Low2, decimal Neckline)?
             FindDoubleBottomPair(IReadOnlyList<TickerCandle> candles, List<int> pivotIndices)
         {
-            var minIndexSeparation = (int)Math.Ceiling(PatternThresholds.DoubleMinSeparationAtrMultiple);
-
             for (var outerIndex = 0; outerIndex < pivotIndices.Count - 1; outerIndex++)
             {
                 for (var innerIndex = outerIndex + 1; innerIndex < pivotIndices.Count; innerIndex++)
@@ -93,22 +91,28 @@ namespace BackPredictFinance.Patterns.Definitions
                     }
 
                     var indexSpan = secondIndex - firstIndex;
-                    if (indexSpan <= minIndexSeparation)
+                    if (indexSpan <= PatternThresholds.DoubleMinSeparationBars)
                     {
                         continue;
                     }
 
+                    var avgLows = (low1 + low2) / 2m;
                     var neckline = ComputeNeckline(candles, firstIndex, secondIndex);
-                    var figureHeight = neckline - ((low1 + low2) / 2m);
+                    var figureHeight = neckline - avgLows;
 
                     if (figureHeight <= 0m)
                     {
                         continue;
                     }
 
+                    // Profondeur du rebond intermediaire rapportee aux 2 extremes (les creux), pas a
+                    // figureHeight : diviser par figureHeight rendait ce ratio structurellement ~1
+                    // (neckline, base sur les Close, et intermediateHigh, base sur les High, convergent
+                    // quasi toujours vers la meme bougie), un filtre mort en pratique. avgLows est
+                    // independant de la hauteur du rebond, donc ce ratio redevient discriminant.
                     var intermediateHigh = ComputeIntermediateHigh(candles, firstIndex, secondIndex);
                     var reboundHeight = intermediateHigh - Math.Min(low1, low2);
-                    var reboundRatio = figureHeight > 0m ? reboundHeight / figureHeight : 0m;
+                    var reboundRatio = reboundHeight / avgLows;
 
                     if (reboundRatio < PatternThresholds.DoubleMinIntermediateReboundPct)
                     {

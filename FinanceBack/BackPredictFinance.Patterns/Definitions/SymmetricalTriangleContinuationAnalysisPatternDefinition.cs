@@ -45,8 +45,8 @@ namespace BackPredictFinance.Patterns.Definitions
                     ScoreReasons = ["Le nombre minimal de bougies n'est pas atteint pour ce pattern."]
                 };
             }
-            var triangleWindow = PatternTechnicals.Tail(candles, 24).ToList();
-            var priorWindow = candles.Take(Math.Max(candles.Count - triangleWindow.Count, 0)).TakeLast(20).ToList();
+            var triangleWindow = PatternTechnicals.Tail(candles, PatternThresholds.PatternRangeWindowCandleCount).ToList();
+            var priorWindow = candles.Take(Math.Max(candles.Count - triangleWindow.Count, 0)).TakeLast(PatternThresholds.PriorTrendWindowCandleCount).ToList();
             var currentPrice = candles[^1].Close;
             var highs = triangleWindow.Select(candle => candle.High).ToList();
             var lows = triangleWindow.Select(candle => candle.Low).ToList();
@@ -65,7 +65,7 @@ namespace BackPredictFinance.Patterns.Definitions
             var upperBoundary = upperIntercept + (upperSlope * lastIndex);
             var lowerBoundary = lowerIntercept + (lowerSlope * lastIndex);
             var atr = PatternTechnicals.VolatilityUnit(triangleWindow, currentPrice);
-            var priorTrend = ResolveDirectionalTrend(priorWindow);
+            var priorTrend = PatternTechnicals.ResolveDirectionalTrend(priorWindow);
             // Compression exigée sur DEUX preuves indépendantes et cohérentes entre elles : la pente
             // de régression (upperSlope négative, lowerSlope positive) ET la comparaison brute entre
             // première et seconde moitié de la fenêtre (secondHalfHigh < firstHalfHigh, secondHalfLow
@@ -231,38 +231,6 @@ namespace BackPredictFinance.Patterns.Definitions
             }
 
             return PatternTechnicals.Clamp01(confidence);
-        }
-
-        private static DirectionalTrend ResolveDirectionalTrend(IReadOnlyList<TickerCandle> candles)
-        {
-            if (candles == null || candles.Count < 8)
-            {
-                return DirectionalTrend.None;
-            }
-
-            // Tendance prealable normalisee par la volatilite : on compare l'amplitude absolue du
-            // mouvement a un multiple d'ATR plutot qu'a un pourcentage fixe, pour avoir le meme
-            // sens sur une valeur calme et une valeur volatile.
-            var move = candles[^1].Close - candles[0].Close;
-            var threshold = PatternThresholds.PriorTrendMinMoveAtrMultiple * PatternTechnicals.VolatilityUnit(candles, candles[^1].Close);
-            if (move >= threshold)
-            {
-                return DirectionalTrend.Up;
-            }
-
-            if (move <= -threshold)
-            {
-                return DirectionalTrend.Down;
-            }
-
-            return DirectionalTrend.None;
-        }
-
-        private enum DirectionalTrend
-        {
-            None,
-            Up,
-            Down
         }
     }
 }

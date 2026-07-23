@@ -310,5 +310,39 @@ namespace BackPredictFinance.Patterns.Common
             }
             return recentSum / recentBars > globalAvg;
         }
+
+        /// <summary>
+        /// Tendance directionnelle prealable a une fenetre de pattern de continuation (Rectangle,
+        /// Triangle symetrique), normalisee par la volatilite (multiple d'ATR) plutot qu'un
+        /// pourcentage fixe, pour avoir le meme sens sur une valeur calme et une valeur volatile.
+        /// </summary>
+        public static DirectionalTrend ResolveDirectionalTrend(IReadOnlyList<TickerCandle> candles)
+        {
+            if (candles == null || candles.Count < PatternThresholds.PriorTrendMinCandles)
+            {
+                return DirectionalTrend.None;
+            }
+
+            var move = candles[^1].Close - candles[0].Close;
+            var threshold = PatternThresholds.PriorTrendMinMoveAtrMultiple * VolatilityUnit(candles, candles[^1].Close);
+            if (move >= threshold)
+            {
+                return DirectionalTrend.Up;
+            }
+
+            if (move <= -threshold)
+            {
+                return DirectionalTrend.Down;
+            }
+
+            return DirectionalTrend.None;
+        }
+    }
+
+    internal enum DirectionalTrend
+    {
+        None,
+        Up,
+        Down
     }
 }

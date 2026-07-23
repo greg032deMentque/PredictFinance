@@ -95,7 +95,7 @@ namespace BackPredictFinance.Patterns.Definitions
                     ValidationReason = "La cassure sous la neckline confirme le renversement baissier du double top.",
                     ValidationRuleCode = "DOUBLE_TOP_NECKLINE_BREAKDOWN_CLOSE",
                     InvalidationReason = "Le scenario reste actif tant que le prix ne repasse pas au-dessus du second sommet.",
-                    Confidence = Math.Max(confidence, 0.80m),
+                    Confidence = confidence,
                     CurrentPrice = currentPrice,
                     NecklinePrice = necklinePrice,
                     TargetPrice = targetPrice,
@@ -121,7 +121,7 @@ namespace BackPredictFinance.Patterns.Definitions
                 StatusReason = "Deux sommets proches ont ete detectes avec un creux intermediaire suffisant, sans cassure sous la neckline pour l'instant.",
                 ValidationReason = "Une cloture sous la neckline est necessaire pour confirmer le renversement baissier.",
                 InvalidationReason = "Un depassement significatif du second sommet invaliderait la lecture de double top.",
-                Confidence = Math.Max(confidence, 0.65m),
+                Confidence = confidence,
                 CurrentPrice = currentPrice,
                 NecklinePrice = necklinePrice,
                 TargetPrice = targetPrice,
@@ -171,21 +171,26 @@ namespace BackPredictFinance.Patterns.Definitions
                     }
 
                     var barDistance = secondIndex - firstIndex;
-                    var minimumBarDistance = (int)Math.Ceiling(PatternThresholds.DoubleMinSeparationAtrMultiple);
-                    if (barDistance < minimumBarDistance)
+                    if (barDistance < PatternThresholds.DoubleMinSeparationBars)
                     {
                         continue;
                     }
 
                     var necklinePrice = FindNecklinePrice(candles, firstIndex, secondIndex);
-                    var figureHeight = (high1 + high2) / 2m - necklinePrice;
+                    var avgPeaks = (high1 + high2) / 2m;
+                    var figureHeight = avgPeaks - necklinePrice;
 
                     if (figureHeight <= 0m)
                     {
                         continue;
                     }
 
-                    var intermediateRebound = (high1 - necklinePrice) / figureHeight;
+                    // Profondeur du creux intermediaire rapportee aux 2 extremes (les sommets), pas a
+                    // figureHeight lui-meme : diviser par figureHeight rendait ce ratio structurellement
+                    // ~1 (high1 ~ high2 par ArePricesEqual, donc figureHeight ~ high1 - necklinePrice),
+                    // un filtre mort qui ne rejetait jamais rien. avgPeaks est independant de la
+                    // profondeur du creux, donc ce ratio redevient un vrai pourcentage discriminant.
+                    var intermediateRebound = figureHeight / avgPeaks;
                     if (intermediateRebound < PatternThresholds.DoubleMinIntermediateReboundPct)
                     {
                         continue;

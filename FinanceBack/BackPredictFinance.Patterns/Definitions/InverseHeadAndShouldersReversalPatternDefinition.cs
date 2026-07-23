@@ -108,22 +108,25 @@ namespace BackPredictFinance.Patterns.Definitions
                 return null;
             }
 
-            var avgShoulder = (leftShoulderLow + rightShoulderLow) / 2m;
-            var figureHeight = avgShoulder - headLow;
+            // Neckline calculee AVANT le test de profondeur : figureHeight doit mesurer la distance
+            // neckline -> tete (miroir exact du tete-epaules haussier), jamais avgShoulder -> tete
+            // (qui rendrait le ratio de profondeur algebriquement egal a 1, voir HeadAndShoulders...).
+            var neckline = ComputeNeckline(candles, leftShoulderIndex, headIndex, rightShoulderIndex);
+            var figureHeight = neckline - headLow;
 
-            if (!IsHeadDepthSufficient(headLow, avgShoulder, figureHeight))
+            if (figureHeight <= 0m)
+            {
+                return null;
+            }
+
+            var avgShoulder = (leftShoulderLow + rightShoulderLow) / 2m;
+
+            if (!IsHeadDepthSufficient(neckline, avgShoulder, figureHeight))
             {
                 return null;
             }
 
             if (!IsShoulderSymmetric(leftShoulderIndex, headIndex, rightShoulderIndex))
-            {
-                return null;
-            }
-
-            var neckline = ComputeNeckline(candles, leftShoulderIndex, headIndex, rightShoulderIndex);
-
-            if (neckline <= headLow)
             {
                 return null;
             }
@@ -136,14 +139,13 @@ namespace BackPredictFinance.Patterns.Definitions
             return headLow < leftShoulderLow && headLow < rightShoulderLow;
         }
 
-        private static bool IsHeadDepthSufficient(decimal headLow, decimal avgShoulder, decimal figureHeight)
+        // Miroir exact de HeadAndShouldersReversalPatternDefinition.FindHeadAndShouldersTriplet :
+        // depthRatio = (neckline - avgShoulder) / figureHeight, ou figureHeight = neckline - headLow.
+        // Ce sont deux quantites distinctes (contrairement a l'ancienne version qui comparait
+        // avgShoulder - headLow a elle-meme), donc le ratio n'est plus structurellement fixe a 1.
+        private static bool IsHeadDepthSufficient(decimal neckline, decimal avgShoulder, decimal figureHeight)
         {
-            if (figureHeight <= 0m)
-            {
-                return false;
-            }
-
-            var depthRatio = (avgShoulder - headLow) / figureHeight;
+            var depthRatio = (neckline - avgShoulder) / figureHeight;
             return depthRatio >= PatternThresholds.HsMinHeadDepthRatio;
         }
 

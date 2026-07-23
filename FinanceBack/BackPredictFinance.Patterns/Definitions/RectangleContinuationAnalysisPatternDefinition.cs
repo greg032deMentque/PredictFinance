@@ -46,11 +46,11 @@ namespace BackPredictFinance.Patterns.Definitions
                     ScoreReasons = ["Le nombre minimal de bougies n'est pas atteint pour ce pattern."]
                 };
             }
-            // Deux fenêtres disjointes et chronologiquement adjacentes : les 24 dernières bougies
-            // définissent le rectangle (support/résistance), les 20 bougies immédiatement AVANT celui-ci
+            // Deux fenêtres disjointes et chronologiquement adjacentes : les dernières bougies
+            // définissent le rectangle (support/résistance), les bougies immédiatement AVANT celui-ci
             // définissent la tendance préalable. priorWindow ne chevauche jamais rangeWindow.
-            var rangeWindow = PatternTechnicals.Tail(candles, 24);
-            var priorWindow = candles.Take(Math.Max(candles.Count - rangeWindow.Count, 0)).TakeLast(20).ToList();
+            var rangeWindow = PatternTechnicals.Tail(candles, PatternThresholds.PatternRangeWindowCandleCount);
+            var priorWindow = candles.Take(Math.Max(candles.Count - rangeWindow.Count, 0)).TakeLast(PatternThresholds.PriorTrendWindowCandleCount).ToList();
             var currentPrice = candles[^1].Close;
             var support = rangeWindow.Min(candle => candle.Low);
             var resistance = rangeWindow.Max(candle => candle.High);
@@ -65,7 +65,7 @@ namespace BackPredictFinance.Patterns.Definitions
             var touchesSupport = rangeWindow.Count(candle => Math.Abs(candle.Low - support) <= tolerance);
             var slopeHigh = PatternTechnicals.ComputeSlope(rangeWindow.Select(candle => candle.High).ToList());
             var slopeLow = PatternTechnicals.ComputeSlope(rangeWindow.Select(candle => candle.Low).ToList());
-            var priorTrend = ResolveDirectionalTrend(priorWindow);
+            var priorTrend = PatternTechnicals.ResolveDirectionalTrend(priorWindow);
             var isFlatEnough = averageClose > 0m
                 && Math.Abs(slopeHigh) <= PatternThresholds.RectangleMaxBoundarySlopeAtrPerCandle * atr
                 && Math.Abs(slopeLow) <= PatternThresholds.RectangleMaxBoundarySlopeAtrPerCandle * atr;
@@ -233,37 +233,6 @@ namespace BackPredictFinance.Patterns.Definitions
             }
 
             return PatternTechnicals.Clamp01(confidence);
-        }
-
-        private static DirectionalTrend ResolveDirectionalTrend(IReadOnlyList<TickerCandle> candles)
-        {
-            if (candles == null || candles.Count < 8)
-            {
-                return DirectionalTrend.None;
-            }
-
-            // Tendance prealable normalisee par la volatilite (multiple d'ATR) plutot qu'un
-            // pourcentage fixe, coherente avec la detection du triangle.
-            var move = candles[^1].Close - candles[0].Close;
-            var threshold = PatternThresholds.PriorTrendMinMoveAtrMultiple * PatternTechnicals.VolatilityUnit(candles, candles[^1].Close);
-            if (move >= threshold)
-            {
-                return DirectionalTrend.Up;
-            }
-
-            if (move <= -threshold)
-            {
-                return DirectionalTrend.Down;
-            }
-
-            return DirectionalTrend.None;
-        }
-
-        private enum DirectionalTrend
-        {
-            None,
-            Up,
-            Down
         }
     }
 }

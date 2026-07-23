@@ -619,43 +619,7 @@ namespace BackPredictFinance.Services.TwelveDataServices
             };
         }
 
-        // Yahoo renvoie tantot un code pays ISO a 2 lettres, tantot un nom complet selon le module/l'instrument.
-        // Cette table normalise les codes connus vers un nom complet pour un affichage coherent ; un code ou
-        // nom absent de la table est retourne tel quel plutot que vide, pour ne pas perdre l'information brute.
-        private static readonly Dictionary<string, string> CountryCodeToName = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["FR"] = "France",
-            ["US"] = "United States",
-            ["NL"] = "Netherlands",
-            ["DE"] = "Germany",
-            ["GB"] = "United Kingdom",
-            ["CH"] = "Switzerland",
-            ["BE"] = "Belgium",
-            ["ES"] = "Spain",
-            ["IT"] = "Italy",
-            ["SE"] = "Sweden",
-            ["LU"] = "Luxembourg",
-            ["IE"] = "Ireland",
-            ["DK"] = "Denmark",
-            ["FI"] = "Finland",
-            ["NO"] = "Norway",
-            ["PT"] = "Portugal",
-            ["AT"] = "Austria",
-            ["JP"] = "Japan",
-            ["CN"] = "China",
-            ["CA"] = "Canada"
-        };
-
-        private static string NormalizeCountry(string? raw)
-        {
-            var trimmed = (raw ?? string.Empty).Trim();
-            if (trimmed.Length == 0)
-            {
-                return string.Empty;
-            }
-
-            return CountryCodeToName.TryGetValue(trimmed, out var fullName) ? fullName : trimmed;
-        }
+        private static string NormalizeCountry(string? raw) => CountryCodeNormalizer.NormalizeToIso2(raw);
 
         private sealed class YahooChartEnvelope
         {

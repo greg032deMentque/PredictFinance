@@ -1,3 +1,6 @@
+using BackPredictFinance.Common.AnalysisV1;
+using BackPredictFinance.Common.enums;
+using BackPredictFinance.Common.MarketData;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Indicators;
 using Microsoft.EntityFrameworkCore;
@@ -12,12 +15,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Indicators
     public sealed class TechnicalIndicatorsService : BaseService, ITechnicalIndicatorsService
     {
         private const int MaxDataPoints = 250;
-        private const int RsiPeriod = 14;
-        private const int MacdFast = 12;
-        private const int MacdSlow = 26;
-        private const int MacdSignalPeriod = 9;
         private const int BbPeriod = 20;
-        private const int MacdMinRequired = MacdSlow + MacdSignalPeriod - 1;
 
         public TechnicalIndicatorsService(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
@@ -47,9 +45,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Indicators
 
             var prices = histories.Select(p => p.Price).ToList();
             var currentPrice = prices[^1];
+            var candles = ToTickerCandles(histories);
 
-            var rsi = ComputeRsi(prices);
-            var macd = ComputeMacd(prices);
+            var rsi = ComputeRsi(candles);
+            var macd = ComputeMacd(candles);
             var bb = ComputeBollingerBands(prices, currentPrice);
             var ma = ComputeMovingAverages(prices, currentPrice);
 
@@ -67,67 +66,59 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Indicators
             };
         }
 
-        private static RsiIndicatorViewModel? ComputeRsi(List<decimal> prices)
+        private static List<TickerCandle> ToTickerCandles(List<PriceHistory> histories)
         {
-            if (prices.Count <= RsiPeriod) return null;
-
-            var changes = new List<decimal>(prices.Count - 1);
-            for (int i = 1; i < prices.Count; i++)
-                changes.Add(prices[i] - prices[i - 1]);
-
-            var seed = changes.Take(RsiPeriod).ToList();
-            var avgGain = seed.Where(c => c > 0).Sum() / RsiPeriod;
-            var avgLoss = seed.Where(c => c < 0).Select(c => Math.Abs(c)).Sum() / RsiPeriod;
-
-            for (int i = RsiPeriod; i < changes.Count; i++)
+            var candles = new List<TickerCandle>(histories.Count);
+            foreach (var history in histories)
             {
-                var gain = changes[i] > 0 ? changes[i] : 0m;
-                var loss = changes[i] < 0 ? Math.Abs(changes[i]) : 0m;
-                avgGain = (avgGain * (RsiPeriod - 1) + gain) / RsiPeriod;
-                avgLoss = (avgLoss * (RsiPeriod - 1) + loss) / RsiPeriod;
+                candles.Add(new TickerCandle
+                {
+                    Date = history.RetrievedAtUtc,
+                    Open = history.Price,
+                    High = history.Price,
+                    Low = history.Price,
+                    Close = history.Price,
+                    Volume = history.Volume ?? 0m
+                });
             }
 
-            if (avgLoss == 0m) return new RsiIndicatorViewModel { Value = 100m, Signal = "Surachat" };
+            return candles;
+        }
 
-            var rsi = Math.Round(100m - 100m / (1m + avgGain / avgLoss), 2);
-            var signal = rsi >= 70m ? "Surachat" : rsi <= 30m ? "Survente" : "Neutre";
+        private static RsiIndicatorViewModel? ComputeRsi(List<TickerCandle> candles)
+        {
+            if (candles.Count <= TechnicalIndicators.DefaultRsiPeriod) return null;
+
+            var rsi = Math.Round(TechnicalIndicators.ComputeRsi(candles, TechnicalIndicators.DefaultRsiPeriod), 2);
+            var zone = TechnicalIndicators.ClassifyRsiZone(rsi);
+            var signal = zone switch
+            {
+                RsiZone.Oversold => "Survente",
+                RsiZone.Overbought => "Surachat",
+                _ => "Neutre"
+            };
 
             return new RsiIndicatorViewModel { Value = rsi, Signal = signal };
         }
 
-        private static MacdIndicatorViewModel? ComputeMacd(List<decimal> prices)
+        private static MacdIndicatorViewModel? ComputeMacd(List<TickerCandle> candles)
         {
-            if (prices.Count < MacdMinRequired) return null;
+            var minRequired = TechnicalIndicators.DefaultMacdSlow + TechnicalIndicators.DefaultMacdSignal;
+            if (candles.Count < minRequired) return null;
 
-            var ema12 = ComputeEmaSequence(prices, MacdFast);
-            var ema26 = ComputeEmaSequence(prices, MacdSlow);
-
-            var macdLine = new List<decimal>(prices.Count - MacdSlow + 1);
-            for (int i = MacdSlow - 1; i < prices.Count; i++)
-                macdLine.Add(ema12[i] - ema26[i]);
-
-            var signalEma = ComputeEmaSequence(macdLine, MacdSignalPeriod);
-
-            var lastMacd = macdLine[^1];
-            var lastSignal = signalEma[^1];
+            var (macd, signal, histogram, _) = TechnicalIndicators.ComputeMacd(
+                candles,
+                TechnicalIndicators.DefaultMacdFast,
+                TechnicalIndicators.DefaultMacdSlow,
+                TechnicalIndicators.DefaultMacdSignal);
 
             return new MacdIndicatorViewModel
             {
-                Line = Math.Round(lastMacd, 4),
-                SignalLine = Math.Round(lastSignal, 4),
-                Histogram = Math.Round(lastMacd - lastSignal, 4),
-                Trend = lastMacd >= lastSignal ? "Haussier" : "Baissier"
+                Line = Math.Round(macd, 4),
+                SignalLine = Math.Round(signal, 4),
+                Histogram = Math.Round(histogram, 4),
+                Trend = macd >= signal ? "Haussier" : "Baissier"
             };
-        }
-
-        private static List<decimal> ComputeEmaSequence(List<decimal> source, int period)
-        {
-            var ema = new decimal[source.Count];
-            ema[period - 1] = source.Take(period).Average();
-            var multiplier = 2m / (period + 1);
-            for (int i = period; i < source.Count; i++)
-                ema[i] = (source[i] - ema[i - 1]) * multiplier + ema[i - 1];
-            return [.. ema];
         }
 
         private static BollingerBandsViewModel? ComputeBollingerBands(List<decimal> prices, decimal currentPrice)

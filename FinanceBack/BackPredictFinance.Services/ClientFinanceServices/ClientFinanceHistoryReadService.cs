@@ -1,12 +1,14 @@
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Datas.Common;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.History;
+using BackPredictFinance.ViewModels.WebViewModels.PaginateViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace BackPredictFinance.Services.ClientFinanceServices
 {
     public interface IClientFinanceHistoryReadService
     {
-        Task<PagedHistoryFeedViewModel> GetHistoryFeedAsync(HistoryQueryViewModel query, CancellationToken ct = default);
+        Task<PagedResultViewModel<HistoryItemViewModel>> GetHistoryFeedAsync(HistoryQueryViewModel query, CancellationToken ct = default);
         Task<PagedInstrumentHistoryViewModel?> GetInstrumentHistoryAsync(string symbol, InstrumentHistoryQueryViewModel query, CancellationToken ct = default);
     }
 
@@ -25,11 +27,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             _projectionService = projectionService;
         }
 
-        public async Task<PagedHistoryFeedViewModel> GetHistoryFeedAsync(HistoryQueryViewModel query, CancellationToken ct = default)
+        public async Task<PagedResultViewModel<HistoryItemViewModel>> GetHistoryFeedAsync(HistoryQueryViewModel query, CancellationToken ct = default)
         {
             var userId = _assetSupportService.GetRequiredCurrentUserId();
-            var page = Math.Max(1, query.Page);
-            var pageSize = Math.Clamp(query.PageSize, 1, 100);
+            var (page, pageSize) = PaginationExtensions.NormalizePagination(query.Page, query.PageSize);
             var symbolFilter = string.IsNullOrWhiteSpace(query.Symbol)
                 ? null
                 : query.Symbol.Trim().ToUpperInvariant();
@@ -49,6 +50,11 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 ? dbQuery.OrderBy(x => x.CompletedAtUtc ?? x.StartedAtUtc)
                 : dbQuery.OrderByDescending(x => x.CompletedAtUtc ?? x.StartedAtUtc);
 
+            // Pourquoi pas de Skip/Take SQL ici (contrairement à GetInstrumentHistoryAsync) :
+            // le filtre Recommendation et l'exclusion des payloads illisibles ne s'appliquent
+            // qu'après désérialisation de RawPayload, qui n'est pas requêtable en SQL. Paginer
+            // avant ce filtre fausserait Total et produirait des pages incomplètes. Corrigible
+            // uniquement en exposant Recommendation comme colonne dédiée (migration EF).
             var analysisRuns = await dbQuery.ToListAsync(ct);
 
             var peaStatusByAssetId = await LoadLatestPeaStatusesAsync(
@@ -82,7 +88,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 .Take(pageSize)
                 .ToList();
 
-            return new PagedHistoryFeedViewModel
+            return new PagedResultViewModel<HistoryItemViewModel>
             {
                 Items = pagedItems,
                 Total = total,
@@ -110,8 +116,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 return null;
             }
 
-            var page = Math.Max(1, query.Page);
-            var pageSize = Math.Clamp(query.PageSize, 1, 100);
+            var (page, pageSize) = PaginationExtensions.NormalizePagination(query.Page, query.PageSize);
             var sortAscending = string.Equals(query.SortDirection, "asc", StringComparison.OrdinalIgnoreCase);
 
             var dbQuery = _financeDbContext.AnalysisRuns

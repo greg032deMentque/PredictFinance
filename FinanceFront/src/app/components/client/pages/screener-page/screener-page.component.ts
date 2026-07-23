@@ -9,6 +9,7 @@ import type { IFundamentalScoreResult } from '../../../../Models/client-finance-
 import { UserPaths } from '../../../../Routes/app.routes.constants';
 import { ScreenerService } from '../../../../services/screener.service';
 import { FundamentalsService } from '../../../../services/fundamentals.service';
+import { translateCountry } from '../../../../Models/client-finance-models/finance-localization.util';
 
 const PAGE_SIZE = 20;
 
@@ -25,49 +26,6 @@ const SECTOR_LABELS: Record<string, string> = {
   'Communication Services': 'Communication',
   'Consumer Defensive': 'Consommation défensive',
   'Information Technology': 'Technologies de l\'information',
-};
-
-const COUNTRY_LABELS: Record<string, string> = {
-  'France': 'France',
-  'United States': 'États-Unis',
-  'Netherlands': 'Pays-Bas',
-  'Germany': 'Allemagne',
-  'United Kingdom': 'Royaume-Uni',
-  'Switzerland': 'Suisse',
-  'Belgium': 'Belgique',
-  'Spain': 'Espagne',
-  'Italy': 'Italie',
-  'Sweden': 'Suède',
-  'Luxembourg': 'Luxembourg',
-  'Ireland': 'Irlande',
-  'Denmark': 'Danemark',
-  'Finland': 'Finlande',
-  'Norway': 'Norvège',
-  'Portugal': 'Portugal',
-  'Austria': 'Autriche',
-  'Japan': 'Japon',
-  'China': 'Chine',
-  'Canada': 'Canada',
-  'FR': 'France',
-  'US': 'États-Unis',
-  'NL': 'Pays-Bas',
-  'DE': 'Allemagne',
-  'GB': 'Royaume-Uni',
-  'CH': 'Suisse',
-  'BE': 'Belgique',
-  'ES': 'Espagne',
-  'IT': 'Italie',
-  'SE': 'Suède',
-  'LU': 'Luxembourg',
-  'IE': 'Irlande',
-  'DK': 'Danemark',
-  'FI': 'Finlande',
-  'NO': 'Norvège',
-  'PT': 'Portugal',
-  'AT': 'Autriche',
-  'JP': 'Japon',
-  'CN': 'Chine',
-  'CA': 'Canada',
 };
 
 @Component({
@@ -331,7 +289,7 @@ export class ScreenerPageComponent {
   }
 
   getCountryLabel(country: string): string {
-    return COUNTRY_LABELS[country] ?? country;
+    return translateCountry(country);
   }
 
   private loadMeta(): void {

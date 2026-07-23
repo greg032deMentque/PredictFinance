@@ -1,0 +1,76 @@
+// BROUILLON — À LANCER MANUELLEMENT APRÈS REVUE, JAMAIS AUTOMATIQUEMENT.
+//
+// Contexte : avant le correctif "CountryCodeNormalizer" (vague 3, lot vocabulaire pays),
+// Asset.Country recevait deux vocabulaires selon l'origine de l'actif : code ISO-2 pour
+// les actifs seedés (catalogue CAC40), nom complet anglais pour tout actif ajouté
+// dynamiquement (recherche libre puis watchlist, résolu via Yahoo). Le correctif normalise
+// désormais toute nouvelle écriture en ISO-2, mais les lignes déjà en base avec un nom
+// complet restent inchangées tant que ce script n'a pas tourné.
+//
+// Ce fichier n'est PAS compilé (extension .cs.draft, hors *.csproj). Pour l'exécuter :
+//   1. Renommer en .cs et créer un petit projet console jetable (ou coller le corps de
+//      RunAsync dans un contrôleur/endpoint temporaire protégé par [Authorize("RequireAdminRole")],
+//      ou l'exécuter via `dotnet run` dans un projet console qui référence
+//      BackPredictFinance.Datas + BackPredictFinance.Common.
+//   2. Fournir une ConnectionStrings:DefaultConnection pointant vers la base RÉELLE
+//      (jamais vers une base de test) via configuration/appsettings/argument.
+//   3. Exécuter d'abord en mode "dry-run" (DryRun = true ci-dessous) et vérifier le
+//      rapport avant de relancer avec DryRun = false.
+//   4. Réutilise CountryCodeNormalizer (même table que le correctif live) — pas de
+//      duplication de règle entre le correctif et ce backfill.
+//   5. Pas de filtre IsDeleted : correction d'intégrité de données, pas une action
+//      métier — les lignes soft-supprimées doivent rester cohérentes elles aussi.
+//
+// Ce script ne doit JAMAIS être enregistré comme IHostedService, ni appelé depuis
+// Program.cs / ProgramServiceDeclarator. Il est volontairement laissé hors de tout
+// projet compilé pour ne pas pouvoir s'exécuter par accident.
+
+using BackPredictFinance.Common.MarketData;
+using BackPredictFinance.Datas.Context;
+using Microsoft.EntityFrameworkCore;
+
+namespace BackPredictFinance.Datas.Scripts;
+
+public static class NormalizeAssetCountryToIso2OneShotCommand
+{
+    private const bool DryRun = true;
+
+    public static async Task RunAsync(FinanceDbContext db, CancellationToken ct = default)
+    {
+        var assets = await db.Assets
+            .IgnoreQueryFilters()
+            .Where(asset => asset.Country != null && asset.Country != "")
+            .ToListAsync(ct);
+
+        Console.WriteLine($"[COUNTRY-NORMALIZE] {assets.Count} actifs avec un pays renseigné trouvés.");
+
+        var updatedCount = 0;
+        foreach (var asset in assets)
+        {
+            var normalized = CountryCodeNormalizer.NormalizeToIso2(asset.Country);
+            if (string.Equals(normalized, asset.Country, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            Console.WriteLine($"[COUNTRY-NORMALIZE] Asset {asset.Id} ({asset.Symbol}) : \"{asset.Country}\" -> \"{normalized}\"");
+            updatedCount++;
+
+            if (DryRun)
+            {
+                continue;
+            }
+
+            asset.Country = normalized;
+        }
+
+        Console.WriteLine(DryRun
+            ? $"[COUNTRY-NORMALIZE] DRY-RUN : {updatedCount} actifs seraient corrigés. Aucune écriture effectuée."
+            : $"[COUNTRY-NORMALIZE] {updatedCount} actifs corrigés.");
+
+        if (!DryRun && updatedCount > 0)
+        {
+            await db.SaveChangesAsync(ct);
+        }
+    }
+}

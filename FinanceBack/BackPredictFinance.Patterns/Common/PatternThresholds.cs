@@ -49,6 +49,25 @@ namespace BackPredictFinance.Patterns.Common
         /// </summary>
         public const decimal PriorTrendMinMoveAtrMultiple = 1.5m;
 
+        /// <summary>
+        /// Nombre minimal de bougies requis dans la fenetre de tendance prealable pour que
+        /// <see cref="PatternTechnicals.ResolveDirectionalTrend"/> puisse se prononcer (sinon
+        /// <c>DirectionalTrend.None</c>). Partage par Rectangle et Triangle symetrique.
+        /// </summary>
+        public const int PriorTrendMinCandles = 8;
+
+        /// <summary>
+        /// Taille de la fenetre principale (support/resistance du rectangle, bornes du triangle)
+        /// pour les patterns de continuation Rectangle et Triangle symetrique.
+        /// </summary>
+        public const int PatternRangeWindowCandleCount = 24;
+
+        /// <summary>
+        /// Taille de la fenetre de tendance prealable, immediatement avant la fenetre principale,
+        /// pour les patterns de continuation Rectangle et Triangle symetrique.
+        /// </summary>
+        public const int PriorTrendWindowCandleCount = 20;
+
         // --- Seuils de forme (ratios sans dimension) ---
 
         /// <summary>Gain (ou perte) minimal du pole d'un flag : l'impulsion initiale doit etre nette.</summary>
@@ -100,14 +119,19 @@ namespace BackPredictFinance.Patterns.Common
         public const decimal DoublePriceTolerance = 0.06m;
 
         /// <summary>
-        /// Ecart minimal entre les deux sommets/creux d'un double top/bottom, exprime en multiples
-        /// d'ATR. Evite de detecter deux pivots consecutifs sur la meme consolidation.
+        /// Ecart minimal, en nombre de bougies, entre les deux sommets/creux d'un double top/bottom.
+        /// Evite de detecter deux pivots consecutifs sur la meme consolidation. N'est PAS un multiple
+        /// d'ATR malgre l'ancien nom de cette constante : elle est utilisee directement comme un
+        /// nombre de bougies par les deux definitions (DoubleTop, DoubleBottom), jamais multipliee
+        /// par un ATR reel.
         /// </summary>
-        public const decimal DoubleMinSeparationAtrMultiple = 3.0m;
+        public const int DoubleMinSeparationBars = 3;
 
         /// <summary>
         /// Rebond intermédiaire minimal entre les deux creux (double bottom) ou deux sommets
-        /// (double top), rapporté à la hauteur de la figure. Bulkowski : >= 10 %.
+        /// (double top), rapporté aux 2 extrêmes de la figure (moyenne des sommets pour le double
+        /// top, moyenne des creux pour le double bottom) — pas à la hauteur de la figure elle-même,
+        /// ratio qui serait structurellement toujours proche de 1. Bulkowski : >= 10 %.
         /// </summary>
         public const decimal DoubleMinIntermediateReboundPct = 0.10m;
 

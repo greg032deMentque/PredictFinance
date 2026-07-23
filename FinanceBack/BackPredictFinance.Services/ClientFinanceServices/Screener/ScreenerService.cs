@@ -1,9 +1,11 @@
 using System.Text.Json;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.Fundamentals;
+using BackPredictFinance.Datas.Common;
 using BackPredictFinance.Datas.Entities;
 using BackPredictFinance.Services.Fundamentals;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Screener;
+using BackPredictFinance.ViewModels.WebViewModels.PaginateViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +14,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
 {
     public interface IScreenerService
     {
-        Task<PagedScreenerViewModel> GetPagedAsync(ScreenerQueryViewModel query, CancellationToken ct = default);
+        Task<PagedResultViewModel<ScreenerItemViewModel>> GetPagedAsync(ScreenerQueryViewModel query, CancellationToken ct = default);
         Task<ScreenerMetaViewModel> GetMetaAsync(CancellationToken ct = default);
 
         /// <summary>
@@ -45,10 +47,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
             _memoryCache = serviceProvider.GetRequiredService<IMemoryCache>();
         }
 
-        public async Task<PagedScreenerViewModel> GetPagedAsync(ScreenerQueryViewModel query, CancellationToken ct = default)
+        public async Task<PagedResultViewModel<ScreenerItemViewModel>> GetPagedAsync(ScreenerQueryViewModel query, CancellationToken ct = default)
         {
-            var page = Math.Max(1, query.Page);
-            var pageSize = Math.Clamp(query.PageSize, 1, 100);
+            var (page, pageSize) = PaginationExtensions.NormalizePagination(query.Page, query.PageSize);
 
             var filtered = await BuildFilteredQueryAsync(query, ct);
             var total = await filtered.CountAsync(ct);
@@ -60,7 +61,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Screener
                 .Take(pageSize)
                 .ToListAsync(ct);
 
-            return new PagedScreenerViewModel
+            return new PagedResultViewModel<ScreenerItemViewModel>
             {
                 Items = items,
                 Total = total,
