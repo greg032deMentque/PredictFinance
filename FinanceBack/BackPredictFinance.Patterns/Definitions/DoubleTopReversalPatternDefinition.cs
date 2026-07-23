@@ -80,7 +80,7 @@ namespace BackPredictFinance.Patterns.Definitions
             var targetPrice = necklinePrice - figureHeight;
             var hasVolumeExpansion = PatternTechnicals.IsVolumeExpanding(candles);
             var breakdownConfirmed = currentPrice < necklinePrice;
-            var confidence = BuildConfidence(peakPair is not null, breakdownConfirmed, hasVolumeExpansion);
+            var confidence = BuildConfidence(true, breakdownConfirmed, hasVolumeExpansion);
 
             if (breakdownConfirmed)
             {

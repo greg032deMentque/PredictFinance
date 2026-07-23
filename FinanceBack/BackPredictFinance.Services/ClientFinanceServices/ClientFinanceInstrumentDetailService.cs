@@ -1,5 +1,6 @@
 using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
+using BackPredictFinance.Services.ClientFinanceServices.PortfolioCostBasis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Analysis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Instruments;
 using Microsoft.EntityFrameworkCore;
@@ -69,7 +70,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             var recommendation = BuildRecommendation(snapshot, holdsInstrument, marketReadingSummary.RecommendationStrength);
             var latestPeaEligibility = await _projectionService.GetLatestPeaEligibilityAsync(userAsset.AssetId, ct);
             var freshness = _projectionService.BuildFreshness(snapshot?.CompletedAtUtc ?? userAsset.Asset.LastProfileSyncUtc);
-            var averageUnitCost = await ComputeAverageUnitCostAsync(userAsset.Id, snapshot, ct);
+            var costBasis = await ComputeAverageUnitCostAsync(userAsset.Id, snapshot, ct);
             int? openLineCount = snapshot?.PortfolioContextSnapshot.OpenLineCount > 0
                 ? snapshot.PortfolioContextSnapshot.OpenLineCount
                 : null;
@@ -94,9 +95,10 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 PersonalSituation = _projectionService.BuildPersonalSituation(
                     holdsInstrument,
                     userAsset.Quantity,
-                    averageUnitCost,
+                    costBasis.AverageUnitCost,
                     openLineCount,
                     currencyCode ?? "EUR",
+                    costBasis.HasDataIntegrityWarning,
                     recommendation),
                 NavigationLinks = _projectionService.BuildInstrumentNavigationLinks(normalizedSymbol),
                 LatestAnalysisId = latestRun?.Id,
@@ -120,7 +122,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 recommendationStrength);
         }
 
-        private async Task<decimal?> ComputeAverageUnitCostAsync(
+        private async Task<(decimal? AverageUnitCost, bool HasDataIntegrityWarning)> ComputeAverageUnitCostAsync(
             string userAssetId,
             PersistedAnalysisSnapshotPayloadReadModel? snapshot,
             CancellationToken ct)
@@ -129,23 +131,19 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 && snapshot.PortfolioContextSnapshot.AverageUnitCost.HasValue
                 && snapshot.PortfolioContextSnapshot.AverageUnitCost.Value > 0m)
             {
-                return decimal.Round(snapshot.PortfolioContextSnapshot.AverageUnitCost.Value, 4);
+                return (
+                    decimal.Round(snapshot.PortfolioContextSnapshot.AverageUnitCost.Value, 4),
+                    snapshot.PortfolioContextSnapshot.HasDataIntegrityWarning);
             }
 
             var transactions = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .Where(x => x.UserAssetId == userAssetId)
+                .Where(x => x.UserAssetId == userAssetId && !x.IsDeleted)
                 .ExcludeArchivedPortfolios()
                 .ToListAsync(ct);
-            var buyTransactions = transactions.Where(x => x.TransactionType == TransactionTypeEnum.Buy).ToList();
-            var boughtQuantity = buyTransactions.Sum(x => x.Quantity);
-            if (boughtQuantity <= 0m)
-            {
-                return null;
-            }
 
-            var totalBuyAmount = buyTransactions.Sum(x => (x.Quantity * x.UnitPrice) + x.Fees);
-            return decimal.Round(totalBuyAmount / boughtQuantity, 4);
+            var result = PortfolioCostBasisCalculator.Compute(transactions);
+            return (result.AverageUnitCost, !result.IsHistoryConsistent);
         }
     }
 }

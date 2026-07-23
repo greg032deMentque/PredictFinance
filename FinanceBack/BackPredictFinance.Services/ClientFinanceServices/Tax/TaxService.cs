@@ -1,5 +1,6 @@
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services.ClientFinanceServices.PortfolioCostBasis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Tax;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,7 +33,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Tax
             var allTransactions = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
                 .Include(t => t.UserAsset).ThenInclude(ua => ua.Asset)
-                .Where(t => portfolioIds.Contains(t.PortfolioId))
+                .Where(t => portfolioIds.Contains(t.PortfolioId) && !t.IsDeleted)
                 .OrderBy(t => t.PortfolioId).ThenBy(t => t.UserAsset.AssetId).ThenBy(t => t.TimestampUtc)
                 .ToListAsync(ct);
 
@@ -70,7 +71,19 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Tax
 
             foreach (var (_, assetTxs) in txByAsset)
             {
-                var sales = ComputeRealizedSales(assetTxs, year);
+                var costBasis = PortfolioCostBasisCalculator.Compute(assetTxs);
+                var sales = costBasis.RealizedSales
+                    .Where(s => s.SaleDate.Year == year)
+                    .Select(s => new RealizedSaleViewModel
+                    {
+                        SaleDate = s.SaleDate,
+                        Quantity = s.Quantity,
+                        SellPrice = s.NetUnitSellPrice,
+                        AvgCostAtSale = s.AvgCostAtSale,
+                        RealizedPnl = s.RealizedPnl
+                    })
+                    .ToList();
+
                 if (sales.Count == 0) continue;
 
                 var asset = assetTxs[0].UserAsset.Asset;
@@ -79,7 +92,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Tax
                     Symbol = asset.Symbol,
                     DisplayName = asset.Name ?? asset.Symbol,
                     RealizedPnl = sales.Sum(s => s.RealizedPnl),
-                    Sales = sales
+                    Sales = sales,
+                    HasDataIntegrityWarning = !costBasis.IsHistoryConsistent
                 });
             }
 
@@ -96,48 +110,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Tax
                 PeaAncienneteYears = peaYears,
                 TotalRealizedPnl = Math.Round(totalPnl, 2),
                 EstimatedTax = Math.Round(taxableGain * taxRate / 100m, 2),
-                Positions = positions.OrderByDescending(p => Math.Abs(p.RealizedPnl)).ToList()
+                Positions = positions.OrderByDescending(p => Math.Abs(p.RealizedPnl)).ToList(),
+                HasDataIntegrityWarning = positions.Any(p => p.HasDataIntegrityWarning)
             };
-        }
-
-        private static List<RealizedSaleViewModel> ComputeRealizedSales(
-            List<AssetTransaction> transactions,
-            int year)
-        {
-            decimal avgCost = 0m;
-            decimal qtyHeld = 0m;
-            var sales = new List<RealizedSaleViewModel>();
-
-            foreach (var tx in transactions)
-            {
-                if (tx.TransactionType == TransactionTypeEnum.Buy)
-                {
-                    if (qtyHeld + tx.Quantity > 0m)
-                        avgCost = (qtyHeld * avgCost + tx.Quantity * tx.UnitPrice) / (qtyHeld + tx.Quantity);
-                    qtyHeld += tx.Quantity;
-                }
-                else
-                {
-                    var sellQty = Math.Min(tx.Quantity, qtyHeld);
-                    if (sellQty <= 0m || qtyHeld <= 0m) continue;
-
-                    var pnl = Math.Round(sellQty * (tx.UnitPrice - avgCost), 2);
-                    qtyHeld -= sellQty;
-
-                    if (tx.TimestampUtc.Year != year) continue;
-
-                    sales.Add(new RealizedSaleViewModel
-                    {
-                        SaleDate = tx.TimestampUtc,
-                        Quantity = sellQty,
-                        SellPrice = tx.UnitPrice,
-                        AvgCostAtSale = Math.Round(avgCost, 4),
-                        RealizedPnl = pnl
-                    });
-                }
-            }
-
-            return sales;
         }
 
         private static (decimal Rate, int? PeaYears) DetermineTaxRate(

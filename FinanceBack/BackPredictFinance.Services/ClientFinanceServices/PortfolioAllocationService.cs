@@ -1,4 +1,5 @@
 using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services.ClientFinanceServices.PortfolioCostBasis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Portfolio;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -71,7 +72,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             // le pitfall documenté sur la reconstruction FIFO.
             var transactionQuery = _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .Where(x => userAssetIds.Contains(x.UserAssetId));
+                .Where(x => userAssetIds.Contains(x.UserAssetId) && !x.IsDeleted);
 
             if (!string.IsNullOrWhiteSpace(portfolioId))
             {
@@ -101,9 +102,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
                 groupedTransactions.TryGetValue(ua.Id, out var history);
                 history ??= [];
-                var holding = PortfolioHoldingCalculator.Compute(history, _holdingLogger);
+                var holding = PortfolioCostBasisCalculator.Compute(history, _holdingLogger);
 
-                var quantity = string.IsNullOrWhiteSpace(portfolioId) ? ua.Quantity : holding.Quantity;
+                var quantity = string.IsNullOrWhiteSpace(portfolioId) ? ua.Quantity : holding.QuantityHeld;
                 var valueEur = quantity * price * forexRate;
                 var costBasisEur = decimal.Round(holding.InvestedAmount * forexRate, 2);
 

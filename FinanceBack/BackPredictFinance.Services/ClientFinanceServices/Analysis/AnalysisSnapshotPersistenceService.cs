@@ -485,7 +485,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                 TotalQuantityHeld = portfolioContext.TotalQuantityHeld,
                 AverageUnitCost = portfolioContext.AverageUnitCost,
                 OpenLineCount = portfolioContext.OpenLineCount,
-                CurrencyCode = portfolioContext.CurrencyCode
+                CurrencyCode = portfolioContext.CurrencyCode,
+                HasDataIntegrityWarning = portfolioContext.HasDataIntegrityWarning
             };
         }
 
@@ -529,7 +530,8 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
                     })
                     .ToList(),
                 OldestOpenBuyDate = portfolioContext.OldestOpenBuyDate,
-                LatestOpenBuyDate = portfolioContext.LatestOpenBuyDate
+                LatestOpenBuyDate = portfolioContext.LatestOpenBuyDate,
+                HasDataIntegrityWarning = portfolioContext.HasDataIntegrityWarning
             };
         }
 

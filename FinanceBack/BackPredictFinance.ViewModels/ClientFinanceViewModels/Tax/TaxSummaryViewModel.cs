@@ -11,5 +11,6 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Tax
         public decimal TotalRealizedPnl { get; set; }
         public decimal EstimatedTax { get; set; }
         public List<RealizedPositionViewModel> Positions { get; set; } = [];
+        public bool HasDataIntegrityWarning { get; set; }
     }
 }

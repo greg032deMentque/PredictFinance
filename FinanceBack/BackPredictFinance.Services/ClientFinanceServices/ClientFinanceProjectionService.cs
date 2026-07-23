@@ -97,6 +97,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             decimal? averageUnitCost,
             int? openLineCount,
             string currencyCode,
+            bool hasDataIntegrityWarning,
             RecommendationSummaryViewModel recommendation);
         /// <summary>
         /// Construit les liens de navigation associés à un instrument.
@@ -517,6 +518,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
             decimal? averageUnitCost,
             int? openLineCount,
             string currencyCode,
+            bool hasDataIntegrityWarning,
             RecommendationSummaryViewModel recommendation)
         {
             return new PersonalSituationReadingViewModel
@@ -527,6 +529,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 AverageUnitCost = averageUnitCost,
                 OpenLineCount = openLineCount,
                 CurrencyCode = string.IsNullOrWhiteSpace(currencyCode) ? "EUR" : currencyCode.Trim(),
+                HasDataIntegrityWarning = hasDataIntegrityWarning,
                 Recommendation = recommendation,
                 GuidanceSummary = holdsInstrument
                     ? $"La recommandation contextuelle s applique a une position deja detenue: {recommendation.DisplayLabel}."

@@ -7,5 +7,6 @@ namespace BackPredictFinance.Common.AnalysisV1
         public decimal? AverageUnitCost { get; set; }
         public int OpenLineCount { get; set; }
         public string CurrencyCode { get; set; } = string.Empty;
+        public bool HasDataIntegrityWarning { get; set; }
     }
 }

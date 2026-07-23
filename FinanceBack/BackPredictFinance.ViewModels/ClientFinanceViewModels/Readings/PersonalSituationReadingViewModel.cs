@@ -11,6 +11,7 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Readings
         public decimal? AverageUnitCost { get; set; }
         public int? OpenLineCount { get; set; }
         public string CurrencyCode { get; set; } = string.Empty;
+        public bool HasDataIntegrityWarning { get; set; }
         public RecommendationSummaryViewModel Recommendation { get; set; } = new();
         public string GuidanceSummary { get; set; } = string.Empty;
     }

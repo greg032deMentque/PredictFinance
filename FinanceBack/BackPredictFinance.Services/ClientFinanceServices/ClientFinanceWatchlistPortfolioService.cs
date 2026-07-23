@@ -1,6 +1,7 @@
 using BackPredictFinance.Common.AnalysisV1;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Datas.Entities;
+using BackPredictFinance.Services.ClientFinanceServices.PortfolioCostBasis;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Assets;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Portfolio;
 using BackPredictFinance.ViewModels.ClientFinanceViewModels.Watchlist;
@@ -154,6 +155,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 InvestedAmount = 0m,
                 OutstandingAmount = decimal.Round(userAsset.Quantity * quote.LastPrice * forexRate, 2),
                 HoldingStatus = userAsset.Quantity > 0m ? HoldingStatusEnum.Held : HoldingStatusEnum.NotHeld,
+                HasDataIntegrityWarning = false,
                 MarketReading = _projectionService.BuildEmptyMarketReading(),
                 SupportReading = _projectionService.BuildSupportReadingSummary(PeaEligibilityStatusEnum.Unknown),
                 Recommendation = _projectionService.BuildDefaultRecommendation(userAsset.Quantity > 0m),
@@ -232,7 +234,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
 
             var transactionQuery = _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .Where(x => userAssetIds.Contains(x.UserAssetId));
+                .Where(x => userAssetIds.Contains(x.UserAssetId) && !x.IsDeleted);
 
             if (!string.IsNullOrWhiteSpace(portfolioId))
             {
@@ -282,14 +284,19 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                 groupedTransactions.TryGetValue(userAsset.Id, out var history);
                 history ??= [];
 
-                var holding = PortfolioHoldingCalculator.Compute(history, _holdingLogger);
+                var holding = PortfolioCostBasisCalculator.Compute(history, _holdingLogger);
 
                 // Quantité segmentée par portefeuille quand un portfolioId est fourni ; sinon la
                 // détention reste la vérité globale portée par UserAsset (cf. AssetTransaction).
-                var heldQuantity = string.IsNullOrWhiteSpace(portfolioId) ? userAsset.Quantity : holding.Quantity;
-                var averageBuyPrice = holding.AverageBuyPrice;
+                var heldQuantity = string.IsNullOrWhiteSpace(portfolioId) ? userAsset.Quantity : holding.QuantityHeld;
+                var averageBuyPrice = holding.AverageUnitCost ?? 0m;
                 var investedAmount = holding.InvestedAmount;
                 var outstandingAmount = heldQuantity * quote.LastPrice * forexRate;
+
+                // Comparaison uniquement pertinente en vérité globale (portfolioId vide) : c'est le
+                // seul cas où heldQuantity provient de UserAsset.Quantity, indépendamment du calcul.
+                var quantityMismatch = string.IsNullOrWhiteSpace(portfolioId) && holding.QuantityHeld != userAsset.Quantity;
+                var hasDataIntegrityWarning = !holding.IsHistoryConsistent || quantityMismatch;
 
                 latestAnalysisByAssetId.TryGetValue(userAsset.AssetId, out var latestAnalysis);
                 latestPeaStatusByAssetId.TryGetValue(userAsset.AssetId, out var peaStatus);
@@ -326,6 +333,7 @@ namespace BackPredictFinance.Services.ClientFinanceServices
                     InvestedAmount = investedAmount,
                     OutstandingAmount = decimal.Round(outstandingAmount, 2),
                     HoldingStatus = heldQuantity > 0m ? HoldingStatusEnum.Held : HoldingStatusEnum.NotHeld,
+                    HasDataIntegrityWarning = hasDataIntegrityWarning,
                     HasPersistedAnalysis = latestAnalysis != null,
                     MarketReading = marketReading,
                     SupportReading = _projectionService.BuildSupportReadingSummary(peaStatus),

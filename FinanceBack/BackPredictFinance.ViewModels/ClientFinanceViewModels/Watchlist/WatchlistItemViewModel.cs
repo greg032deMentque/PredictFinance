@@ -26,6 +26,7 @@ namespace BackPredictFinance.ViewModels.ClientFinanceViewModels.Watchlist
         public decimal AverageBuyPrice { get; set; }
         public decimal InvestedAmount { get; set; }
         public decimal OutstandingAmount { get; set; }
+        public bool HasDataIntegrityWarning { get; set; }
         public HoldingStatusEnum HoldingStatus { get; set; } = HoldingStatusEnum.NotHeld;
         public MarketReadingSummaryViewModel MarketReading { get; set; } = new();
         public SupportReadingSummaryViewModel SupportReading { get; set; } = new();

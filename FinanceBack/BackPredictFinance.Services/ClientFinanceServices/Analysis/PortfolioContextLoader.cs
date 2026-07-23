@@ -1,10 +1,9 @@
 using BackPredictFinance.Datas.Context;
-using BackPredictFinance.Common;
 using BackPredictFinance.Common.enums;
 using BackPredictFinance.Common.AnalysisV1;
+using BackPredictFinance.Services.ClientFinanceServices.PortfolioCostBasis;
 using Microsoft.EntityFrameworkCore;
 using BackPredictFinance.Services.ClientFinanceServices;
-using System.Net;
 
 namespace BackPredictFinance.Services.ClientFinanceServices.Analysis
 {
@@ -22,6 +21,9 @@ public interface IPortfolioContextLoader
 
     /// <summary>
     /// Implémente la reconstruction du contexte portefeuille à partir des transactions persistées.
+    /// Ne lève jamais d'exception sur un historique incohérent (CORR-02) : dégrade et signale via
+    /// <see cref="PortfolioContext.HasDataIntegrityWarning"/>, pour ne jamais bloquer le pipeline
+    /// d'analyse ou la page de détail d'un instrument sur une seule transaction mal saisie.
     /// </summary>
     public sealed class PortfolioContextLoader : IPortfolioContextLoader
     {
@@ -48,11 +50,9 @@ public interface IPortfolioContextLoader
                 return BuildEmptyContext(userId, instrumentId, currencyCode);
             }
 
-            var transactionQuery = _financeDbContext.AssetTransactions
+            var transactions = await _financeDbContext.AssetTransactions
                 .AsNoTracking()
-                .Where(x => x.UserAssetId == userAsset.Id);
-
-            var transactions = await transactionQuery
+                .Where(x => x.UserAssetId == userAsset.Id && !x.IsDeleted)
                 .OrderBy(x => x.TimestampUtc)
                 .ThenBy(x => x.Id)
                 .ToListAsync(ct);
@@ -60,106 +60,58 @@ public interface IPortfolioContextLoader
             if (transactions.Count == 0)
             {
                 return userAsset.Quantity > 0m
-                    ? throw new CustomException(
-                        $"Portfolio context inconsistent for user {userId}, asset {instrumentId}: quantity held without any transaction history.",
-                        "Impossible de reconstruire le contexte de portefeuille pour cet instrument.",
-                        statusCode: HttpStatusCode.UnprocessableEntity)
+                    ? BuildQuantityOnlyContext(userId, instrumentId, userAsset.Quantity, currencyCode)
                     : BuildEmptyContext(userId, instrumentId, currencyCode);
             }
 
-            var openLines = new Queue<ReconstructedPortfolioLine>();
-            foreach (var transaction in transactions)
+            var result = PortfolioCostBasisCalculator.Compute(transactions);
+            var quantityMismatch = result.QuantityHeld != userAsset.Quantity;
+            var hasDataIntegrityWarning = !result.IsHistoryConsistent || quantityMismatch;
+
+            if (result.QuantityHeld <= 0m)
             {
-                if (transaction.TransactionType == TransactionTypeEnum.Buy)
-                {
-                    openLines.Enqueue(new ReconstructedPortfolioLine
-                    {
-                        OriginalQuantity = transaction.Quantity,
-                        RemainingQuantity = transaction.Quantity,
-                        UnitBuyPrice = transaction.UnitPrice,
-                        BuyDate = DateOnly.FromDateTime(transaction.TimestampUtc),
-                        RemainingFeesAmount = transaction.Fees
-                    });
-                    continue;
-                }
-
-                var remainingToConsume = transaction.Quantity;
-                while (remainingToConsume > 0m && openLines.Count > 0)
-                {
-                    var line = openLines.Peek();
-                    var quantityBeforeConsumption = line.RemainingQuantity;
-                    var consumedQuantity = Math.Min(quantityBeforeConsumption, remainingToConsume);
-                    if (quantityBeforeConsumption <= 0m)
-                    {
-                        openLines.Dequeue();
-                        continue;
-                    }
-
-                    var consumedFeesAmount = line.RemainingFeesAmount * (consumedQuantity / quantityBeforeConsumption);
-                    line.RemainingQuantity -= consumedQuantity;
-                    line.RemainingFeesAmount -= consumedFeesAmount;
-                    remainingToConsume -= consumedQuantity;
-
-                    if (line.RemainingQuantity == 0m)
-                    {
-                        line.RemainingFeesAmount = 0m;
-                        openLines.Dequeue();
-                    }
-                }
-
-                if (remainingToConsume > 0m)
-                {
-                    throw new CustomException(
-                        $"Portfolio FIFO reconstruction inconsistent for user {userId}, asset {instrumentId}: a sell exceeds the available bought quantity.",
-                        "Le contexte de portefeuille pour cet instrument est incohérent.",
-                        statusCode: HttpStatusCode.UnprocessableEntity);
-                }
+                return BuildEmptyContext(userId, instrumentId, currencyCode, hasDataIntegrityWarning);
             }
 
-            var remainingOpenLines = openLines
-                .Where(x => x.RemainingQuantity > 0m)
-                .Select(x => new PortfolioContextLine
-                {
-                    Quantity = x.RemainingQuantity,
-                    UnitBuyPrice = x.UnitBuyPrice,
-                    BuyDate = x.BuyDate,
-                    FeesAmount = x.RemainingFeesAmount,
-                    CurrencyCode = currencyCode
-                })
+            var buyDates = transactions
+                .Where(x => x.TransactionType == TransactionTypeEnum.Buy)
+                .Select(x => DateOnly.FromDateTime(x.TimestampUtc))
                 .ToList();
 
-            if (remainingOpenLines.Count == 0)
+            // Sous PMP, la position est une ligne unique fusionnée (plus de lots FIFO datés) :
+            // les dates d'achat les plus anciennes/récentes de l'historique complet approximent
+            // OldestOpenBuyDate/LatestOpenBuyDate. Aucun consommateur ne lit ces deux champs pour
+            // une décision métier (vérifié) — seule la valeur agrégée AverageUnitCost est affichée.
+            var openLine = new PortfolioContextLine
             {
-                return BuildEmptyContext(userId, instrumentId, currencyCode);
-            }
-
-            var totalQuantityHeld = remainingOpenLines.Sum(x => x.Quantity);
-            if (totalQuantityHeld != userAsset.Quantity)
-            {
-                throw new CustomException(
-                    $"Portfolio FIFO reconstruction inconsistent for user {userId}, asset {instrumentId}: reconstructed quantity does not match the persisted aggregate quantity.",
-                    "Le contexte de portefeuille pour cet instrument est incohérent.",
-                    statusCode: HttpStatusCode.UnprocessableEntity);
-            }
-
-            var totalCost = remainingOpenLines.Sum(x => (x.Quantity * x.UnitBuyPrice) + x.FeesAmount);
+                Quantity = result.QuantityHeld,
+                UnitBuyPrice = result.AverageUnitCost ?? 0m,
+                BuyDate = buyDates.Count > 0 ? buyDates.Max() : DateOnly.FromDateTime(transactions[^1].TimestampUtc),
+                FeesAmount = 0m,
+                CurrencyCode = currencyCode
+            };
 
             return new PortfolioContext
             {
                 UserId = userId,
                 InstrumentId = instrumentId,
                 HoldsInstrument = true,
-                OpenLineCount = remainingOpenLines.Count,
-                TotalQuantityHeld = totalQuantityHeld,
-                AverageUnitCost = totalQuantityHeld > 0m ? totalCost / totalQuantityHeld : null,
+                OpenLineCount = 1,
+                TotalQuantityHeld = result.QuantityHeld,
+                AverageUnitCost = result.AverageUnitCost,
                 CurrencyCode = currencyCode,
-                OpenLines = remainingOpenLines,
-                OldestOpenBuyDate = remainingOpenLines.Min(x => x.BuyDate),
-                LatestOpenBuyDate = remainingOpenLines.Max(x => x.BuyDate)
+                OpenLines = [openLine],
+                OldestOpenBuyDate = buyDates.Count > 0 ? buyDates.Min() : null,
+                LatestOpenBuyDate = buyDates.Count > 0 ? buyDates.Max() : null,
+                HasDataIntegrityWarning = hasDataIntegrityWarning
             };
         }
 
-        private static PortfolioContext BuildEmptyContext(string userId, string instrumentId, string currencyCode)
+        private static PortfolioContext BuildEmptyContext(
+            string userId,
+            string instrumentId,
+            string currencyCode,
+            bool hasDataIntegrityWarning = false)
         {
             return new PortfolioContext
             {
@@ -170,17 +122,29 @@ public interface IPortfolioContextLoader
                 TotalQuantityHeld = 0m,
                 AverageUnitCost = null,
                 CurrencyCode = currencyCode,
-                OpenLines = []
+                OpenLines = [],
+                HasDataIntegrityWarning = hasDataIntegrityWarning
             };
         }
 
-        private sealed class ReconstructedPortfolioLine
+        private static PortfolioContext BuildQuantityOnlyContext(
+            string userId,
+            string instrumentId,
+            decimal quantity,
+            string currencyCode)
         {
-            public decimal OriginalQuantity { get; set; }
-            public decimal RemainingQuantity { get; set; }
-            public decimal UnitBuyPrice { get; set; }
-            public DateOnly BuyDate { get; set; }
-            public decimal RemainingFeesAmount { get; set; }
+            return new PortfolioContext
+            {
+                UserId = userId,
+                InstrumentId = instrumentId,
+                HoldsInstrument = true,
+                OpenLineCount = 0,
+                TotalQuantityHeld = quantity,
+                AverageUnitCost = null,
+                CurrencyCode = currencyCode,
+                OpenLines = [],
+                HasDataIntegrityWarning = true
+            };
         }
     }
 }

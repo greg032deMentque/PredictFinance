@@ -149,6 +149,8 @@ public sealed class PortfolioContextLoaderArchivedPortfolioTests
         Assert.NotNull(context);
         Assert.True(context!.HoldsInstrument);
         Assert.Equal(15m, context.TotalQuantityHeld);
-        Assert.Equal(2, context.OpenLines.Count);
+        // Sous PMP (CORR-02), les 2 achats sont fusionnés en une seule ligne agrégée au lieu de
+        // 2 lots FIFO distincts.
+        Assert.Single(context.OpenLines);
     }
 }

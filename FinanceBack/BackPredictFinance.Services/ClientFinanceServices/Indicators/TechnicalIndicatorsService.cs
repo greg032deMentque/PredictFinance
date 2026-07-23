@@ -103,6 +103,9 @@ namespace BackPredictFinance.Services.ClientFinanceServices.Indicators
 
         private static MacdIndicatorViewModel? ComputeMacd(List<TickerCandle> candles)
         {
+            // slow bougies pour le premier point d'EMA lente valide, puis signal points de ligne
+            // MACD supplementaires pour amorcer l'EMA du signal : une bougie de moins romprait la
+            // ligne signal (pas de -1 ici, contrairement a une ancienne version de ce seuil).
             var minRequired = TechnicalIndicators.DefaultMacdSlow + TechnicalIndicators.DefaultMacdSignal;
             if (candles.Count < minRequired) return null;
 

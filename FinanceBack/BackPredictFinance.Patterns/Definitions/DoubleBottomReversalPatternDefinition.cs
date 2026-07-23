@@ -91,7 +91,7 @@ namespace BackPredictFinance.Patterns.Definitions
                     }
 
                     var indexSpan = secondIndex - firstIndex;
-                    if (indexSpan <= PatternThresholds.DoubleMinSeparationBars)
+                    if (indexSpan < PatternThresholds.DoubleMinSeparationBars)
                     {
                         continue;
                     }

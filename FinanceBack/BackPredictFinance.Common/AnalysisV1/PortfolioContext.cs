@@ -12,5 +12,6 @@ namespace BackPredictFinance.Common.AnalysisV1
         public List<PortfolioContextLine> OpenLines { get; set; } = [];
         public DateOnly? OldestOpenBuyDate { get; set; }
         public DateOnly? LatestOpenBuyDate { get; set; }
+        public bool HasDataIntegrityWarning { get; set; }
     }
 }
